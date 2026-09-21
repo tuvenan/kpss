@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { userProfileService, UserProfile } from '../services/userProfileService';
+import React, { useState, useRef, useEffect } from 'react';
+import { userProfileService, UserProfile, ALL_BADGES } from '../services/userProfileService';
 import {
   User,
   Mail,
@@ -16,6 +16,9 @@ export const StudentSettingsView: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(userProfileService.getProfile());
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(profile.photoUrl || '');
+  const [activeAvatarTab, setActiveAvatarTab] = useState<'photo' | 'avatar'>('photo');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Şifre Formu
   const [currentPassword, setCurrentPassword] = useState('');
@@ -24,8 +27,33 @@ export const StudentSettingsView: React.FC = () => {
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    setProfile(userProfileService.getProfile());
+    const p = userProfileService.getProfile();
+    setProfile(p);
+    setPhotoPreview(p.photoUrl || '');
   }, []);
+
+  // Fotoğraf yükleme
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Dosya boyutu 2 MB\'ı aşamaz.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      setPhotoPreview(base64);
+      setProfile(prev => ({ ...prev, photoUrl: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview('');
+    setProfile(prev => ({ ...prev, photoUrl: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -110,37 +138,161 @@ export const StudentSettingsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Avatar Seçimi */}
-        <div style={styles.avatarRow}>
-          <div style={styles.currentAvatarBig}>
-            <span style={{ fontSize: '32px' }}>
-              {avatarOptions.find((a) => a.id === profile.avatarIcon)?.emoji || '🎓'}
-            </span>
+
+        {/* === PROFİL FOTOĞRAFI & AVATAR === */}
+        <div style={{ marginBottom: '24px' }}>
+          {/* Sekme Seçimi */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            {(['photo', 'avatar'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveAvatarTab(tab)}
+                style={{
+                  padding: '7px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                  border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                  backgroundColor: activeAvatarTab === tab ? '#0F172A' : '#F1F5F9',
+                  color: activeAvatarTab === tab ? '#fff' : '#475569',
+                }}
+              >
+                {tab === 'photo' ? '📷 Fotoğraf Yükle' : '🎨 Avatar Seç'}
+              </button>
+            ))}
           </div>
-          <div style={{ flex: 1 }}>
-            <label style={styles.inputLabel}>Profil Rozeti / Avatar Seçimi</label>
-            <div style={styles.avatarPills}>
-              {avatarOptions.map((opt) => {
-                const isSelected = profile.avatarIcon === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setProfile({ ...profile, avatarIcon: opt.id })}
+
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+            {/* Sol: Önizleme */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '90px', height: '90px', borderRadius: '50%',
+                border: '3px solid #E2E8F0', overflow: 'hidden',
+                backgroundColor: '#F8FAFC',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Profil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '38px' }}>
+                    {avatarOptions.find(a => a.id === profile.avatarIcon)?.emoji || '🎓'}
+                  </span>
+                )}
+              </div>
+              {photoPreview && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  style={{ fontSize: '11px', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Fotoğrafı Kaldır
+                </button>
+              )}
+            </div>
+
+            {/* Sağ: İçerik */}
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              {activeAvatarTab === 'photo' ? (
+                <>
+                  {/* Fotoğraf Yükleme Alanı */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
                     style={{
-                      ...styles.avatarPillBtn,
-                      backgroundColor: isSelected ? '#0F172A' : '#F1F5F9',
-                      color: isSelected ? '#FFFFFF' : '#334155',
-                      border: isSelected ? '1.5px solid #0F172A' : '1.5px solid transparent',
+                      border: '2px dashed #CBD5E1', borderRadius: '12px',
+                      padding: '20px 16px', textAlign: 'center',
+                      cursor: 'pointer', backgroundColor: '#F8FAFC',
+                      transition: 'border-color 0.2s',
                     }}
                   >
-                    <span style={{ marginRight: '6px' }}>{opt.emoji}</span>
-                    <span>{opt.label}</span>
-                  </button>
-                );
-              })}
+                    <div style={{ fontSize: '28px', marginBottom: '6px' }}>📸</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Tıkla veya fotoğraf sürükle
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#94A3B8' }}>
+                      JPG, PNG, WEBP · Maks. 2 MB
+                    </div>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handlePhotoUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '8px' }}>
+                    Fotoğraf cihazınızda saklanır, sunucuya yüklenmez.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label style={styles.inputLabel}>Emoji Avatar Seç</label>
+                  <div style={styles.avatarPills}>
+                    {avatarOptions.map((opt) => {
+                      const isSelected = !photoPreview && profile.avatarIcon === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setProfile({ ...profile, avatarIcon: opt.id });
+                            handleRemovePhoto();
+                          }}
+                          style={{
+                            ...styles.avatarPillBtn,
+                            backgroundColor: isSelected ? '#0F172A' : '#F1F5F9',
+                            color: isSelected ? '#FFFFFF' : '#334155',
+                            border: isSelected ? '1.5px solid #0F172A' : '1.5px solid transparent',
+                          }}
+                        >
+                          <span style={{ marginRight: '6px' }}>{opt.emoji}</span>
+                          <span>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* === ROZETLER (Pasif Altyapı) === */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <label style={{ ...styles.inputLabel, margin: 0 }}>🏅 Rozetlerim</label>
+            <span style={{
+              fontSize: '10px', padding: '2px 8px', borderRadius: '20px',
+              backgroundColor: '#FEF3C7', color: '#D97706', fontWeight: 700, letterSpacing: '0.3px'
+            }}>YAKINDA</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {ALL_BADGES.map(badge => {
+              const earned = profile.earnedBadgeIds?.includes(badge.id);
+              return (
+                <div
+                  key={badge.id}
+                  title={badge.description}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 12px', borderRadius: '20px',
+                    border: `1.5px solid ${earned ? '#C7D2FE' : '#E2E8F0'}`,
+                    backgroundColor: earned ? '#EEF2FF' : '#F8FAFC',
+                    opacity: earned ? 1 : 0.5,
+                    cursor: 'default', fontSize: '12px',
+                    fontWeight: earned ? 700 : 400,
+                    color: earned ? '#3730A3' : '#94A3B8',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '16px', filter: earned ? 'none' : 'grayscale(1)' }}>{badge.emoji}</span>
+                  <span>{badge.label}</span>
+                  {!earned && <span style={{ fontSize: '10px' }}>🔒</span>}
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>
+            Rozetler çalışma aktivitenize göre otomatik olarak kazanılacak.
+          </p>
         </div>
 
         {/* İsim & Kullanıcı Adı */}
