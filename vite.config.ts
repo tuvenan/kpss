@@ -4,8 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  envDir: '../', // Kök dizindeki .env dosyasını oku
-  envPrefix: ['VITE_', 'EXPO_PUBLIC_'], // EXPO_PUBLIC_ değişkenlerini web tarafında da tanı
+  envPrefix: ['VITE_', 'EXPO_PUBLIC_'],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
