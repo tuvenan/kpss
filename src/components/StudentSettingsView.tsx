@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { userProfileService, UserProfile, ALL_BADGES } from '../services/userProfileService';
+import { themeService, PRESET_THEMES, ThemeConfig } from '../services/themeService';
 import {
   User,
   Mail,
@@ -10,6 +11,7 @@ import {
   RotateCcw,
   Check,
   Save,
+  Palette,
 } from 'lucide-react';
 
 export const StudentSettingsView: React.FC = () => {
@@ -18,6 +20,7 @@ export const StudentSettingsView: React.FC = () => {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(profile.photoUrl || '');
   const [activeAvatarTab, setActiveAvatarTab] = useState<'photo' | 'avatar'>('photo');
+  const [activeTheme, setActiveTheme] = useState<ThemeConfig>(() => themeService.getActiveTheme());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Şifre Formu
@@ -534,7 +537,57 @@ export const StudentSettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. BÖLÜM: GÜVENLİK & VERİ YÖNETİMİ */}
+      {/* 4. BÖLÜM: GÖRSEL STİL & TEMA SEÇİMİ */}
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardIconBox}>
+            <Palette size={18} color="#0F172A" />
+          </div>
+          <div>
+            <h2 style={styles.cardTitle}>Görsel Stil &amp; Tema Seçimi</h2>
+            <p style={styles.cardSubtitle}>Çalışma ortamınızı gözünüzü yormayacak renklere göre özelleştirin.</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '12px' }}>
+          {PRESET_THEMES.map((themePreset) => {
+            const isSelected = activeTheme.id === themePreset.id;
+            return (
+              <div
+                key={themePreset.id}
+                onClick={() => {
+                  setActiveTheme(themePreset);
+                  themeService.setActiveTheme(themePreset);
+                }}
+                style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  borderWidth: '2px',
+                  borderStyle: 'solid',
+                  borderColor: isSelected ? '#0F172A' : '#E2E8F0',
+                  backgroundColor: themePreset.backgroundColor,
+                  color: themePreset.textColor,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isSelected ? '0 0 0 2px #0F172A' : 'none',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700 }}>{themePreset.name}</span>
+                  {isSelected && <Check size={14} color={themePreset.primaryColor} />}
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: themePreset.primaryColor }} />
+                  <div style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: themePreset.cardBackground, border: '1px solid #ccc' }} />
+                  <div style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: themePreset.accentColor }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 5. BÖLÜM: GÜVENLİK & VERİ YÖNETİMİ */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>

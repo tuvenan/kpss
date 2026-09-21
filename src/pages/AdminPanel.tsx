@@ -7,6 +7,7 @@ import { userProfileService } from '../services/userProfileService';
 import { studentProgressService } from '../services/studentProgressService';
 import { AdvancedQuestionManager } from '../components/AdvancedQuestionManager';
 import { AdvancedStudentManager } from '../components/AdvancedStudentManager';
+import { AdvancedThemeEditor } from '../components/AdvancedThemeEditor';
 import {
   LayoutDashboard,
   BookOpen,
@@ -40,6 +41,7 @@ import {
   ShieldCheck,
   BarChart3,
   Sliders,
+  Palette,
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -53,6 +55,7 @@ type TabType =
   | 'bulk_packages'
   | 'error_pool'
   | 'student_data'
+  | 'theme_editor'
   | 'system_settings';
 
 const ADMIN_PASS_KEY = 'kpss_admin_custom_password_v1';
@@ -904,6 +907,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
           </button>
 
           <button
+            onClick={() => setActiveTab('theme_editor')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'theme_editor' ? '#1E293B' : 'transparent',
+              color: activeTab === 'theme_editor' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'theme_editor' ? 600 : 400,
+            }}
+          >
+            <Palette size={18} color={activeTab === 'theme_editor' ? '#818CF8' : '#64748B'} />
+            <span>Tema &amp; Görsel Stil</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('system_settings')}
             style={{
               ...styles.navItem,
@@ -942,6 +958,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
               {activeTab === 'bulk_packages' && 'Toplu Paket Yükleme & JSON'}
               {activeTab === 'error_pool' && 'Hata Havuzu & Raporlama'}
               {activeTab === 'student_data' && 'Öğrenci & Test İlerleme Yönetimi'}
+              {activeTab === 'theme_editor' && 'Görsel Stil & Tema Editörü'}
               {activeTab === 'system_settings' && 'Sistem & Depolama Ayarları'}
             </h1>
           </div>
@@ -1620,7 +1637,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
           )}
 
           {/* ============================================================== */}
-          {/* 7. SEKME: SİSTEM & VERİTABANI AYARLARI */}
+          {/* 7. SEKME: GELİŞMİŞ GÖRSEL STİL & TEMA EDİTÖRÜ */}
+          {/* ============================================================== */}
+          {activeTab === 'theme_editor' && (
+            <AdvancedThemeEditor onNotify={notify} />
+          )}
+
+          {/* ============================================================== */}
+          {/* 8. SEKME: SİSTEM & VERİTABANI AYARLARI */}
           {/* ============================================================== */}
           {activeTab === 'system_settings' && (
             <div>
