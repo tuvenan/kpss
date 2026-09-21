@@ -106,6 +106,64 @@ export const userProfileService = {
     }
   },
 
+  /** Rozet durumunu tersine çevir (toggle) */
+  toggleBadge(badgeId: string): void {
+    const profile = userProfileService.getProfile();
+    const hasBadge = profile.earnedBadgeIds.includes(badgeId);
+    const updatedBadges = hasBadge
+      ? profile.earnedBadgeIds.filter((id) => id !== badgeId)
+      : [...profile.earnedBadgeIds, badgeId];
+    userProfileService.saveProfile({ ...profile, earnedBadgeIds: updatedBadges });
+  },
+
+  /** Tüm kayıtlı öğrenci profillerini getirir */
+  getAllProfiles(): UserProfile[] {
+    if (typeof window === 'undefined') return [DEFAULT_PROFILE];
+    try {
+      const raw = localStorage.getItem('kpss_all_profiles_list_v1');
+      if (raw) {
+        const list: UserProfile[] = JSON.parse(raw);
+        if (list.length > 0) return list;
+      }
+    } catch {}
+    const current = userProfileService.getProfile();
+    return [current];
+  },
+
+  /** Yeni bir profil oluşturup kaydeder */
+  createProfile(newProfile: UserProfile): void {
+    if (typeof window === 'undefined') return;
+    const list = userProfileService.getAllProfiles();
+    const idx = list.findIndex((p) => p.username === newProfile.username);
+    if (idx >= 0) {
+      list[idx] = newProfile;
+    } else {
+      list.push(newProfile);
+    }
+    localStorage.setItem('kpss_all_profiles_list_v1', JSON.stringify(list));
+    userProfileService.saveProfile(newProfile);
+  },
+
+  /** Profiller arasında geçiş yapar */
+  switchProfile(username: string): void {
+    const list = userProfileService.getAllProfiles();
+    const target = list.find((p) => p.username === username);
+    if (target) {
+      userProfileService.saveProfile(target);
+    }
+  },
+
+  /** Bir profili siler */
+  deleteProfile(username: string): void {
+    const list = userProfileService.getAllProfiles().filter((p) => p.username !== username);
+    localStorage.setItem('kpss_all_profiles_list_v1', JSON.stringify(list));
+    if (list.length > 0) {
+      userProfileService.saveProfile(list[0]);
+    } else {
+      userProfileService.saveProfile(DEFAULT_PROFILE);
+    }
+  },
+
   resetProgressData(): void {
     if (typeof window === 'undefined') return;
     try {
@@ -115,5 +173,34 @@ export const userProfileService = {
     } catch (e) {
       console.warn('resetProgressData error:', e);
     }
+  },
+
+  /** Test simülasyon verisi yükle (örnek ilerleme) */
+  injectSimulationProgress(sampleType: 'light' | 'moderate' | 'intensive'): void {
+    if (typeof window === 'undefined') return;
+    const progress: Record<string, { solved: number; correct: number; wrong: number }> = {};
+    const multiplier = sampleType === 'light' ? 1 : sampleType === 'moderate' ? 2.5 : 5;
+
+    const baseTopics = [
+      { key: 'tr-gercek-mecaz', solved: 20, correct: 18, wrong: 2 },
+      { key: 'tr-soz-obekleri', solved: 20, correct: 16, wrong: 4 },
+      { key: 'tar-orta-asya', solved: 20, correct: 15, wrong: 5 },
+      { key: 'tar-ilk-devletler', solved: 20, correct: 17, wrong: 3 },
+      { key: 'mat-temel-kavramlar', solved: 20, correct: 14, wrong: 6 },
+      { key: 'mat-sayi-kesir', solved: 20, correct: 12, wrong: 8 },
+      { key: 'cog-fiziki-yapi', solved: 20, correct: 19, wrong: 1 },
+      { key: 'vat-temel-hukuk', solved: 20, correct: 16, wrong: 4 },
+    ];
+
+    baseTopics.forEach((t) => {
+      progress[t.key] = {
+        solved: Math.round(t.solved * multiplier),
+        correct: Math.round(t.correct * multiplier),
+        wrong: Math.round(t.wrong * multiplier),
+      };
+    });
+
+    localStorage.setItem('kpss_real_student_progress_v1', JSON.stringify(progress));
+    window.dispatchEvent(new Event('kpss_profile_updated'));
   },
 };

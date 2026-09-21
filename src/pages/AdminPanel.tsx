@@ -6,6 +6,7 @@ import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 import { userProfileService } from '../services/userProfileService';
 import { studentProgressService } from '../services/studentProgressService';
 import { AdvancedQuestionManager } from '../components/AdvancedQuestionManager';
+import { AdvancedStudentManager } from '../components/AdvancedStudentManager';
 import {
   LayoutDashboard,
   BookOpen,
@@ -1612,58 +1613,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
           )}
 
           {/* ============================================================== */}
-          {/* 6. SEKME: ÖĞRENCİ VERİLERİ & TEST SIFIRLAMA */}
+          {/* 6. SEKME: GELİŞMİŞ ÖĞRENCİ YÖNETİM MODÜLÜ */}
           {/* ============================================================== */}
           {activeTab === 'student_data' && (
-            <div>
-              <div style={styles.twoColGrid}>
-                {/* Öğrenci Profil Bilgisi */}
-                <div style={styles.sectionCard}>
-                  <h3 style={styles.sectionTitle}>Mevcut Öğrenci Profili</h3>
-                  <p style={styles.sectionSub}>Öğrenci arayüzünde aktif olarak kullanılan yerel profil.</p>
-
-                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={styles.infoRow}>
-                      <span style={styles.infoLabel}>Ad Soyad:</span>
-                      <span style={styles.infoValue}>{userProfileService.getProfile().name}</span>
-                    </div>
-                    <div style={styles.infoRow}>
-                      <span style={styles.infoLabel}>Kullanıcı Adı:</span>
-                      <span style={styles.infoValue}>@{userProfileService.getProfile().username}</span>
-                    </div>
-                    <div style={styles.infoRow}>
-                      <span style={styles.infoLabel}>Sınav Hedefi:</span>
-                      <span style={styles.infoValue}>{userProfileService.getProfile().examType}</span>
-                    </div>
-                    <div style={styles.infoRow}>
-                      <span style={styles.infoLabel}>Hedef Puan:</span>
-                      <span style={styles.infoValue}>{userProfileService.getProfile().targetScore}</span>
-                    </div>
-                    <div style={styles.infoRow}>
-                      <span style={styles.infoLabel}>Günlük Soru Hedefi:</span>
-                      <span style={styles.infoValue}>{userProfileService.getProfile().dailyGoal} Soru</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* İlerleme Verisi Sıfırlama */}
-                <div style={styles.sectionCard}>
-                  <h3 style={{ ...styles.sectionTitle, color: '#DC2626' }}>Öğrenci Test Verilerini Sıfırla</h3>
-                  <p style={styles.sectionSub}>Test çözme geçmişini, doğru/yanlış sayılarını ve başarı dağılımını temizleyin.</p>
-
-                  <div style={{ padding: '14px', backgroundColor: '#FEF2F2', borderRadius: '8px', margin: '16px 0', border: '1px solid #FECACA' }}>
-                    <div style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.5 }}>
-                      ⚠️ <b>Dikkat:</b> Bu işlem öğrencinin çözdüğü tüm testlerin istatistiklerini sıfırlar. Soru bankasındaki sorular silinmez, yalnızca çözülme istatistikleri sıfırlanır.
-                    </div>
-                  </div>
-
-                  <button onClick={handleResetStudentData} style={styles.dangerBtn}>
-                    <Trash2 size={16} style={{ marginRight: '8px' }} />
-                    Öğrenci İlerleme Verilerini Sıfırla
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AdvancedStudentManager onNotify={notify} />
           )}
 
           {/* ============================================================== */}
