@@ -4,6 +4,8 @@ import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 import {
   saveWrongQuestionToMistakesBank,
   saveWrongQuestionsToMistakesBank,
+  recordDenemeMistakesToMistakesBank,
+  removeQuestionFromMistakesBank,
   getMistakesBankQuestions,
   getOrCreateMistakesBank,
 } from './mockExamService';
@@ -751,6 +753,17 @@ export const api = {
 
   saveWrongQuestionsToMistakesBank(questions: Question[]) {
     return saveWrongQuestionsToMistakesBank(questions);
+  },
+
+  recordDenemeMistakes(
+    questions: Question[],
+    userAnswers: Record<string, { isCorrect?: boolean; selectedOption?: string }>
+  ) {
+    return recordDenemeMistakesToMistakesBank(questions, userAnswers);
+  },
+
+  removeQuestionFromMistakesBank(questionId: string) {
+    return removeQuestionFromMistakesBank(questionId);
   },
 
   getMistakesBankQuestions() {

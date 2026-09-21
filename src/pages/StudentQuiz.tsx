@@ -50,8 +50,11 @@ import {
   generateRandomMockExam,
   saveWrongQuestionToMistakesBank,
   saveWrongQuestionsToMistakesBank,
+  recordDenemeMistakesToMistakesBank,
+  removeQuestionFromMistakesBank,
   getMistakesBankQuestions,
   getOrCreateMistakesBank,
+  MISTAKES_BANK_ID,
 } from '../services/mockExamService';
 
 export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavigateAdmin }) => {
@@ -250,6 +253,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     };
   }, [isDenemeMode, viewState, isCompleted, isTimerPaused, denemeDurationMinutes]);
 
+  // Deneme Modu tamamlandığında (zaman aşımı, erken bitirme veya son soruya ulaşma)
+  // tüm yanlış yapılan soruları otomatik olarak 'Yanlışlarım' özel soru bankasına kaydet
+  useEffect(() => {
+    if (isCompleted && isDenemeMode && questions.length > 0) {
+      recordDenemeMistakesToMistakesBank(questions, userAnswers);
+    }
+  }, [isCompleted, isDenemeMode, questions, userAnswers]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -324,6 +335,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       }
     } else if (isCorrect) {
       api.markQuestionResolved(currentQ.id);
+      if (selectedBank?.id === MISTAKES_BANK_ID) {
+        removeQuestionFromMistakesBank(currentQ.id);
+      }
     }
 
     // Gerçek öğrenci analitiğine kaydet
@@ -1461,8 +1475,24 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       <FileText size={16} color="#111" />
                     </div>
                     <div>
-                      <div style={styles.quickAccessTitleText}>Hata Havuzu</div>
-                      <div style={styles.quickAccessSubText}>Yanlışlarını tekrar et</div>
+                      <div style={{ ...styles.quickAccessTitleText, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>Hata Havuzu</span>
+                        {mistakesBankCount > 0 && (
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: '8px',
+                            backgroundColor: '#FEE2E2',
+                            color: '#DC2626',
+                          }}>
+                            {mistakesBankCount}
+                          </span>
+                        )}
+                      </div>
+                      <div style={styles.quickAccessSubText}>
+                        {mistakesBankCount > 0 ? "'Yanlışlarım' soru bankası" : 'Yanlışlarını tekrar et'}
+                      </div>
                     </div>
                   </div>
 

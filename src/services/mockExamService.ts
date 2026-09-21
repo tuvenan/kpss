@@ -715,6 +715,74 @@ export function saveWrongQuestionsToMistakesBank(questions: Question[]): {
 }
 
 /**
+ * Deneme Modu'nda yanlış yapılan soruları otomatik olarak 'Yanlışlarım' isimli
+ * özel bir soru bankasına kaydedilmesini sağlayan merkezi fonksiyon.
+ * Sınavdaki tüm soruları ve kullanıcının cevaplarını analiz ederek yanlışları
+ * ayıklar ve 'Yanlışlarım' soru bankasına aktarır.
+ */
+export function recordDenemeMistakesToMistakesBank(
+  questions: Question[],
+  userAnswers: Record<string, { isCorrect?: boolean; selectedOption?: string }>
+): {
+  success: boolean;
+  wrongCount: number;
+  addedCount: number;
+  totalCount: number;
+  bank: QuestionBank;
+} {
+  const wrongQuestions = questions.filter(
+    (q) => userAnswers[q.id] && !userAnswers[q.id].isCorrect
+  );
+
+  const res = saveWrongQuestionsToMistakesBank(wrongQuestions);
+  return {
+    success: res.success,
+    wrongCount: wrongQuestions.length,
+    addedCount: res.addedCount,
+    totalCount: res.totalCount,
+    bank: res.bank,
+  };
+}
+
+/**
+ * 'Yanlışlarım' soru bankasından belirli bir soruyu (örneğin doğru çözüldüğünde) kaldırır.
+ */
+export function removeQuestionFromMistakesBank(questionId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const rawQ = localStorage.getItem(LOCAL_QUESTIONS_KEY);
+    if (!rawQ) return false;
+    const allQuestions: Question[] = JSON.parse(rawQ);
+    const updated = allQuestions.filter((q) => q.id !== questionId);
+    localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(updated));
+
+    const remaining = updated.filter(
+      (q) => q.bankId === MISTAKES_BANK_ID || q.topicId === MISTAKES_TOPIC_ID
+    );
+    const rawBanks = localStorage.getItem(LOCAL_QUESTION_BANKS_KEY);
+    if (rawBanks) {
+      const banks: QuestionBank[] = JSON.parse(rawBanks);
+      const bIdx = banks.findIndex((b) => b.id === MISTAKES_BANK_ID || b.title === 'Yanlışlarım');
+      if (bIdx >= 0) {
+        banks[bIdx].questionCount = remaining.length;
+        localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(banks));
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('kpss_mistakes_bank_updated', {
+        detail: { bankId: MISTAKES_BANK_ID, totalCount: remaining.length },
+      })
+    );
+
+    return true;
+  } catch (e) {
+    console.error('removeQuestionFromMistakesBank error:', e);
+    return false;
+  }
+}
+
+/**
  * 'Yanlışlarım' soru bankasını sıfırlar (temizler).
  */
 export function clearMistakesBank(): boolean {
@@ -751,4 +819,5 @@ export function clearMistakesBank(): boolean {
     return false;
   }
 }
+
 
