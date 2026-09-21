@@ -1852,7 +1852,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footerContainer: {
     position: 'fixed',
-    bottom: 0,
+    bottom: '64px',
     left: 0,
     right: 0,
     backgroundColor: '#F9F9FB',
