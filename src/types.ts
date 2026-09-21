@@ -63,6 +63,8 @@ export interface Question {
   difficulty?: 'Kolay' | 'Orta' | 'Zor';
   year?: string;
   tags?: string[];
+  subjectTitle?: string;
+  topicTitle?: string;
 }
 
 export interface UserAnswer {

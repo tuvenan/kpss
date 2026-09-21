@@ -38,7 +38,15 @@ import {
   Settings,
   Lock,
   Database,
+  Timer,
+  Clock,
+  Pause,
+  RotateCcw,
+  Zap,
+  Flame,
+  Award,
 } from 'lucide-react';
+import { generateRandomMockExam } from '../services/mockExamService';
 
 export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavigateAdmin }) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -55,6 +63,16 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [userProfile, setUserProfile] = useState<UserProfile>(() => userProfileService.getProfile());
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // ----------------------------------------------------
+  // DENEME MODU & CANLI SÜRE TUTMA (TIMER) DURUMLARI
+  // ----------------------------------------------------
+  const [isDenemeMode, setIsDenemeMode] = useState<boolean>(false);
+  const [showDenemeSetupModal, setShowDenemeSetupModal] = useState<boolean>(false);
+  const [denemeDurationMinutes, setDenemeDurationMinutes] = useState<number>(25); // 20, 25, 30 veya 0 (süresiz/kronometre)
+  const [timeRemainingSeconds, setTimeRemainingSeconds] = useState<number>(25 * 60);
+  const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
+  const [denemeTotalElapsedSeconds, setDenemeTotalElapsedSeconds] = useState<number>(0);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -186,7 +204,63 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     }
   };
 
+  useEffect(() => {
+    let interval: any = null;
+    if (isDenemeMode && (viewState === 'quiz' || viewState === 'feedback') && !isCompleted && !isTimerPaused) {
+      interval = setInterval(() => {
+        setDenemeTotalElapsedSeconds((prev) => prev + 1);
+        setTimeRemainingSeconds((prev) => {
+          if (denemeDurationMinutes > 0) {
+            if (prev <= 1) {
+              clearInterval(interval);
+              setIsCompleted(true);
+              return 0;
+            }
+            return prev - 1;
+          } else {
+            return prev + 1;
+          }
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isDenemeMode, viewState, isCompleted, isTimerPaused, denemeDurationMinutes]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleOpenDenemeSetup = () => {
+    setShowDenemeSetupModal(true);
+  };
+
+  const handleStartDenemeExam = (durationMinutes: number = denemeDurationMinutes) => {
+    const mockQuestions = generateRandomMockExam(20);
+    setQuestions(mockQuestions);
+    setCurrentIndex(0);
+    setUserAnswers({});
+    setIsCompleted(false);
+    setStagedOption(null);
+    setIsDenemeMode(true);
+    setDenemeDurationMinutes(durationMinutes);
+    setTimeRemainingSeconds(durationMinutes > 0 ? durationMinutes * 60 : 0);
+    setDenemeTotalElapsedSeconds(0);
+    setIsTimerPaused(false);
+    setStartTime(Date.now());
+    setSelectedSubject(null);
+    setSelectedUnit(null);
+    setSelectedTopic(null);
+    setSelectedBank(null);
+    setShowDenemeSetupModal(false);
+    setViewState('quiz');
+  };
+
   const handleStartQuiz = () => {
+    setIsDenemeMode(false);
     setCurrentIndex(0);
     setUserAnswers({});
     setIsCompleted(false);
@@ -225,7 +299,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     }
 
     // Gerçek öğrenci analitiğine kaydet
-    const topicKey = selectedTopic?.title || selectedTopic?.id || selectedUnit?.title || 'Genel';
+    const topicKey = currentQ?.subjectTitle
+      ? `${currentQ.subjectTitle} - ${currentQ.topicTitle || 'Deneme'}`
+      : selectedTopic?.title || selectedTopic?.id || selectedUnit?.title || 'Genel';
     studentProgressService.recordAnswer(topicKey, isCorrect);
 
     setViewState('feedback');
@@ -283,6 +359,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   };
 
   const handleRestartQuiz = async () => {
+    if (isDenemeMode) {
+      handleStartDenemeExam(denemeDurationMinutes);
+      return;
+    }
     if (selectedTopic) {
       const qList = await api.getQuestions(selectedTopic.id);
       setQuestions(qList);
@@ -327,6 +407,220 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     const wrong = res.wrongCount;
     const empty = res.emptyCount;
     const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+    if (isDenemeMode) {
+      const totalTime = denemeDurationMinutes > 0
+        ? Math.max(1, (denemeDurationMinutes * 60) - timeRemainingSeconds)
+        : Math.max(1, denemeTotalElapsedSeconds);
+      const spentMins = Math.floor(totalTime / 60);
+      const spentSecs = totalTime % 60;
+      const avgSecsPerQ = Math.round(totalTime / (total || 20));
+
+      // Konu / Ders bazlı dağılım hesapla
+      const subjectStats: Record<string, { correct: number; total: number }> = {};
+      questions.forEach((q) => {
+        const sub = q.subjectTitle || 'Karma Alan';
+        if (!subjectStats[sub]) subjectStats[sub] = { correct: 0, total: 0 };
+        subjectStats[sub].total++;
+        if (userAnswers[q.id]?.isCorrect) {
+          subjectStats[sub].correct++;
+        }
+      });
+
+      return (
+        <div>
+          {/* Üst Geri Tuşu ve Başlık */}
+          <div style={styles.unitHeader}>
+            <button
+              onClick={() => {
+                setIsDenemeMode(false);
+                setViewState('subjects');
+                setActiveTab('home');
+              }}
+              style={styles.unitBackButton}
+              title="Ana Sayfaya Dön"
+            >
+              <ChevronLeft size={22} color="#111" />
+            </button>
+            <div style={styles.unitDetailHeaderTitle}>Deneme Sınavı Raporu</div>
+            <div style={{ width: '40px' }} />
+          </div>
+
+          {/* Sonuç Kartı / Başarı Halkası Alanı */}
+          <div style={styles.resultCardNew}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '11px', fontWeight: 700, marginBottom: '8px' }}>
+              <Award size={14} />
+              <span>20 SORULUK GENEL DENEME</span>
+            </div>
+            <div style={styles.resultMainTitleNew}>Deneme Sınavı Tamamlandı!</div>
+
+            {/* Başarı Halkası */}
+            <div style={styles.circleContainerNew}>
+              <div style={styles.scoreTextNew}>{correct} / {total}</div>
+              <div style={styles.percentageTextNew}>%{percentage} Başarı</div>
+            </div>
+
+            {/* Doğru - Yanlış - Boş İstatistikleri */}
+            <div style={styles.statsRowNew}>
+              <div style={styles.statItemNew}>
+                <div style={{ ...styles.statDotNew, backgroundColor: '#2E7D32' }} />
+                <div style={styles.statLabelNew}>Doğru</div>
+                <div style={styles.statValueNew}>{correct}</div>
+              </div>
+              <div style={styles.statDividerNew} />
+              <div style={styles.statItemNew}>
+                <div style={{ ...styles.statDotNew, backgroundColor: '#D32F2F' }} />
+                <div style={styles.statLabelNew}>Yanlış</div>
+                <div style={styles.statValueNew}>{wrong}</div>
+              </div>
+              <div style={styles.statDividerNew} />
+              <div style={styles.statItemNew}>
+                <div style={{ ...styles.statDotNew, backgroundColor: '#888' }} />
+                <div style={styles.statLabelNew}>Boş</div>
+                <div style={styles.statValueNew}>{empty}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* SÜRE VE HIZ ANALİZ KARTI */}
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '16px',
+            marginBottom: '16px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '10px',
+            textAlign: 'center',
+          }}>
+            <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Clock size={13} />
+                Toplam Süre
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
+                {spentMins} dk {spentSecs} sn
+              </div>
+            </div>
+
+            <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Zap size={13} />
+                Soru Başına
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
+                {avgSecsPerQ} sn
+              </div>
+            </div>
+
+            <div style={{ padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Timer size={13} />
+                Sınav Temposu
+              </div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: avgSecsPerQ <= 60 ? '#15803D' : avgSecsPerQ <= 75 ? '#2563EB' : '#D97706',
+                marginTop: '5px',
+              }}>
+                {avgSecsPerQ <= 60 ? '⚡ Çok Hızlı' : avgSecsPerQ <= 75 ? '🎯 İdeal KPSS' : '⏳ Normal'}
+              </div>
+            </div>
+          </div>
+
+          {/* DERS BAZLI BAŞARI DAĞILIMI */}
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '16px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <BarChart2 size={16} color="#4F46E5" />
+              <span>Ders Bazlı Performans Dağılımı</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.entries(subjectStats).map(([subName, stat]) => {
+                const subPct = Math.round((stat.correct / stat.total) * 100);
+                return (
+                  <div key={subName} style={{ padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #F1F5F9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{subName}</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: stat.correct === stat.total ? '#16A34A' : '#475569' }}>
+                        {stat.correct} / {stat.total} Doğru (%{subPct})
+                      </span>
+                    </div>
+                    <div style={{ height: '5px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${subPct}%`,
+                          backgroundColor: subPct >= 75 ? '#16A34A' : subPct >= 50 ? '#F59E0B' : '#EF4444',
+                          borderRadius: '3px',
+                          transition: 'width 0.4s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Hata Havuzu Bilgisi */}
+          {wrong > 0 && (
+            <div style={styles.errorBannerNew}>
+              <Info size={18} color="#666" style={{ marginRight: '8px', flexShrink: 0 }} />
+              <span style={styles.errorBannerTextNew}>
+                {wrong} soru hata havuzunuza eklendi. Çözümlerini ve açıklamalarını Hatalarım sekmesinde inceleyebilirsiniz.
+              </span>
+            </div>
+          )}
+
+          {/* Yönlendirme Butonları */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button
+              onClick={() => handleStartDenemeExam(denemeDurationMinutes)}
+              style={{
+                ...styles.resultPrimaryButton,
+                backgroundColor: '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <RotateCcw size={16} />
+              Yeni Deneme Sınavı Başlat (20 Soru)
+            </button>
+
+            {wrong > 0 && (
+              <button
+                onClick={handleRetryWrong}
+                style={styles.resultSecondaryButton}
+              >
+                Bu Denemedeki Hatalarımı Çöz ({wrong} Soru)
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                setIsDenemeMode(false);
+                setViewState('subjects');
+                setActiveTab('home');
+              }}
+              style={styles.resultOutlineButton}
+            >
+              Ana Sayfaya Dön
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div>
@@ -568,10 +862,18 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           <nav style={styles.sidebarNav}>
             <button
               onClick={() => { setActiveTab('home'); setViewState('subjects'); }}
-              style={activeTab === 'home' && viewState === 'subjects' ? styles.sidebarNavItemActive : styles.sidebarNavItem}
+              style={activeTab === 'home' && viewState === 'subjects' && !isDenemeMode ? styles.sidebarNavItemActive : styles.sidebarNavItem}
             >
               <Home size={18} style={{ marginRight: '12px' }} />
               <span>Ana Sayfa</span>
+            </button>
+
+            <button
+              onClick={handleOpenDenemeSetup}
+              style={styles.sidebarNavItem}
+            >
+              <Timer size={18} color="#D97706" style={{ marginRight: '12px' }} />
+              <span style={{ fontWeight: 600, color: '#D97706' }}>Deneme Sınavı ⏱️</span>
             </button>
 
             <button
@@ -748,6 +1050,33 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
                 </div>
 
+                {/* KPSS DENEME MODU HERO BANNER */}
+                <div style={styles.denemeHeroBanner}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={styles.denemeHeroBadge}>
+                      <Flame size={13} />
+                      <span>DENEME MODU • YENİ</span>
+                    </div>
+                    <div style={styles.denemeHeroTitle}>Rastgele 20 Soruluk Deneme Sınavı</div>
+                    <div style={styles.denemeHeroDesc}>
+                      Farklı konulardan dengeli 20 soru, canlı süre takibi, tempo analizi ve detaylı ders raporu.
+                    </div>
+                    <div style={styles.denemeHeroPillsRow}>
+                      <span style={styles.denemeHeroPill}>🎯 20 Soru</span>
+                      <span style={styles.denemeHeroPill}>⏱️ Canlı Süre</span>
+                      <span style={styles.denemeHeroPill}>⚡ Hız Temposu</span>
+                      <span style={styles.denemeHeroPill}>📊 Konu Analizi</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleOpenDenemeSetup}
+                    style={styles.denemeHeroButton}
+                  >
+                    <Play size={16} fill="#0F172A" />
+                    <span>Denemeye Başla</span>
+                  </button>
+                </div>
+
                 {/* Günlük Hedef Kartı */}
                 <div style={styles.goalCardContainer}>
                   <div style={styles.goalHeaderRow}>
@@ -920,6 +1249,23 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 {/* Hızlı Erişim */}
                 <div style={styles.quickAccessTitle}>Hızlı Erişim</div>
                 <div className="quick-access-row" style={styles.quickAccessRow}>
+                  <div
+                    onClick={handleOpenDenemeSetup}
+                    style={{
+                      ...styles.quickAccessCard,
+                      border: '1px solid #FDE68A',
+                      backgroundColor: '#FFFBEB',
+                    }}
+                  >
+                    <div style={{ ...styles.quickAccessIconBox, backgroundColor: '#FEF3C7' }}>
+                      <Timer size={16} color="#D97706" />
+                    </div>
+                    <div>
+                      <div style={{ ...styles.quickAccessTitleText, color: '#92400E' }}>Deneme Modu</div>
+                      <div style={styles.quickAccessSubText}>20 Soru • Süreli</div>
+                    </div>
+                  </div>
+
                   <div
                     onClick={() => handleStartPlan(1)}
                     style={styles.quickAccessCard}
@@ -1152,7 +1498,29 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           {/* DERSLER SEKMESİ */}
           {viewState === 'subjects' && activeTab === 'subjects' && (
             <div style={{ maxWidth: '780px', margin: '0 auto', width: '100%' }}>
-              <h1 style={styles.mainTitle}>Dersler</h1>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <h1 style={{ ...styles.mainTitle, margin: 0 }}>Dersler</h1>
+                <button
+                  onClick={handleOpenDenemeSetup}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '9px 16px',
+                    backgroundColor: '#D97706',
+                    color: '#FFFFFF',
+                    borderRadius: '10px',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.2)',
+                  }}
+                >
+                  <Timer size={16} />
+                  <span>20 Soruluk Deneme Başlat</span>
+                </button>
+              </div>
               <div style={styles.categoryTitle}>KPSS Genel Yetenek</div>
               {generalTalentSubjects.map(renderSubjectCard)}
               <div style={{ ...styles.categoryTitle, marginTop: '24px' }}>KPSS Genel Kültür</div>
@@ -1619,24 +1987,175 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingBottom: '110px' }}>
             {!isCompleted ? (
               <div>
+                {/* Duraklatma Katmanı (Overlay) */}
+                {isTimerPaused && (
+                  <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px',
+                    color: '#FFFFFF',
+                    textAlign: 'center',
+                    backdropFilter: 'blur(4px)',
+                  }}>
+                    <div style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      backgroundColor: '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '16px',
+                    }}>
+                      <Pause size={32} color="#F59E0B" />
+                    </div>
+                    <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Sınav Duraklatıldı</h3>
+                    <p style={{ fontSize: '14px', color: '#94A3B8', maxWidth: '340px', marginBottom: '24px', lineHeight: 1.5 }}>
+                      Süre sayacı durduruldu. Dinlendikten sonra sınavınıza kaldığınız yerden devam edebilirsiniz.
+                    </p>
+                    <button
+                      onClick={() => setIsTimerPaused(false)}
+                      style={{
+                        padding: '12px 28px',
+                        backgroundColor: '#10B981',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                      }}
+                    >
+                      <Play size={16} />
+                      Sınava Devam Et
+                    </button>
+                  </div>
+                )}
+
                 {/* Üst Navigasyon ve Sayaç */}
                 <div style={styles.quizNavHeader}>
                   <button
-                    onClick={() => setViewState('topics')}
+                    onClick={() => {
+                      if (isDenemeMode) {
+                        if (confirm('Deneme sınavından çıkmak istediğinize emin misiniz? İlerlemeniz kaydedilmeyecektir.')) {
+                          setIsDenemeMode(false);
+                          setViewState('subjects');
+                          setActiveTab('home');
+                        }
+                      } else {
+                        setViewState('topics');
+                      }
+                    }}
                     style={styles.quizBackButton}
-                    title="Testten Çık"
+                    title={isDenemeMode ? 'Denemeden Çık' : 'Testten Çık'}
                   >
                     <ChevronLeft size={22} color="#111" />
                   </button>
-                  <div style={styles.quizHeaderCounter}>
-                    {String(currentIndex + 1).padStart(2, '0')} / {String(questions.length).padStart(2, '0')}
-                  </div>
-                  <button
-                    style={styles.quizMenuButton}
-                    title="Seçenekler"
-                  >
-                    <MoreVertical size={18} color="#111" />
-                  </button>
+
+                  {isDenemeMode ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Canlı Süre Sayacı Rozeti */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        backgroundColor: (denemeDurationMinutes > 0 && timeRemainingSeconds <= 60)
+                          ? '#FEF2F2'
+                          : (denemeDurationMinutes > 0 && timeRemainingSeconds <= 300)
+                          ? '#FFFBEB'
+                          : '#0F172A',
+                        color: (denemeDurationMinutes > 0 && timeRemainingSeconds <= 60)
+                          ? '#DC2626'
+                          : (denemeDurationMinutes > 0 && timeRemainingSeconds <= 300)
+                          ? '#D97706'
+                          : '#FFFFFF',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        border: (denemeDurationMinutes > 0 && timeRemainingSeconds <= 60)
+                          ? '1px solid #FECACA'
+                          : (denemeDurationMinutes > 0 && timeRemainingSeconds <= 300)
+                          ? '1px solid #FDE68A'
+                          : 'none',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      }}>
+                        <Clock size={15} />
+                        <span>
+                          {denemeDurationMinutes > 0
+                            ? formatTime(timeRemainingSeconds)
+                            : formatTime(denemeTotalElapsedSeconds)}
+                        </span>
+                        {denemeDurationMinutes > 0 && (
+                          <span style={{ fontSize: '11px', opacity: 0.85 }}>kaldı</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsTimerPaused((p) => !p)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'inherit',
+                            padding: '0 0 0 4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                          title={isTimerPaused ? 'Süreyi Devam Ettir' : 'Süreyi Duraklat'}
+                        >
+                          {isTimerPaused ? <Play size={13} /> : <Pause size={13} />}
+                        </button>
+                      </div>
+
+                      <div style={styles.quizHeaderCounter}>
+                        {String(currentIndex + 1).padStart(2, '0')} / {String(questions.length).padStart(2, '0')}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={styles.quizHeaderCounter}>
+                      {String(currentIndex + 1).padStart(2, '0')} / {String(questions.length).padStart(2, '0')}
+                    </div>
+                  )}
+
+                  {isDenemeMode ? (
+                    <button
+                      onClick={() => {
+                        if (confirm('Deneme sınavını şimdi sonlandırıp sonuç raporunu görmek istiyor musunuz?')) {
+                          setIsCompleted(true);
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: '#FEF2F2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                      title="Denemeyi Bitir"
+                    >
+                      Bitir
+                    </button>
+                  ) : (
+                    <button
+                      style={styles.quizMenuButton}
+                      title="Seçenekler"
+                    >
+                      <MoreVertical size={18} color="#111" />
+                    </button>
+                  )}
                 </div>
 
                 {/* İlerleme Çubuğu */}
@@ -1644,6 +2163,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <div
                     style={{
                       ...styles.cardProgressBarFill,
+                      backgroundColor: isDenemeMode ? '#D97706' : undefined,
                       width: `${((currentIndex + 1) / questions.length) * 100}%`,
                     }}
                   />
@@ -1651,8 +2171,23 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
                 {/* Soru Kartı */}
                 <div style={styles.questionCard}>
-                  <div style={styles.questionLabel}>
-                    SORU {String(currentIndex + 1).padStart(2, '0')}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <div style={styles.questionLabel}>
+                      {isDenemeMode ? `DENEME SORUSU ${String(currentIndex + 1).padStart(2, '0')}` : `SORU ${String(currentIndex + 1).padStart(2, '0')}`}
+                    </div>
+                    {currentQ?.subjectTitle && (
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 9px',
+                        borderRadius: '6px',
+                        backgroundColor: '#EEF2FF',
+                        color: '#4F46E5',
+                        border: '1px solid #C7D2FE',
+                      }}>
+                        {currentQ.subjectTitle} • {currentQ.topicTitle || 'Karma'}
+                      </span>
+                    )}
                   </div>
                   <div style={styles.questionText}>{currentQ?.questionText}</div>
                 </div>
@@ -1987,6 +2522,189 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             >
               Tamam, Anladım
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* DENEME MODU BAŞLATMA & SÜRE AYARI MODALI */}
+      {showDenemeSetupModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.72)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px',
+          backdropFilter: 'blur(4px)',
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '20px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            position: 'relative',
+          }}>
+            {/* Kapat butonu */}
+            <button
+              onClick={() => setShowDenemeSetupModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#94A3B8',
+                padding: '4px',
+                borderRadius: '8px',
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Başlık & İkon */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                backgroundColor: '#FEF3C7',
+                color: '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <Timer size={24} />
+              </div>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '10.5px', fontWeight: 700 }}>
+                  <Zap size={11} />
+                  <span>KPSS SİMÜLASYONU</span>
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: '2px 0 0 0' }}>
+                  20 Soruluk Deneme Sınavı
+                </h3>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5, marginBottom: '18px' }}>
+              Tüm konulardan (Türkçe, Matematik, Tarih, Coğrafya, Vatandaşlık, Güncel Bilgiler) dengeli olarak seçilen <b>20 soru</b> ile kendinizi sınav temposunda test edin.
+            </p>
+
+            {/* Süre Seçimi */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                ⏱️ Süre Modu Seçin:
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                {[
+                  { value: 20, label: '20 Dakika', sub: 'Hızlı tempo (1 dk/soru)' },
+                  { value: 25, label: '25 Dakika ⭐', sub: 'Önerilen KPSS temposu' },
+                  { value: 30, label: '30 Dakika', sub: 'Rahat tempo (1.5 dk/soru)' },
+                  { value: 0, label: 'Süresiz', sub: 'Kronometre ile serbest' },
+                ].map((opt) => {
+                  const isSelected = denemeDurationMinutes === opt.value;
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => setDenemeDurationMinutes(opt.value)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid #D97706' : '1px solid #E2E8F0',
+                        backgroundColor: isSelected ? '#FFFBEB' : '#F8FAFC',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? '#92400E' : '#1E293B' }}>
+                        {opt.label}
+                      </div>
+                      <div style={{ fontSize: '11px', color: isSelected ? '#B45309' : '#64748B', marginTop: '2px' }}>
+                        {opt.sub}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Özellikler Özeti */}
+            <div style={{
+              backgroundColor: '#F8FAFC',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '20px',
+              border: '1px solid #F1F5F9',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}>
+              <div style={{ fontSize: '11.5px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Check size={14} color="#16A34A" />
+                <span>Test anında süreyi duraklatabilir veya erken bitirebilirsiniz.</span>
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Check size={14} color="#16A34A" />
+                <span>Sınav bitiminde ders bazlı başarı ve hız temposu analizi verilir.</span>
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Check size={14} color="#16A34A" />
+                <span>Yanlış çözülen sorular otomatik Hata Havuzu'na kaydedilir.</span>
+              </div>
+            </div>
+
+            {/* Aksiyon Butonları */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowDenemeSetupModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStartDenemeExam(denemeDurationMinutes)}
+                style={{
+                  flex: 2,
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: '#D97706',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(217, 119, 6, 0.35)',
+                }}
+              >
+                <Play size={16} fill="#FFFFFF" />
+                <span>Denemeyi Başlat</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -3863,6 +4581,75 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#FEE2E2',
     padding: '3px 8px',
     borderRadius: '6px',
+  },
+  denemeHeroBanner: {
+    background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%)',
+    borderRadius: '16px',
+    padding: '20px 24px',
+    color: '#FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '16px',
+    marginBottom: '20px',
+    boxShadow: '0 10px 25px -5px rgba(67, 56, 202, 0.3)',
+    flexWrap: 'wrap',
+  },
+  denemeHeroBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    backgroundColor: '#F59E0B',
+    color: '#78350F',
+    padding: '3px 9px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: 800,
+    letterSpacing: '0.3px',
+    marginBottom: '8px',
+  },
+  denemeHeroTitle: {
+    fontSize: '18px',
+    fontWeight: 800,
+    color: '#FFFFFF',
+    marginBottom: '4px',
+    letterSpacing: '-0.3px',
+  },
+  denemeHeroDesc: {
+    fontSize: '13px',
+    color: '#C7D2FE',
+    lineHeight: 1.4,
+    maxWidth: '480px',
+    marginBottom: '10px',
+  },
+  denemeHeroPillsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  denemeHeroPill: {
+    fontSize: '11px',
+    fontWeight: 600,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    color: '#EEF2FF',
+    padding: '2px 8px',
+    borderRadius: '6px',
+  },
+  denemeHeroButton: {
+    backgroundColor: '#FFFFFF',
+    color: '#1E1B4B',
+    padding: '12px 22px',
+    borderRadius: '12px',
+    border: 'none',
+    fontWeight: 800,
+    fontSize: '14px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexShrink: 0,
+    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
   },
   mobileBottomNav: {
     display: 'none',
