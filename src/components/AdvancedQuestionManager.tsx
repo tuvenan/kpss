@@ -1607,30 +1607,30 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                       <SlidersHorizontal size={14} color="#4F46E5" />
                       HEDEF SORU BANKASI VE HİYERARŞİ (ZORUNLU)
                     </span>
-                    {modalTopicId && (
+                    {modalBankId && modalBanksList.find(b => b.id === modalBankId) && (
                       <span style={{
                         fontSize: '11px',
                         fontWeight: 700,
-                        padding: '2px 8px',
+                        padding: '3px 10px',
                         borderRadius: '6px',
-                        backgroundColor: ((modalTopicsList.find(t => t.id === modalTopicId)?.questionCount || 0) >= 20) ? '#DCFCE7' : '#FEE2E2',
-                        color: ((modalTopicsList.find(t => t.id === modalTopicId)?.questionCount || 0) >= 20) ? '#166534' : '#991B1B',
+                        backgroundColor: ((modalBanksList.find(b => b.id === modalBankId)?.questionCount || 0) >= 20) ? '#DCFCE7' : '#FEE2E2',
+                        color: ((modalBanksList.find(b => b.id === modalBankId)?.questionCount || 0) >= 20) ? '#166534' : '#991B1B',
                       }}>
-                        {((modalTopicsList.find(t => t.id === modalTopicId)?.questionCount || 0) >= 20)
-                          ? `Yayında (${modalTopicsList.find(t => t.id === modalTopicId)?.questionCount || 0} Soru)`
-                          : `Hazırlıkta (${modalTopicsList.find(t => t.id === modalTopicId)?.questionCount || 0}/20 Soru)`}
+                        {((modalBanksList.find(b => b.id === modalBankId)?.questionCount || 0) >= 20)
+                          ? `Banka Yayında (${modalBanksList.find(b => b.id === modalBankId)?.questionCount || 0} Soru)`
+                          : `Banka Hazırlıkta (${modalBanksList.find(b => b.id === modalBankId)?.questionCount || 0}/20 Soru)`}
                       </span>
                     )}
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
                     {/* 1. Ders */}
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <label style={styles.fieldLabel}>1. Ders:</label>
                       <select
                         value={modalSubjectId}
                         onChange={(e) => handleModalSubjectChange(e.target.value)}
-                        style={styles.dropdown}
+                        style={{ ...styles.dropdown, width: '100%', maxWidth: '100%' }}
                       >
                         {subjects.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -1641,12 +1641,12 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                     </div>
 
                     {/* 2. Ünite */}
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <label style={styles.fieldLabel}>2. Ünite:</label>
                       <select
                         value={modalUnitId}
                         onChange={(e) => handleModalUnitChange(e.target.value)}
-                        style={styles.dropdown}
+                        style={{ ...styles.dropdown, width: '100%', maxWidth: '100%' }}
                         disabled={modalUnitsList.length === 0}
                       >
                         {modalUnitsList.map((u) => (
@@ -1658,13 +1658,15 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                     </div>
 
                     {/* 3. Alt Konu / Kazanım */}
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <label style={styles.fieldLabel}>3. Alt Konu / Kazanım:</label>
                       <select
                         value={modalTopicId}
                         onChange={(e) => handleModalTopicChange(e.target.value)}
                         style={{
                           ...styles.dropdown,
+                          width: '100%',
+                          maxWidth: '100%',
                           borderColor: !modalTopicId ? '#EF4444' : '#CBD5E1',
                           backgroundColor: !modalTopicId ? '#FEF2F2' : '#FFFFFF',
                         }}
@@ -1683,13 +1685,15 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                     </div>
 
                     {/* 4. Soru Bankası */}
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <label style={styles.fieldLabel}>4. Soru Bankası:</label>
                       <select
                         value={modalBankId}
                         onChange={(e) => setModalBankId(e.target.value)}
                         style={{
                           ...styles.dropdown,
+                          width: '100%',
+                          maxWidth: '100%',
                           borderColor: !modalBankId ? '#EF4444' : '#CBD5E1',
                           backgroundColor: !modalBankId ? '#FEF2F2' : '#FFFFFF',
                           fontWeight: 600,
@@ -2257,6 +2261,9 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#475569',
   },
   dropdown: {
+    width: '100%',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
     padding: '8px 12px',
     borderRadius: '8px',
     border: '1px solid #CBD5E1',
@@ -2264,7 +2271,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     color: '#0F172A',
     outline: 'none',
-    minWidth: '160px',
   },
   textInput: {
     width: '100%',
@@ -2537,8 +2543,9 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#FFFFFF',
     borderRadius: '16px',
     padding: '24px',
-    maxWidth: '680px',
+    maxWidth: '840px',
     width: '100%',
+    boxSizing: 'border-box',
     maxHeight: '92vh',
     overflowY: 'auto',
     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
