@@ -1,13 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
+﻿import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://lcmfscnvhhybeetjskyg.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_In9IvDBoRP6kCAo093CL3Q_nkbmzDK7';
+const supabaseUrl =
+  (import.meta.env.VITE_SUPABASE_URL as string) ||
+  (import.meta.env.EXPO_PUBLIC_SUPABASE_URL as string) ||
+  'https://lcmfscnvhhybeetjskyg.supabase.co';
 
-/**
- * Supabase bağlantısının geçerli kimlik bilgileriyle yapılandırılıp yapılandırılmadığını kontrol eder.
- */
+const supabaseAnonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
+  (import.meta.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string) ||
+  'sb_publishable_In9IvDBoRP6kCAo093CL3Q_nkbmzDK7';
+
 export const isSupabaseConfigured = (): boolean => {
   return (
     Boolean(supabaseUrl) &&
@@ -17,50 +19,39 @@ export const isSupabaseConfigured = (): boolean => {
   );
 };
 
-/**
- * SSR (Sunucu Taraflı Statik Derleme) güvenli depolama adaptörü.
- * Expo Router statik web derlemesi (Node.js) esnasında window tanımsız olduğu için
- * doğrudan window.localStorage'a erişilmesini engeller.
- */
-const safeStorage = {
-  getItem: async (key: string): Promise<string | null> => {
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return null;
-    }
-    try {
-      return await AsyncStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem: async (key: string, value: string): Promise<void> => {
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return;
-    }
-    try {
-      await AsyncStorage.setItem(key, value);
-    } catch {}
-  },
-  removeItem: async (key: string): Promise<void> => {
-    if (Platform.OS === 'web' && typeof window === 'undefined') {
-      return;
-    }
-    try {
-      await AsyncStorage.removeItem(key);
-    } catch {}
-  },
-};
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * KPSS Çoklu Platform (Mobil & Web & Admin) Supabase İstemcisi
+ * Y├Ânetici yetkili istemcisi (Admin Client).
+ * E─şer kullan─▒c─▒ veya ortam de─şi┼şkenleri 'service_role / secret' anahtar─▒ sa─şlam─▒┼şsa
+ * RLS kurallar─▒n─▒ atlayarak do─şrudan tam yetkiyle ├ğal─▒┼ş─▒r; aksi halde standart istemciyi d├Âner.
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: safeStorage,
-    autoRefreshToken: Platform.OS !== 'web' || typeof window !== 'undefined',
-    persistSession: Platform.OS !== 'web' || typeof window !== 'undefined',
-    detectSessionInUrl: false,
-  },
-});
+export const getAdminClient = (): SupabaseClient => {
+  const secretKey =
+    (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) ||
+    (typeof window !== 'undefined' ? localStorage.getItem('kpss_supabase_secret_key') : null);
+
+  if (secretKey && secretKey.trim()) {
+    return createClient(supabaseUrl, secretKey.trim());
+  }
+  return supabase;
+};
+
+export const hasAdminSecretKey = (): boolean => {
+  const secretKey =
+    (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) ||
+    (typeof window !== 'undefined' ? localStorage.getItem('kpss_supabase_secret_key') : null);
+  return Boolean(secretKey && secretKey.trim());
+};
+
+export const setAdminSecretKey = (key: string): void => {
+  if (typeof window !== 'undefined') {
+    if (key.trim()) {
+      localStorage.setItem('kpss_supabase_secret_key', key.trim());
+    } else {
+      localStorage.removeItem('kpss_supabase_secret_key');
+    }
+  }
+};
 
 export default supabase;
