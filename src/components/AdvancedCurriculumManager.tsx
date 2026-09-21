@@ -713,8 +713,20 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                           <span style={styles.orderPill}>{topic.topicNumber || idx + 1}</span>
                           <span>{topic.title}</span>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>
-                          🎯 {topic.questionCount || 20} Soru Hedefi
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                          <span style={{ fontSize: '11px', color: '#64748B' }}>
+                            🎯 {topic.questionCount || 0} Soru
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            backgroundColor: (topic.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
+                            color: (topic.questionCount || 0) >= 20 ? '#166534' : '#991B1B',
+                          }}>
+                            {(topic.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta 🔴'}
+                          </span>
                         </div>
                       </div>
 
@@ -875,9 +887,16 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                                   <div key={t.id} style={styles.treeTopicItem}>
                                     <span style={styles.orderPill}>{t.topicNumber}</span>
                                     <span style={{ fontSize: '13px', color: '#334155', flex: 1 }}>{t.title}</span>
-                                    <span style={{ fontSize: '11px', color: '#64748B' }}>
-                                      {t.questionCount || 20} Soru
-                                    </span>
+                                     <span style={{
+                                       fontSize: '11px',
+                                       fontWeight: 600,
+                                       color: (t.questionCount || 0) >= 20 ? '#16A34A' : '#DC2626',
+                                       backgroundColor: (t.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
+                                       padding: '2px 6px',
+                                       borderRadius: '4px',
+                                     }}>
+                                       {t.questionCount || 0} Soru • {(t.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta 🔴'}
+                                     </span>
                                     <button
                                       onClick={() => openEditTopicModal(t)}
                                       style={styles.microBtn}

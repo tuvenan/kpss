@@ -359,7 +359,37 @@ export const api = {
       }
     }
 
+    const isDefaultTopicId = (targetId: string): boolean => {
+      return [
+        'tarih-1-1', 'tarih-1-2', 'tarih-1-3', 'tarih-1-4',
+        'tarih-2-1', 'tarih-2-2', 'tarih-2-3',
+        'tarih-3-1', 'tarih-3-2', 'tarih-3-3',
+        'tarih-4-1', 'tarih-4-2', 'tarih-4-3', 'tarih-4-4',
+        'tarih-5-1', 'tarih-5-2', 'tarih-5-3',
+        'tarih-6-1', 'tarih-6-2', 'tarih-6-3',
+        'turkce-1-1', 'turkce-1-2', 'turkce-1-3', 'turkce-1-4',
+        'turkce-2-1', 'turkce-2-2', 'turkce-2-3', 'turkce-2-4',
+        'turkce-3-1', 'turkce-3-2', 'turkce-4-1', 'turkce-4-2',
+        'mat-1-1', 'mat-1-2', 'mat-1-3', 'mat-1-4',
+        'mat-2-1', 'mat-2-2', 'mat-2-3', 'mat-3-1', 'mat-3-2',
+        'cog-2-1', 'cog-2-2', 'cog-3-1', 'cog-3-2', 'cog-3-3',
+        'vat-1-1', 'vat-1-2', 'vat-2-1', 'vat-2-2', 'vat-3-1', 'vat-3-2', 'vat-3-3', 'vat-4-1', 'vat-4-2',
+        'gun-1-1', 'gun-2-1', '1'
+      ].includes(targetId);
+    };
+
     if (combined.length > 0) {
+      const localQuestions = getLocalQuestions();
+      for (const t of combined) {
+        const qCount = localQuestions.filter(q => q.topicId === t.id).length;
+        if (qCount > 0) {
+          t.questionCount = qCount;
+        } else if (isDefaultTopicId(t.id)) {
+          t.questionCount = 20;
+        } else {
+          t.questionCount = 0;
+        }
+      }
       return combined;
     }
 
@@ -508,14 +538,28 @@ export const api = {
       ],
     };
 
+    let topicsResult: Topic[] = [];
     if (DEFAULT_TOPICS_MAP[unitId]) {
-      return DEFAULT_TOPICS_MAP[unitId];
+      topicsResult = DEFAULT_TOPICS_MAP[unitId];
+    } else {
+      topicsResult = [
+        { id: `${unitId}-topic-1`, unitId, title: '1. Konu Testi', topicNumber: 1, questionCount: 0, isLocked: false, isCompleted: false },
+        { id: `${unitId}-topic-2`, unitId, title: '2. Konu Testi', topicNumber: 2, questionCount: 0, isLocked: false, isCompleted: false },
+      ];
     }
 
-    return [
-      { id: `${unitId}-topic-1`, unitId, title: '1. Konu Testi', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-      { id: `${unitId}-topic-2`, unitId, title: '2. Konu Testi', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-    ];
+    const localQuestions = getLocalQuestions();
+    for (const t of topicsResult) {
+      const qCount = localQuestions.filter(q => q.topicId === t.id).length;
+      if (qCount > 0) {
+        t.questionCount = qCount;
+      } else if (isDefaultTopicId(t.id)) {
+        t.questionCount = 20;
+      } else {
+        t.questionCount = 0;
+      }
+    }
+    return topicsResult;
   },
 
   async getQuestions(id: string): Promise<Question[]> {
@@ -564,17 +608,41 @@ export const api = {
       return combined;
     }
 
-    // Her konu için standart 20 soruluk eksiksiz KPSS test paketi üret
-    return SAMPLE_20_QUESTIONS.map((q, idx) => ({
-      id: `${id}-q-${idx + 1}`,
-      topicId: id,
-      unitId: id,
-      questionNumber: q.questionNumber,
-      questionText: q.questionText,
-      options: q.options,
-      correctOption: q.correctOption,
-      explanation: q.explanation,
-    }));
+    const isDefaultTopicId = (targetId: string): boolean => {
+      return [
+        'tarih-1-1', 'tarih-1-2', 'tarih-1-3', 'tarih-1-4',
+        'tarih-2-1', 'tarih-2-2', 'tarih-2-3',
+        'tarih-3-1', 'tarih-3-2', 'tarih-3-3',
+        'tarih-4-1', 'tarih-4-2', 'tarih-4-3', 'tarih-4-4',
+        'tarih-5-1', 'tarih-5-2', 'tarih-5-3',
+        'tarih-6-1', 'tarih-6-2', 'tarih-6-3',
+        'turkce-1-1', 'turkce-1-2', 'turkce-1-3', 'turkce-1-4',
+        'turkce-2-1', 'turkce-2-2', 'turkce-2-3', 'turkce-2-4',
+        'turkce-3-1', 'turkce-3-2', 'turkce-4-1', 'turkce-4-2',
+        'mat-1-1', 'mat-1-2', 'mat-1-3', 'mat-1-4',
+        'mat-2-1', 'mat-2-2', 'mat-2-3', 'mat-3-1', 'mat-3-2',
+        'cog-2-1', 'cog-2-2', 'cog-3-1', 'cog-3-2', 'cog-3-3',
+        'vat-1-1', 'vat-1-2', 'vat-2-1', 'vat-2-2', 'vat-3-1', 'vat-3-2', 'vat-3-3', 'vat-4-1', 'vat-4-2',
+        'gun-1-1', 'gun-2-1', '1'
+      ].includes(targetId);
+    };
+
+    // Yalnızca standart demo konular için 20 soruluk paket üret
+    if (isDefaultTopicId(id)) {
+      return SAMPLE_20_QUESTIONS.map((q, idx) => ({
+        id: `${id}-q-${idx + 1}`,
+        topicId: id,
+        unitId: id,
+        questionNumber: q.questionNumber,
+        questionText: q.questionText,
+        options: q.options,
+        correctOption: q.correctOption,
+        explanation: q.explanation,
+      }));
+    }
+
+    // Kullanıcı / admin tarafından oluşturulan veya sıfırlanan konular için boş döner (20 sorunun altındakiler yayınlanamaz kuralı için)
+    return [];
   },
 
   async recordWrongAnswer(questionId: string, unitId: string, selectedOption: OptionId, correctOption: OptionId): Promise<void> {
@@ -847,6 +915,7 @@ export const api = {
         const client = getAdminClient();
         const payload: Record<string, any> = {
           unit_id: question.unitId,
+          topic_id: question.topicId,
           question_number: question.questionNumber,
           question_text: question.questionText,
           options: question.options,
@@ -888,6 +957,8 @@ export const api = {
       try {
         const client = getAdminClient();
         const payload: Record<string, any> = {
+          unit_id: question.unitId,
+          topic_id: question.topicId,
           question_text: question.questionText,
           options: question.options,
           correct_option: question.correctOption,
@@ -905,6 +976,39 @@ export const api = {
     }
 
     return { success: true, isLocal: !cloudUpdated, error: cloudError };
+  },
+
+  async adminLoadSamplePackage(topicId: string, unitId?: string): Promise<{ success: boolean; count: number }> {
+    const listToSave: Question[] = SAMPLE_20_QUESTIONS.map((q, idx) => ({
+      id: `${topicId}-sample-${Date.now()}-${idx + 1}`,
+      topicId,
+      unitId,
+      questionNumber: idx + 1,
+      questionText: q.questionText,
+      options: q.options,
+      correctOption: q.correctOption,
+      explanation: q.explanation,
+      difficulty: 'Orta',
+    }));
+
+    for (const q of listToSave) {
+      saveLocalQuestion(q);
+      if (isSupabaseConfigured()) {
+        try {
+          const client = getAdminClient();
+          await client.from('questions').insert({
+            unit_id: unitId,
+            topic_id: topicId,
+            question_number: q.questionNumber,
+            question_text: q.questionText,
+            options: q.options,
+            correct_option: q.correctOption,
+            explanation: q.explanation,
+          });
+        } catch {}
+      }
+    }
+    return { success: true, count: listToSave.length };
   },
 
   async adminUpdateTopic(id: string, title: string, topicNumber?: number): Promise<{ success: boolean; isLocal?: boolean; error?: string }> {

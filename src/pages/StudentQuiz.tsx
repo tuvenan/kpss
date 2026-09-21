@@ -36,6 +36,7 @@ import {
   BarChart2,
   AlertTriangle,
   Settings,
+  Lock,
 } from 'lucide-react';
 
 export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavigateAdmin }) => {
@@ -45,6 +46,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [unpublishedModalInfo, setUnpublishedModalInfo] = useState<{ topicTitle: string; questionCount: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'home' | 'subjects' | 'errors' | 'profile' | 'settings'>('home');
   const [userProfile, setUserProfile] = useState<UserProfile>(() => userProfileService.getProfile());
   const [searchQuery, setSearchQuery] = useState('');
@@ -144,8 +146,15 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   const handleSelectTopic = async (topic: Topic) => {
     if (topic.isLocked) return;
-    setSelectedTopic(topic);
     const qList = await api.getQuestions(topic.id);
+    if (qList.length < 20) {
+      setUnpublishedModalInfo({
+        topicTitle: topic.title,
+        questionCount: qList.length,
+      });
+      return;
+    }
+    setSelectedTopic(topic);
     setQuestions(qList);
     setViewState('unit-detail');
   };
@@ -1326,20 +1335,52 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {topics.map((topic, index) => {
                 const formattedNumber = String(topic.topicNumber || index + 1).padStart(2, '0');
+                const isUnder20 = (topic.questionCount ?? 0) < 20;
                 return (
                   <div
                     key={topic.id}
                     onClick={() => handleSelectTopic(topic)}
-                    style={styles.unitCard}
+                    style={{
+                      ...styles.unitCard,
+                      opacity: isUnder20 ? 0.8 : 1,
+                      cursor: 'pointer',
+                    }}
                   >
-                    <div style={styles.unitNumberBadge}>
-                      <span style={styles.unitNumberText}>{formattedNumber}</span>
+                    <div style={{
+                      ...styles.unitNumberBadge,
+                      backgroundColor: isUnder20 ? '#F1F5F9' : undefined,
+                    }}>
+                      <span style={{
+                        ...styles.unitNumberText,
+                        color: isUnder20 ? '#94A3B8' : undefined,
+                      }}>
+                        {formattedNumber}
+                      </span>
                     </div>
                     <div style={styles.unitInfo}>
-                      <div style={styles.unitName}>{topic.title}</div>
-                      <div style={styles.unitQuestionText}>{topic.questionCount || 20} Soru • Test</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={styles.unitName}>{topic.title}</div>
+                        {isUnder20 && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: '#FEF2F2',
+                            color: '#DC2626',
+                            border: '1px solid #FECACA',
+                          }}>
+                            🔒 Hazırlık Aşamasında ({topic.questionCount || 0}/20 Soru)
+                          </span>
+                        )}
+                      </div>
+                      <div style={styles.unitQuestionText}>
+                        {isUnder20
+                          ? `${topic.questionCount || 0} Soru • Henüz Yayınlanmadı (Hazırlıkta)`
+                          : `${topic.questionCount || 20} Soru • Test`}
+                      </div>
                     </div>
-                    <ChevronRight size={18} color="#666" />
+                    {isUnder20 ? <Lock size={18} color="#94A3B8" /> : <ChevronRight size={18} color="#666" />}
                   </div>
                 );
               })}
@@ -1401,12 +1442,33 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
             {/* Sabit Alt Teste Başla Butonu */}
             <div style={styles.footerContainer}>
-              <button
-                onClick={handleStartQuiz}
-                style={styles.startButton}
-              >
-                Teste Başla
-              </button>
+              {questions.length < 20 ? (
+                <div style={{
+                  padding: '14px',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  color: '#991B1B',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  marginBottom: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}>
+                  <Lock size={16} color="#DC2626" />
+                  <span>Soru Bankası Hazırlık Aşamasında (Yayınlanmadı • {questions.length}/20 Soru)</span>
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartQuiz}
+                  style={styles.startButton}
+                >
+                  Teste Başla
+                </button>
+              )}
 
               <div style={styles.footerInfoRow}>
                 <Info size={16} color="#666" style={{ marginRight: '6px' }} />
@@ -1707,6 +1769,91 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </button>
         </nav>
       </div>
+
+      {/* Soru Sayısı 20'nin Altında (Yayınlanmadı) Modalı */}
+      {unpublishedModalInfo && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          backdropFilter: 'blur(4px)',
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '20px',
+            padding: '28px 24px',
+            maxWidth: '460px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: '#FEE2E2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+            }}>
+              <Lock size={30} />
+            </div>
+
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+              Soru Bankası Hazırlık Aşamasında
+            </h3>
+
+            <div style={{
+              fontSize: '14px',
+              color: '#475569',
+              lineHeight: 1.6,
+              marginBottom: '20px',
+              backgroundColor: '#F8FAFC',
+              padding: '14px',
+              borderRadius: '12px',
+              border: '1px solid #E2E8F0',
+              width: '100%',
+            }}>
+              <p style={{ margin: 0, marginBottom: '8px' }}>
+                <b>"{unpublishedModalInfo.topicTitle}"</b> konusunun soru bankasında şu an <b>{unpublishedModalInfo.questionCount}</b> soru bulunmaktadır.
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                KPSS hazırlık ve kalite standartlarımız gereği, <b>20 sorunun altındaki soru bankaları yayına alınmamaktadır.</b> İçerik ekibimiz soruları 20'ye tamamladığında bu test çözüme açılacaktır.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setUnpublishedModalInfo(null)}
+              style={{
+                width: '100%',
+                padding: '13px',
+                backgroundColor: '#0F172A',
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              Tamam, Anladım
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
