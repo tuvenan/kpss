@@ -1,18 +1,18 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { isSupabaseConfigured, hasAdminSecretKey, setAdminSecretKey } from '../services/supabase';
 import { Subject, Unit, Topic, Question, OptionId } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 
 export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavigateStudent }) => {
-  // Yetki Durumu (Sadece Yetkililerin Eri┼şimi)
+  // Yetki Durumu (Sadece Yetkililerin Erişimi)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('kpss_admin_auth') === 'true';
   });
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Veri Durumlar─▒
+  // Veri Durumları
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [units, setUnits] = useState<Unit[]>([]);
@@ -22,7 +22,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeTab, setActiveTab] = useState<'packages' | 'subjects_units' | 'error_pool'>('packages');
 
-  // Form Durumlar─▒
+  // Form Durumları
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [newUnitTitle, setNewUnitTitle] = useState('');
   const [newTopicTitle, setNewTopicTitle] = useState('');
@@ -74,13 +74,13 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // G├╝venlik kap─▒s─▒: Varsay─▒lan admin yetki ┼şifresi
+    // Güvenlik kapısı: Varsayılan admin yetki şifresi
     if (passwordInput === 'admin2026' || passwordInput === 'kpss') {
       setIsAuthenticated(true);
       sessionStorage.setItem('kpss_admin_auth', 'true');
       setAuthError('');
     } else {
-      setAuthError('Hatal─▒ yetkili ┼şifresi! (Varsay─▒lan: admin2026 veya kpss)');
+      setAuthError('Hatalı yetkili şifresi! (Varsayılan: admin2026 veya kpss)');
     }
   };
 
@@ -133,11 +133,11 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
     setErrorPoolStats(data);
   };
 
-  // 20 Soruluk ├ûrnek Paketi Y├╝kle
+  // 20 Soruluk Örnek Paketi Yükle
   const handleUploadSample20Package = async () => {
     const targetId = selectedTopicId || selectedUnitId;
     if (!targetId) {
-      alert('L├╝tfen ├Ânce bir ├╝nite veya konu se├ğiniz.');
+      alert('Lütfen önce bir ünite veya konu seçiniz.');
       return;
     }
 
@@ -157,19 +157,19 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
     if (res.success) {
       setPackageMessage({
         type: 'success',
-        text: `Tebrikler! ${res.count} soruluk soru paketi ba┼şar─▒yla y├╝klendi.`,
+        text: `Tebrikler! ${res.count} soruluk soru paketi başarıyla yüklendi.`,
       });
       loadQuestions(targetId);
     } else {
       setPackageMessage({
         type: 'error',
-        text: `Hata: ${res.error || 'Paket y├╝klenemedi.'}`,
+        text: `Hata: ${res.error || 'Paket yüklenemedi.'}`,
       });
     }
   };
 
   const handleDeleteAllUnitQuestions = async () => {
-    if (!confirm('Bu alandaki t├╝m sorular silinecektir. Emin misiniz?')) return;
+    if (!confirm('Bu alandaki tüm sorular silinecektir. Emin misiniz?')) return;
     for (const q of questions) {
       await api.adminDeleteQuestion(q.id);
     }
@@ -213,7 +213,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
       const title = newSubjectTitle.trim();
       if (!title) return;
 
-      console.log('­şÜÇ [AdminPanel] Yeni ders ekleniyor:', { title });
+      console.log('🚀 [AdminPanel] Yeni ders ekleniyor:', { title });
       const res = await api.adminCreateSubject(title);
 
       setNewSubjectTitle('');
@@ -222,28 +222,28 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
       if (res.isLocal) {
         setPackageMessage({
           type: 'success',
-          text: `"${title}" dersi ba┼şar─▒yla eklendi! (Yerel veritaban─▒na kaydedildi)`,
+          text: `"${title}" dersi başarıyla eklendi! (Yerel veritabanına kaydedildi)`,
         });
       } else {
         setPackageMessage({
           type: 'success',
-          text: `"${title}" dersi Supabase bulut veritaban─▒na ba┼şar─▒yla eklendi!`,
+          text: `"${title}" dersi Supabase bulut veritabanına başarıyla eklendi!`,
         });
       }
     } catch (err) {
-      console.error('­şÆÑ [AdminPanel] handleCreateSubject i├ğerisinde beklenmeyen hata:', err);
-      alert('Ders ekleme i┼şlemi s─▒ras─▒nda beklenmeyen bir hata meydana geldi.');
+      console.error('💥 [AdminPanel] handleCreateSubject içerisinde beklenmeyen hata:', err);
+      alert('Ders ekleme işlemi sırasında beklenmeyen bir hata meydana geldi.');
     }
   };
 
   const handleDeleteSubject = async (id: string) => {
     try {
-      if (!confirm('Bu dersi silmek istedi─şinize emin misiniz?')) return;
-      console.log('­şùæ´©Å [AdminPanel] Ders siliniyor:', { id });
+      if (!confirm('Bu dersi silmek istediğinize emin misiniz?')) return;
+      console.log('🗑️ [AdminPanel] Ders siliniyor:', { id });
       await api.adminDeleteSubject(id);
       await loadSubjects();
     } catch (err) {
-      console.error('­şÆÑ [AdminPanel] handleDeleteSubject hatas─▒:', err);
+      console.error('💥 [AdminPanel] handleDeleteSubject hatası:', err);
     }
   };
 
@@ -251,12 +251,12 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
     try {
       const title = newUnitTitle.trim();
       if (!title || !selectedSubjectId) {
-        alert('L├╝tfen ├╝nite ba┼şl─▒─ş─▒ giriniz ve bir dersin se├ğili oldu─şundan emin olunuz.');
+        alert('Lütfen ünite başlığı giriniz ve bir dersin seçili olduğundan emin olunuz.');
         return;
       }
 
       const unitNumber = units.length + 1;
-      console.log('­şÜÇ [AdminPanel] Yeni ├╝nite ekleniyor:', {
+      console.log('🚀 [AdminPanel] Yeni ünite ekleniyor:', {
         subjectId: selectedSubjectId,
         title,
         unitNumber,
@@ -270,33 +270,33 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
       if (res.isLocal) {
         setPackageMessage({
           type: 'success',
-          text: `"${title}" ├╝nitesi ba┼şar─▒yla eklendi! (Yerel veritaban─▒na kaydedildi)`,
+          text: `"${title}" ünitesi başarıyla eklendi! (Yerel veritabanına kaydedildi)`,
         });
       } else {
         setPackageMessage({
           type: 'success',
-          text: `"${title}" ├╝nitesi Supabase bulut veritaban─▒na ba┼şar─▒yla eklendi!`,
+          text: `"${title}" ünitesi Supabase bulut veritabanına başarıyla eklendi!`,
         });
       }
     } catch (err) {
-      console.error('­şÆÑ [AdminPanel] handleCreateUnit i├ğerisinde beklenmeyen hata:', err);
-      alert('├£nite ekleme i┼şlemi s─▒ras─▒nda beklenmeyen bir hata meydana geldi.');
+      console.error('💥 [AdminPanel] handleCreateUnit içerisinde beklenmeyen hata:', err);
+      alert('Ünite ekleme işlemi sırasında beklenmeyen bir hata meydana geldi.');
     }
   };
 
   const handleDeleteUnit = async (id: string) => {
     try {
-      if (!confirm('Bu ├╝niteyi silmek istedi─şinize emin misiniz?')) return;
-      console.log('­şùæ´©Å [AdminPanel] ├£nite siliniyor:', { id });
+      if (!confirm('Bu üniteyi silmek istediğinize emin misiniz?')) return;
+      console.log('🗑️ [AdminPanel] Ünite siliniyor:', { id });
       const res = await api.adminDeleteUnit(id);
       if (!res.success) {
-        console.error('ÔØî [AdminPanel] ├£nite silinemedi:', res.error);
-        alert(`├£nite silinemedi: ${res.error}`);
+        console.error('❌ [AdminPanel] Ünite silinemedi:', res.error);
+        alert(`Ünite silinemedi: ${res.error}`);
         return;
       }
       await loadUnits(selectedSubjectId);
     } catch (err) {
-      console.error('­şÆÑ [AdminPanel] handleDeleteUnit hatas─▒:', err);
+      console.error('💥 [AdminPanel] handleDeleteUnit hatası:', err);
     }
   };
 
@@ -304,7 +304,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
     try {
       const title = newTopicTitle.trim();
       if (!title || !selectedUnitId) {
-        alert('L├╝tfen konu ba┼şl─▒─ş─▒ giriniz ve bir ├╝nitenin se├ğili oldu─şundan emin olunuz.');
+        alert('Lütfen konu başlığı giriniz ve bir ünitenin seçili olduğundan emin olunuz.');
         return;
       }
 
@@ -317,23 +317,23 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
       if (res.isLocal) {
         setPackageMessage({
           type: 'success',
-          text: `"${title}" konusu ba┼şar─▒yla eklendi! (Yerel veritaban─▒na kaydedildi)`,
+          text: `"${title}" konusu başarıyla eklendi! (Yerel veritabanına kaydedildi)`,
         });
       } else {
         setPackageMessage({
           type: 'success',
-          text: `"${title}" konusu Supabase bulut veritaban─▒na ba┼şar─▒yla eklendi!`,
+          text: `"${title}" konusu Supabase bulut veritabanına başarıyla eklendi!`,
         });
       }
     } catch (err) {
-      console.error('­şÆÑ [AdminPanel] handleCreateTopic hatas─▒:', err);
-      alert('Konu ekleme s─▒ras─▒nda bir hata meydana geldi.');
+      console.error('💥 [AdminPanel] handleCreateTopic hatası:', err);
+      alert('Konu ekleme sırasında bir hata meydana geldi.');
     }
   };
 
   const handleDeleteTopic = async (id: string) => {
     try {
-      if (!confirm('Bu konuyu silmek istedi─şinize emin misiniz?')) return;
+      if (!confirm('Bu konuyu silmek istediğinize emin misiniz?')) return;
       const res = await api.adminDeleteTopic(id);
       if (!res.success) {
         alert(`Konu silinemedi: ${res.error}`);
@@ -341,25 +341,25 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
       }
       await loadTopics(selectedUnitId);
     } catch (err) {
-      console.error('­şÆÑ [AdminPanel] handleDeleteTopic hatas─▒:', err);
+      console.error('💥 [AdminPanel] handleDeleteTopic hatası:', err);
     }
   };
 
-  // YETK─░ G─░R─░┼Ş EKRANI
+  // YETKİ GİRİŞ EKRANI
   if (!isAuthenticated) {
     return (
       <div style={styles.loginContainer}>
         <div style={styles.loginCard}>
-          <div style={styles.loginBadge}>­şöÆ YETK─░L─░ G─░R─░┼Ş─░</div>
-          <h2 style={{ fontSize: '20px', margin: '12px 0 6px', color: '#111827' }}>KPSS Y├Ânetici Paneli</h2>
+          <div style={styles.loginBadge}>🔒 YETKİLİ GİRİŞİ</div>
+          <h2 style={{ fontSize: '20px', margin: '12px 0 6px', color: '#111827' }}>KPSS Yönetici Paneli</h2>
           <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 20px' }}>
-            Bu alana sadece yetkili e─şitim ve i├ğerik y├Âneticileri eri┼şebilir.
+            Bu alana sadece yetkili eğitim ve içerik yöneticileri erişebilir.
           </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <input
               type="password"
-              placeholder="Yetkili Giri┼ş ┼Şifresi"
+              placeholder="Yetkili Giriş Şifresi"
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
               style={styles.loginInput}
@@ -369,30 +369,30 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
             {authError && <div style={styles.loginError}>{authError}</div>}
 
             <button type="submit" style={styles.loginButton}>
-              Giri┼ş Yap ÔåÆ
+              Giriş Yap →
             </button>
           </form>
 
           <button onClick={onNavigateStudent} style={styles.backToStudentBtn}>
-            ÔåÉ ├û─şrenci Aray├╝z├╝ne D├Ân
+            ← Öğrenci Arayüzüne Dön
           </button>
         </div>
       </div>
     );
   }
 
-  // ADM─░N PANEL─░ ANA G├ûR├£N├£M├£
+  // ADMİN PANELİ ANA GÖRÜNÜMÜ
   return (
     <div style={styles.adminOuter}>
-      {/* ├£st Y├Ânetim ├çubu─şu */}
+      {/* Üst Yönetim Çubuğu */}
       <header style={styles.adminHeader}>
         <div style={styles.adminHeaderInner}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={styles.adminTag}>ADM─░N</span>
-            <span style={{ fontWeight: 'bold', fontSize: '16px' }}>KPSS ─░├ğerik & Soru Y├Ânetim Paneli</span>
+            <span style={styles.adminTag}>ADMİN</span>
+            <span style={{ fontWeight: 'bold', fontSize: '16px' }}>KPSS İçerik & Soru Yönetim Paneli</span>
             <span style={{ ...styles.cloudDot, backgroundColor: isCloud ? '#16A34A' : '#EAB308' }}></span>
             <span style={{ fontSize: '12px', color: '#6B7280' }}>
-              {isCloud ? 'Supabase Ba─şl─▒' : 'Yerel Mod'}
+              {isCloud ? 'Supabase Bağlı' : 'Yerel Mod'}
             </span>
           </div>
 
@@ -407,13 +407,13 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                 fontWeight: isSecretActive ? 'bold' : 'normal',
               }}
             >
-              {isSecretActive ? '­şöæ Secret Key Aktif' : '­şöæ Secret Key (RLS Bypass)'}
+              {isSecretActive ? '🔑 Secret Key Aktif' : '🔑 Secret Key (RLS Bypass)'}
             </button>
             <button onClick={onNavigateStudent} style={styles.headerBtn}>
-              ├û─şrenci G├Âr├╝n├╝m├╝ ÔåÆ
+              Öğrenci Görünümü →
             </button>
             <button onClick={handleLogout} style={styles.logoutBtn}>
-              ├ç─▒k─▒┼ş
+              Çıkış
             </button>
           </div>
         </div>
@@ -426,29 +426,29 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
             onClick={() => setActiveTab('packages')}
             style={{ ...styles.tabBtn, borderBottomColor: activeTab === 'packages' ? '#111827' : 'transparent', fontWeight: activeTab === 'packages' ? 'bold' : 'normal' }}
           >
-            ­şôĞ 20 Soruluk Paket Y├Ânetimi
+            📦 20 Soruluk Paket Yönetimi
           </button>
           <button
             onClick={() => setActiveTab('subjects_units')}
             style={{ ...styles.tabBtn, borderBottomColor: activeTab === 'subjects_units' ? '#111827' : 'transparent', fontWeight: activeTab === 'subjects_units' ? 'bold' : 'normal' }}
           >
-            ­şôÜ Ders, ├£nite & Konu D├╝zenleyici
+            📚 Ders, Ünite & Konu Düzenleyici
           </button>
           <button
             onClick={() => setActiveTab('error_pool')}
             style={{ ...styles.tabBtn, borderBottomColor: activeTab === 'error_pool' ? '#111827' : 'transparent', fontWeight: activeTab === 'error_pool' ? 'bold' : 'normal' }}
           >
-            ÔÜá´©Å Hata Havuzu Analiti─şi
+            ⚠️ Hata Havuzu Analitiği
           </button>
         </div>
       </div>
 
-      {/* ─░├ğerik Alan─▒ */}
+      {/* İçerik Alanı */}
       <main style={styles.adminMain}>
-        {/* 1. 20 SORULUK PAKET Y├ûNET─░M─░ */}
+        {/* 1. 20 SORULUK PAKET YÖNETİMİ */}
         {activeTab === 'packages' && (
           <div style={styles.tabContent}>
-            {/* ├£nite Se├ğim Bar─▒ */}
+            {/* Ünite Seçim Barı */}
             <div style={styles.selectorCard}>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <div>
@@ -465,7 +465,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                 </div>
 
                 <div>
-                  <label style={styles.label}>├£nite:</label>
+                  <label style={styles.label}>Ünite:</label>
                   <select
                     value={selectedUnitId}
                     onChange={(e) => setSelectedUnitId(e.target.value)}
@@ -493,17 +493,17 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                 )}
               </div>
 
-              {/* H─▒zl─▒ Paket Aksiyonlar─▒ */}
+              {/* Hızlı Paket Aksiyonları */}
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={handleUploadSample20Package} style={styles.uploadPackageBtn}>
-                  ÔÜí 20 Soruluk Haz─▒r Paketi Y├╝kle
+                  ⚡ 20 Soruluk Hazır Paketi Yükle
                 </button>
                 <button onClick={() => setShowQuestionModal(true)} style={styles.addQuestionBtn}>
                   + Tekil Soru Ekle
                 </button>
                 {questions.length > 0 && (
                   <button onClick={handleDeleteAllUnitQuestions} style={styles.deleteAllBtn}>
-                    T├╝m├╝n├╝ Sil
+                    Tümünü Sil
                   </button>
                 )}
               </div>
@@ -519,7 +519,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
             <div style={styles.tableBox}>
               <div style={styles.tableHeaderRow}>
                 <div style={{ fontWeight: 'bold', fontSize: '15px' }}>
-                  {selectedTopicId ? 'Se├ğili Konudaki Sorular' : 'Se├ğili ├£nitedeki Sorular'} ({questions.length} / 20 Soru)
+                  {selectedTopicId ? 'Seçili Konudaki Sorular' : 'Seçili Ünitedeki Sorular'} ({questions.length} / 20 Soru)
                 </div>
                 <div style={{ fontSize: '12px', color: '#6B7280' }}>
                   Supabase tablosu: questions &bull; {selectedTopicId ? `topic_id: ${selectedTopicId}` : `unit_id: ${selectedUnitId}`}
@@ -528,7 +528,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
 
               {questions.length === 0 ? (
                 <div style={{ padding: '36px', textAlign: 'center', color: '#9CA3AF' }}>
-                  Bu alanda hen├╝z soru bulunmuyor. Yukar─▒daki butonu kullanarak 20 soruluk paket y├╝kleyebilirsiniz.
+                  Bu alanda henüz soru bulunmuyor. Yukarıdaki butonu kullanarak 20 soruluk paket yükleyebilirsiniz.
                 </div>
               ) : (
                 <div style={styles.questionRowsList}>
@@ -538,7 +538,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px' }}>{q.questionText}</div>
                         <div style={{ fontSize: '12px', color: '#16A34A', fontWeight: 'bold' }}>
-                          Do─şru ┼Ş─▒k: {q.correctOption} &bull; A├ğ─▒klama: {q.explanation}
+                          Doğru Şık: {q.correctOption} &bull; Açıklama: {q.explanation}
                         </div>
                       </div>
                       <button onClick={() => handleDeleteSingleQuestion(q.id)} style={styles.deleteSmallBtn}>
@@ -552,7 +552,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
           </div>
         )}
 
-        {/* 2. DERS, ├£N─░TE & KONU Y├ûNET─░M─░ */}
+        {/* 2. DERS, ÜNİTE & KONU YÖNETİMİ */}
         {activeTab === 'subjects_units' && (
           <div style={styles.tabContent}>
             <div style={styles.tripleGrid}>
@@ -562,7 +562,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                   <input
                     type="text"
-                    placeholder="Yeni Ders Ad─▒"
+                    placeholder="Yeni Ders Adı"
                     value={newSubjectTitle}
                     onChange={(e) => setNewSubjectTitle(e.target.value)}
                     style={styles.textInput}
@@ -601,20 +601,20 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                 </div>
               </div>
 
-              {/* ├£niteler */}
+              {/* Üniteler */}
               <div style={styles.panelCard}>
                 <h3 style={styles.cardHeading}>
-                  ├£niteler ({units.length})
+                  Üniteler ({units.length})
                   {selectedSubjectId && (
                     <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#6B7280', display: 'block', marginTop: '2px' }}>
-                      Se├ğili Ders: {subjects.find((s) => s.id === selectedSubjectId)?.title || selectedSubjectId}
+                      Seçili Ders: {subjects.find((s) => s.id === selectedSubjectId)?.title || selectedSubjectId}
                     </span>
                   )}
                 </h3>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                   <input
                     type="text"
-                    placeholder="Yeni ├£nite Ad─▒"
+                    placeholder="Yeni Ünite Adı"
                     value={newUnitTitle}
                     onChange={(e) => setNewUnitTitle(e.target.value)}
                     style={styles.textInput}
@@ -638,7 +638,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                       <div>
                         <span style={{ fontWeight: 600 }}>{u.unitNumber}. {u.title}</span>
                         <span style={{ fontSize: '11px', color: u.isCompleted ? '#16A34A' : '#6B7280', marginLeft: '6px' }}>
-                          {u.isCompleted ? 'Ô£ô Tamamland─▒' : u.isLocked ? 'Kilitli' : 'A├ğ─▒k'}
+                          {u.isCompleted ? '✓ Tamamlandı' : u.isLocked ? 'Kilitli' : 'Açık'}
                         </span>
                       </div>
                       <button
@@ -661,14 +661,14 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                   Konular ({topics.length})
                   {selectedUnitId && (
                     <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#6B7280', display: 'block', marginTop: '2px' }}>
-                      Se├ğili ├£nite: {units.find((u) => u.id === selectedUnitId)?.title || selectedUnitId}
+                      Seçili Ünite: {units.find((u) => u.id === selectedUnitId)?.title || selectedUnitId}
                     </span>
                   )}
                 </h3>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                   <input
                     type="text"
-                    placeholder="Yeni Konu Ad─▒"
+                    placeholder="Yeni Konu Adı"
                     value={newTopicTitle}
                     onChange={(e) => setNewTopicTitle(e.target.value)}
                     style={styles.textInput}
@@ -712,11 +712,11 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
           </div>
         )}
 
-        {/* 3. HATA HAVUZU ANAL─░T─░─Ş─░ */}
+        {/* 3. HATA HAVUZU ANALİTİĞİ */}
         {activeTab === 'error_pool' && (
           <div style={styles.tabContent}>
             <div style={styles.panelCard}>
-              <h3 style={styles.cardHeading}>├û─şrenci Hata Analiti─şi (Supabase 'error_pool')</h3>
+              <h3 style={styles.cardHeading}>Öğrenci Hata Analitiği (Supabase 'error_pool')</h3>
               <div style={{ display: 'flex', gap: '20px', margin: '14px 0' }}>
                 <div style={styles.statBox}>
                   <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>
@@ -728,7 +728,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                   <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16A34A' }}>
                     {errorPoolStats?.resolvedCount ?? 0}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>D├╝zeltilen Sorular</div>
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Düzeltilen Sorular</div>
                 </div>
               </div>
 
@@ -742,7 +742,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                           {item.questions?.question_text || `Soru ID: ${item.question_id}`}
                         </div>
                         <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                          Se├ğilen: {item.selected_option} &bull; Do─şru: {item.correct_option} &bull; Durum: {item.is_resolved ? '├ç├Âz├╝ld├╝' : 'Bekliyor'}
+                          Seçilen: {item.selected_option} &bull; Doğru: {item.correct_option} &bull; Durum: {item.is_resolved ? 'Çözüldü' : 'Bekliyor'}
                         </div>
                       </div>
                     </div>
@@ -750,7 +750,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                 </div>
               ) : (
                 <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF' }}>
-                  Kay─▒tl─▒ ├Â─şrenci hatas─▒ bulunmuyor.
+                  Kayıtlı öğrenci hatası bulunmuyor.
                 </div>
               )}
             </div>
@@ -758,14 +758,14 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
         )}
       </main>
 
-      {/* TEK─░L SORU EKLEME MODALI */}
+      {/* TEKİL SORU EKLEME MODALI */}
       {showQuestionModal && (
         <div style={styles.modalBackdrop}>
           <div style={styles.modalCard}>
             <h3 style={{ margin: '0 0 12px' }}>
               Yeni Soru Ekle
               <span style={{ display: 'block', fontSize: '13px', fontWeight: 'normal', color: '#6B7280', marginTop: '4px' }}>
-                {units.find((u) => u.id === selectedUnitId)?.title || 'Se├ğili ├£nite'}
+                {units.find((u) => u.id === selectedUnitId)?.title || 'Seçili Ünite'}
                 {selectedTopicId && ` > ${topics.find((t) => t.id === selectedTopicId)?.title || ''}`}
               </span>
             </h3>
@@ -777,15 +777,15 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
             />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '12px 0' }}>
-              <input type="text" placeholder="A ┼Ş─▒kk─▒" value={formA} onChange={(e) => setFormA(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="B ┼Ş─▒kk─▒" value={formB} onChange={(e) => setFormB(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="C ┼Ş─▒kk─▒" value={formC} onChange={(e) => setFormC(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="D ┼Ş─▒kk─▒" value={formD} onChange={(e) => setFormD(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="E ┼Ş─▒kk─▒" value={formE} onChange={(e) => setFormE(e.target.value)} style={styles.modalInput} />
+              <input type="text" placeholder="A Şıkkı" value={formA} onChange={(e) => setFormA(e.target.value)} style={styles.modalInput} />
+              <input type="text" placeholder="B Şıkkı" value={formB} onChange={(e) => setFormB(e.target.value)} style={styles.modalInput} />
+              <input type="text" placeholder="C Şıkkı" value={formC} onChange={(e) => setFormC(e.target.value)} style={styles.modalInput} />
+              <input type="text" placeholder="D Şıkkı" value={formD} onChange={(e) => setFormD(e.target.value)} style={styles.modalInput} />
+              <input type="text" placeholder="E Şıkkı" value={formE} onChange={(e) => setFormE(e.target.value)} style={styles.modalInput} />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <label style={styles.label}>Do─şru ┼Ş─▒k:</label>
+              <label style={styles.label}>Doğru Şık:</label>
               {(['A', 'B', 'C', 'D', 'E'] as OptionId[]).map((opt) => (
                 <button
                   key={opt}
@@ -803,7 +803,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
             </div>
 
             <textarea
-              placeholder="Detayl─▒ ├ç├Âz├╝m A├ğ─▒klamas─▒"
+              placeholder="Detaylı Çözüm Açıklaması"
               value={formExplanation}
               onChange={(e) => setFormExplanation(e.target.value)}
               style={styles.modalTextarea}
@@ -811,7 +811,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
               <button onClick={() => setShowQuestionModal(false)} style={styles.modalCancelBtn}>
-                Vazge├ğ
+                Vazgeç
               </button>
               <button onClick={handleAddSingleQuestion} style={styles.modalSaveBtn}>
                 Kaydet
@@ -825,9 +825,9 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
       {showSecretModal && (
         <div style={styles.modalBackdrop}>
           <div style={{ ...styles.modalCard, maxWidth: '480px' }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: '18px' }}>­şöæ Supabase Secret / Service Role Key</h3>
+            <h3 style={{ margin: '0 0 10px', fontSize: '18px' }}>🔑 Supabase Secret / Service Role Key</h3>
             <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Supabase Dashboard &gt; <strong>Project Settings &rarr; API</strong> sayfas─▒ndaki <code>service_role / secret</code> anahtar─▒n─▒z─▒ buraya yap─▒┼şt─▒rarak RLS g├╝venlik kurallar─▒na tak─▒lmadan do─şrudan veritaban─▒na s─▒n─▒rs─▒z yazma yetkisi kazand─▒rabilirsiniz.
+              Supabase Dashboard &gt; <strong>Project Settings &rarr; API</strong> sayfasındaki <code>service_role / secret</code> anahtarınızı buraya yapıştırarak RLS güvenlik kurallarına takılmadan doğrudan veritabanına sınırsız yazma yetkisi kazandırabilirsiniz.
             </p>
             <input
               type="password"
@@ -853,7 +853,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                   }}
                   style={{ ...styles.modalCancelBtn, color: '#DC2626', borderColor: '#FECACA' }}
                 >
-                  Kald─▒r
+                  Kaldır
                 </button>
               )}
               <button
@@ -864,7 +864,7 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
                     setShowSecretModal(false);
                     setPackageMessage({
                       type: 'success',
-                      text: 'Supabase Secret Key ba┼şar─▒yla kaydedildi! RLS engeli a┼ş─▒ld─▒.',
+                      text: 'Supabase Secret Key başarıyla kaydedildi! RLS engeli aşıldı.',
                     });
                     loadSubjects();
                   }

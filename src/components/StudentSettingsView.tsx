@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { userProfileService, UserProfile } from '../services/userProfileService';
 import {
   User,
@@ -17,7 +17,7 @@ export const StudentSettingsView: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
-  // ┼Şifre Formu
+  // Şifre Formu
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,19 +39,19 @@ export const StudentSettingsView: React.FC = () => {
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword) {
-      setPasswordMessage({ type: 'error', text: 'L├╝tfen mevcut ┼şifrenizi giriniz.' });
+      setPasswordMessage({ type: 'error', text: 'Lütfen mevcut şifrenizi giriniz.' });
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordMessage({ type: 'error', text: 'Yeni ┼şifre en az 6 karakter olmal─▒d─▒r.' });
+      setPasswordMessage({ type: 'error', text: 'Yeni şifre en az 6 karakter olmalıdır.' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: 'error', text: 'Yeni ┼şifreler birbiriyle e┼şle┼şmiyor.' });
+      setPasswordMessage({ type: 'error', text: 'Yeni şifreler birbiriyle eşleşmiyor.' });
       return;
     }
 
-    setPasswordMessage({ type: 'success', text: '┼Şifreniz ba┼şar─▒yla g├╝ncellendi!' });
+    setPasswordMessage({ type: 'success', text: 'Şifreniz başarıyla güncellendi!' });
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -66,59 +66,59 @@ export const StudentSettingsView: React.FC = () => {
   };
 
   const avatarOptions = [
-    { id: 'user-1', label: 'Klasik', emoji: '­şÄô' },
-    { id: 'user-2', label: 'Kitapkurdu', emoji: '­şôÜ' },
-    { id: 'user-3', label: 'Hedef 90+', emoji: '­şÄ»' },
-    { id: 'user-4', label: 'Azimli', emoji: '­şöÑ' },
-    { id: 'user-5', label: '┼Şampiyon', emoji: 'Ô¡É' },
+    { id: 'user-1', label: 'Klasik', emoji: '🎓' },
+    { id: 'user-2', label: 'Kitapkurdu', emoji: '📚' },
+    { id: 'user-3', label: 'Hedef 90+', emoji: '🎯' },
+    { id: 'user-4', label: 'Azimli', emoji: '🔥' },
+    { id: 'user-5', label: 'Şampiyon', emoji: '⭐' },
   ];
 
   return (
     <div style={styles.container}>
-      {/* ├£ST BA┼ŞLIK ALANI */}
+      {/* ÜST BAŞLIK ALANI */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.heading}>Ayarlar &amp; Profil D├╝zenleme</h1>
+          <h1 style={styles.heading}>Ayarlar &amp; Profil Düzenleme</h1>
           <p style={styles.subheading}>
-            Ki┼şisel bilgilerinizi, KPSS s─▒nav hedeflerinizi ve ├ğal─▒┼şma tercihlerinizi buradan ├Âzelle┼ştirin.
+            Kişisel bilgilerinizi, KPSS sınav hedeflerinizi ve çalışma tercihlerinizi buradan özelleştirin.
           </p>
         </div>
 
         <button type="button" onClick={handleSave} style={styles.saveTopBtn}>
           <Save size={16} style={{ marginRight: '8px' }} />
-          De─şi┼şiklikleri Kaydet
+          Değişiklikleri Kaydet
         </button>
       </div>
 
-      {/* BA┼ŞARI B─░LD─░R─░M─░ */}
+      {/* BAŞARI BİLDİRİMİ */}
       {saveSuccess && (
         <div style={styles.successBanner}>
           <Check size={18} color="#16A34A" style={{ marginRight: '10px', flexShrink: 0 }} />
-          <span style={styles.successText}>Profil ve s─▒nav ayarlar─▒n─▒z ba┼şar─▒yla kaydedildi!</span>
+          <span style={styles.successText}>Profil ve sınav ayarlarınız başarıyla kaydedildi!</span>
         </div>
       )}
 
-      {/* 1. B├ûL├£M: K─░┼Ş─░SEL B─░LG─░LER & PROF─░L FOTO─ŞRAFI */}
+      {/* 1. BÖLÜM: KİŞİSEL BİLGİLER & PROFİL FOTOĞRAFI */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
             <User size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>Ki┼şisel Bilgiler &amp; Profil</h2>
-            <p style={styles.cardSubtitle}>G├Âr├╝n├╝m ve ileti┼şim bilgilerinizi g├╝ncelleyin.</p>
+            <h2 style={styles.cardTitle}>Kişisel Bilgiler &amp; Profil</h2>
+            <p style={styles.cardSubtitle}>Görünüm ve iletişim bilgilerinizi güncelleyin.</p>
           </div>
         </div>
 
-        {/* Avatar Se├ğimi */}
+        {/* Avatar Seçimi */}
         <div style={styles.avatarRow}>
           <div style={styles.currentAvatarBig}>
             <span style={{ fontSize: '32px' }}>
-              {avatarOptions.find((a) => a.id === profile.avatarIcon)?.emoji || '­şÄô'}
+              {avatarOptions.find((a) => a.id === profile.avatarIcon)?.emoji || '🎓'}
             </span>
           </div>
           <div style={{ flex: 1 }}>
-            <label style={styles.inputLabel}>Profil Rozeti / Avatar Se├ğimi</label>
+            <label style={styles.inputLabel}>Profil Rozeti / Avatar Seçimi</label>
             <div style={styles.avatarPills}>
               {avatarOptions.map((opt) => {
                 const isSelected = profile.avatarIcon === opt.id;
@@ -143,7 +143,7 @@ export const StudentSettingsView: React.FC = () => {
           </div>
         </div>
 
-        {/* ─░sim & Kullan─▒c─▒ Ad─▒ */}
+        {/* İsim & Kullanıcı Adı */}
         <div style={styles.twoColGrid}>
           <div>
             <label style={styles.inputLabel}>Ad Soyad</label>
@@ -153,14 +153,14 @@ export const StudentSettingsView: React.FC = () => {
                 type="text"
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                placeholder="Ad─▒n─▒z Soyad─▒n─▒z"
+                placeholder="Adınız Soyadınız"
                 style={styles.textInput}
               />
             </div>
           </div>
 
           <div>
-            <label style={styles.inputLabel}>Kullan─▒c─▒ Ad─▒</label>
+            <label style={styles.inputLabel}>Kullanıcı Adı</label>
             <div style={styles.inputGroup}>
               <span style={{ color: '#94A3B8', fontWeight: 600, paddingLeft: '12px', fontSize: '14px' }}>@</span>
               <input
@@ -191,7 +191,7 @@ export const StudentSettingsView: React.FC = () => {
           </div>
 
           <div>
-            <label style={styles.inputLabel}>Telefon Numaras─▒</label>
+            <label style={styles.inputLabel}>Telefon Numarası</label>
             <div style={styles.inputGroup}>
               <Phone size={16} color="#94A3B8" style={styles.groupIcon} />
               <input
@@ -211,43 +211,43 @@ export const StudentSettingsView: React.FC = () => {
           <textarea
             value={profile.bio}
             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-            placeholder="KPSS ├ğal─▒┼şma hedefinizi veya motivasyon c├╝mlenizi yaz─▒n..."
+            placeholder="KPSS çalışma hedefinizi veya motivasyon cümlenizi yazın..."
             rows={3}
             style={styles.textareaInput}
           />
         </div>
       </div>
 
-      {/* 2. B├ûL├£M: KPSS HEDEF & SINAV TERC─░HLER─░ */}
+      {/* 2. BÖLÜM: KPSS HEDEF & SINAV TERCİHLERİ */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
             <Target size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>KPSS S─▒nav─▒ &amp; Hedef Ayarlar─▒</h2>
-            <p style={styles.cardSubtitle}>Haz─▒rland─▒─ş─▒n─▒z s─▒nav t├╝r├╝ne g├Âre analitikleri ve planlar─▒ ┼şekillendirin.</p>
+            <h2 style={styles.cardTitle}>KPSS Sınavı &amp; Hedef Ayarları</h2>
+            <p style={styles.cardSubtitle}>Hazırlandığınız sınav türüne göre analitikleri ve planları şekillendirin.</p>
           </div>
         </div>
 
         <div style={styles.twoColGrid}>
-          {/* S─▒nav T├╝r├╝ */}
+          {/* Sınav Türü */}
           <div>
-            <label style={styles.inputLabel}>Haz─▒rland─▒─ş─▒n─▒z S─▒nav T├╝r├╝</label>
+            <label style={styles.inputLabel}>Hazırlandığınız Sınav Türü</label>
             <select
               value={profile.examType}
               onChange={(e) => setProfile({ ...profile, examType: e.target.value })}
               style={styles.selectInput}
             >
-              <option value="KPSS Lisans (GY-GK)">KPSS Lisans (Genel Yetenek - Genel K├╝lt├╝r)</option>
-              <option value="KPSS ├ûn Lisans">KPSS ├ûn Lisans</option>
-              <option value="KPSS Orta├Â─şretim">KPSS Orta├Â─şretim (Lise D├╝zeyi)</option>
-              <option value="KPSS EKPSS">EKPSS (Engelli Kamu Personeli Se├ğme S─▒nav─▒)</option>
-              <option value="KPSS E─şitim Bilimleri">KPSS E─şitim Bilimleri (├û─şretmenlik)</option>
+              <option value="KPSS Lisans (GY-GK)">KPSS Lisans (Genel Yetenek - Genel Kültür)</option>
+              <option value="KPSS Ön Lisans">KPSS Ön Lisans</option>
+              <option value="KPSS Ortaöğretim">KPSS Ortaöğretim (Lise Düzeyi)</option>
+              <option value="KPSS EKPSS">EKPSS (Engelli Kamu Personeli Seçme Sınavı)</option>
+              <option value="KPSS Eğitim Bilimleri">KPSS Eğitim Bilimleri (Öğretmenlik)</option>
             </select>
           </div>
 
-          {/* Bran┼ş / Kadro */}
+          {/* Branş / Kadro */}
           <div>
             <label style={styles.inputLabel}>Hedeflenen Kadro / Alan</label>
             <select
@@ -256,14 +256,14 @@ export const StudentSettingsView: React.FC = () => {
               style={styles.selectInput}
             >
               <option value="Memurluk (B Grubu)">Memurluk (B Grubu Kadrolar)</option>
-              <option value="├û─şretmenlik (MEB)">├û─şretmenlik (MEB Atamalar─▒)</option>
-              <option value="Uzmanl─▒k / M├╝fetti┼şlik (A Grubu)">Uzmanl─▒k / M├╝fetti┼şlik (A Grubu Kariyer)</option>
-              <option value="Sa─şl─▒k / Teknik Kadrolar">Sa─şl─▒k &amp; Teknik Hizmetler</option>
+              <option value="Öğretmenlik (MEB)">Öğretmenlik (MEB Atamaları)</option>
+              <option value="Uzmanlık / Müfettişlik (A Grubu)">Uzmanlık / Müfettişlik (A Grubu Kariyer)</option>
+              <option value="Sağlık / Teknik Kadrolar">Sağlık &amp; Teknik Hizmetler</option>
             </select>
           </div>
         </div>
 
-        {/* Hedef Puan ve G├╝nl├╝k Soru Hedefi */}
+        {/* Hedef Puan ve Günlük Soru Hedefi */}
         <div style={{ ...styles.twoColGrid, marginTop: '20px' }}>
           {/* Hedef Puan Slider */}
           <div style={styles.goalBox}>
@@ -287,11 +287,11 @@ export const StudentSettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* G├╝nl├╝k Soru Hedefi */}
+          {/* Günlük Soru Hedefi */}
           <div style={styles.goalBox}>
             <div style={styles.goalHeaderRow}>
-              <span style={styles.goalLabel}>G├╝nl├╝k Soru Hedefi:</span>
-              <span style={styles.goalValueBadge}>{profile.dailyGoal} Soru/G├╝n</span>
+              <span style={styles.goalLabel}>Günlük Soru Hedefi:</span>
+              <span style={styles.goalValueBadge}>{profile.dailyGoal} Soru/Gün</span>
             </div>
             <div style={styles.pillOptionsRow}>
               {[30, 40, 60, 80, 100].map((goal) => {
@@ -317,23 +317,23 @@ export const StudentSettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. B├ûL├£M: ├çALI┼ŞMA & UYGULAMA TERC─░HLER─░ */}
+      {/* 3. BÖLÜM: ÇALIŞMA & UYGULAMA TERCİHLERİ */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
             <Clock size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>├çal─▒┼şma &amp; Uygulama Tercihleri</h2>
-            <p style={styles.cardSubtitle}>Test deneyiminizi ve hat─▒rlat─▒c─▒lar─▒ yap─▒land─▒r─▒n.</p>
+            <h2 style={styles.cardTitle}>Çalışma &amp; Uygulama Tercihleri</h2>
+            <p style={styles.cardSubtitle}>Test deneyiminizi ve hatırlatıcıları yapılandırın.</p>
           </div>
         </div>
 
-        {/* Switch 1: ├ç├Âz├╝m A├ğ─▒klamalar─▒ */}
+        {/* Switch 1: Çözüm Açıklamaları */}
         <div style={styles.switchRow}>
           <div>
-            <div style={styles.switchTitle}>├ç├Âz├╝m A├ğ─▒klamalar─▒n─▒ Otomatik G├Âster</div>
-            <div style={styles.switchDesc}>Cevap verdikten sonra do─şru ┼ş─▒kk─▒ ve detayl─▒ konu a├ğ─▒klamas─▒n─▒ hemen g├Âsterir.</div>
+            <div style={styles.switchTitle}>Çözüm Açıklamalarını Otomatik Göster</div>
+            <div style={styles.switchDesc}>Cevap verdikten sonra doğru şıkkı ve detaylı konu açıklamasını hemen gösterir.</div>
           </div>
           <input
             type="checkbox"
@@ -343,11 +343,11 @@ export const StudentSettingsView: React.FC = () => {
           />
         </div>
 
-        {/* Switch 2: S├╝re Sayac─▒ */}
+        {/* Switch 2: Süre Sayacı */}
         <div style={styles.switchRow}>
           <div>
-            <div style={styles.switchTitle}>Testlerde Kronometre / S├╝re Sayac─▒</div>
-            <div style={styles.switchDesc}>Soru ├ğ├Âzerken harcanan zaman─▒ ├Âl├ğerek zaman y├Ânetimini destekler.</div>
+            <div style={styles.switchTitle}>Testlerde Kronometre / Süre Sayacı</div>
+            <div style={styles.switchDesc}>Soru çözerken harcanan zamanı ölçerek zaman yönetimini destekler.</div>
           </div>
           <input
             type="checkbox"
@@ -357,11 +357,11 @@ export const StudentSettingsView: React.FC = () => {
           />
         </div>
 
-        {/* Switch 3: G├╝nl├╝k Hat─▒rlat─▒c─▒ */}
+        {/* Switch 3: Günlük Hatırlatıcı */}
         <div style={styles.switchRow}>
           <div>
-            <div style={styles.switchTitle}>G├╝nl├╝k ├çal─▒┼şma Bildirimi</div>
-            <div style={styles.switchDesc}>Her g├╝n belirledi─şiniz saatte soru ├ğ├Âzme hedefinizi hat─▒rlat─▒r.</div>
+            <div style={styles.switchTitle}>Günlük Çalışma Bildirimi</div>
+            <div style={styles.switchDesc}>Her gün belirlediğiniz saatte soru çözme hedefinizi hatırlatır.</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {profile.dailyReminder && (
@@ -382,33 +382,33 @@ export const StudentSettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. B├ûL├£M: G├£VENL─░K & VER─░ Y├ûNET─░M─░ */}
+      {/* 4. BÖLÜM: GÜVENLİK & VERİ YÖNETİMİ */}
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
             <Lock size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>G├╝venlik &amp; Hesap Y├Ânetimi</h2>
-            <p style={styles.cardSubtitle}>Giri┼ş ┼şifrenizi g├╝ncelleyin ve veri ge├ğmi┼şinizi kontrol edin.</p>
+            <h2 style={styles.cardTitle}>Güvenlik &amp; Hesap Yönetimi</h2>
+            <p style={styles.cardSubtitle}>Giriş şifrenizi güncelleyin ve veri geçmişinizi kontrol edin.</p>
           </div>
         </div>
 
-        {/* ┼Şifre De─şi┼ştirme */}
+        {/* Şifre Değiştirme */}
         <form onSubmit={handlePasswordChange} style={{ marginBottom: '28px' }}>
           <div style={styles.threeColGrid}>
             <div>
-              <label style={styles.inputLabel}>Mevcut ┼Şifre</label>
+              <label style={styles.inputLabel}>Mevcut Şifre</label>
               <input
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó"
+                placeholder="••••••••"
                 style={styles.textInput}
               />
             </div>
             <div>
-              <label style={styles.inputLabel}>Yeni ┼Şifre</label>
+              <label style={styles.inputLabel}>Yeni Şifre</label>
               <input
                 type="password"
                 value={newPassword}
@@ -418,12 +418,12 @@ export const StudentSettingsView: React.FC = () => {
               />
             </div>
             <div>
-              <label style={styles.inputLabel}>Yeni ┼Şifre (Tekrar)</label>
+              <label style={styles.inputLabel}>Yeni Şifre (Tekrar)</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Yeni ┼şifreyi onaylay─▒n"
+                placeholder="Yeni şifreyi onaylayın"
                 style={styles.textInput}
               />
             </div>
@@ -443,18 +443,18 @@ export const StudentSettingsView: React.FC = () => {
           )}
 
           <button type="submit" style={styles.passwordSubmitBtn}>
-            ┼Şifreyi G├╝ncelle
+            Şifreyi Güncelle
           </button>
         </form>
 
         <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '20px 0' }} />
 
-        {/* ─░statistikleri S─▒f─▒rlama */}
+        {/* İstatistikleri Sıfırlama */}
         <div style={styles.dangerRow}>
           <div>
-            <div style={styles.dangerTitle}>├ç├Âz├╝len Soru ve Analitik Verilerini S─▒f─▒rla</div>
+            <div style={styles.dangerTitle}>Çözülen Soru ve Analitik Verilerini Sıfırla</div>
             <div style={styles.dangerDesc}>
-              T├╝m ├ğ├Âz├╝len soru say─▒lar─▒n─▒, ba┼şar─▒ grafi─şini ve haftal─▒k analitik kay─▒tlar─▒n─▒ temizler. Bu i┼şlem geri al─▒namaz.
+              Tüm çözülen soru sayılarını, başarı grafiğini ve haftalık analitik kayıtlarını temizler. Bu işlem geri alınamaz.
             </div>
           </div>
           <button
@@ -463,17 +463,17 @@ export const StudentSettingsView: React.FC = () => {
             style={styles.dangerBtn}
           >
             <RotateCcw size={15} style={{ marginRight: '6px' }} />
-            Verileri S─▒f─▒rla
+            Verileri Sıfırla
           </button>
         </div>
 
-        {/* S─▒f─▒rlama Onay Modal─▒ */}
+        {/* Sıfırlama Onay Modalı */}
         {resetConfirmOpen && (
           <div style={styles.modalBackdrop}>
             <div style={styles.modalCard}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#111' }}>Verileri S─▒f─▒rlamak ─░stiyor Musunuz?</h3>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#111' }}>Verileri Sıfırlamak İstiyor Musunuz?</h3>
               <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5, margin: '0 0 20px 0' }}>
-                Bu i┼şlemle profil sayfan─▒zdaki soru ├ğ├Âzme say─▒lar─▒, haftal─▒k aktivite ve konu analizi s─▒f─▒rlanacakt─▒r.
+                Bu işlemle profil sayfanızdaki soru çözme sayıları, haftalık aktivite ve konu analizi sıfırlanacaktır.
               </p>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button
@@ -481,14 +481,14 @@ export const StudentSettingsView: React.FC = () => {
                   onClick={() => setResetConfirmOpen(false)}
                   style={styles.modalCancelBtn}
                 >
-                  Vazge├ğ
+                  Vazgeç
                 </button>
                 <button
                   type="button"
                   onClick={handleResetData}
                   style={styles.modalConfirmBtn}
                 >
-                  Evet, S─▒f─▒rla
+                  Evet, Sıfırla
                 </button>
               </div>
             </div>
@@ -496,11 +496,11 @@ export const StudentSettingsView: React.FC = () => {
         )}
       </div>
 
-      {/* ALT SAB─░T KAYDET BUTONU */}
+      {/* ALT SABİT KAYDET BUTONU */}
       <div style={styles.footerSaveRow}>
         <button type="button" onClick={handleSave} style={styles.saveBottomBtn}>
           <Save size={18} style={{ marginRight: '8px' }} />
-          T├╝m De─şi┼şiklikleri Kaydet
+          Tüm Değişiklikleri Kaydet
         </button>
       </div>
     </div>

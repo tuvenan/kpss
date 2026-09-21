@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 
 export type RadarTab = 'dersler' | 'uniteler' | 'konular';
@@ -25,32 +25,32 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hasData, setHasData] = useState<boolean>(true); // Can toggle or show data
 
-  // KPSS M├╝fredat─▒na Uygun ├ûrnek ve Canl─▒ Ba┼şar─▒ Verileri
+  // KPSS Müfredatına Uygun Örnek ve Canlı Başarı Verileri
   const defaultDersler: RadarDataPoint[] = derslerData || [
-    { label: 'T├╝rk├ğe', score: 82, subtext: '320 soru ├ğ├Âz├╝ld├╝' },
-    { label: 'Matematik', score: 65, subtext: '280 soru ├ğ├Âz├╝ld├╝' },
-    { label: 'Tarih', score: 88, subtext: '350 soru ├ğ├Âz├╝ld├╝' },
-    { label: 'Co─şrafya', score: 72, subtext: '210 soru ├ğ├Âz├╝ld├╝' },
-    { label: 'Vatanda┼şl─▒k', score: 78, subtext: '160 soru ├ğ├Âz├╝ld├╝' },
-    { label: 'G├╝ncel Bilgiler', score: 60, subtext: '120 soru ├ğ├Âz├╝ld├╝' },
+    { label: 'Türkçe', score: 82, subtext: '320 soru çözüldü' },
+    { label: 'Matematik', score: 65, subtext: '280 soru çözüldü' },
+    { label: 'Tarih', score: 88, subtext: '350 soru çözüldü' },
+    { label: 'Coğrafya', score: 72, subtext: '210 soru çözüldü' },
+    { label: 'Vatandaşlık', score: 78, subtext: '160 soru çözüldü' },
+    { label: 'Güncel Bilgiler', score: 60, subtext: '120 soru çözüldü' },
   ];
 
   const defaultUniteler: RadarDataPoint[] = unitelerData || [
-    { label: 'S├Âzc├╝kte Anlam', score: 90, subtext: 'T├╝rk├ğe' },
+    { label: 'Sözcükte Anlam', score: 90, subtext: 'Türkçe' },
     { label: 'Problemler', score: 58, subtext: 'Matematik' },
-    { label: '─░slamiyet ├ûncesi', score: 85, subtext: 'Tarih' },
-    { label: 'T├╝rkiye Fiziki Yap─▒s─▒', score: 68, subtext: 'Co─şrafya' },
-    { label: 'Temel Hukuk', score: 75, subtext: 'Vatanda┼şl─▒k' },
-    { label: 'G├╝ncel Olaylar', score: 64, subtext: 'Genel K├╝lt├╝r' },
+    { label: 'İslamiyet Öncesi', score: 85, subtext: 'Tarih' },
+    { label: 'Türkiye Fiziki Yapısı', score: 68, subtext: 'Coğrafya' },
+    { label: 'Temel Hukuk', score: 75, subtext: 'Vatandaşlık' },
+    { label: 'Güncel Olaylar', score: 64, subtext: 'Genel Kültür' },
   ];
 
   const defaultKonular: RadarDataPoint[] = konularData || [
-    { label: 'C├╝mlede Anlam', score: 88, subtext: 'S├Âzc├╝kte Anlam' },
-    { label: 'Say─▒ Problemleri', score: 54, subtext: 'Problemler' },
-    { label: '─░lk T├╝rk Devletleri', score: 92, subtext: '─░slamiyet ├ûncesi' },
-    { label: 'T├╝rkiye ─░klimi', score: 70, subtext: 'Fiziki Yap─▒' },
+    { label: 'Cümlede Anlam', score: 88, subtext: 'Sözcükte Anlam' },
+    { label: 'Sayı Problemleri', score: 54, subtext: 'Problemler' },
+    { label: 'İlk Türk Devletleri', score: 92, subtext: 'İslamiyet Öncesi' },
+    { label: 'Türkiye İklimi', score: 70, subtext: 'Fiziki Yapı' },
     { label: 'Anayasa Tarihi', score: 76, subtext: 'Temel Hukuk' },
-    { label: 'Uluslararas─▒ ├ûrg├╝tler', score: 62, subtext: 'G├╝ncel Bilgiler' },
+    { label: 'Uluslararası Örgütler', score: 62, subtext: 'Güncel Bilgiler' },
   ];
 
   const getCurrentDataset = (): RadarDataPoint[] => {
@@ -66,7 +66,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
 
   const currentDataset = getCurrentDataset();
 
-  // Radar ├çizim Geometrisi
+  // Radar Çizim Geometrisi
   const size = 360;
   const cx = size / 2;
   const cy = size / 2;
@@ -74,7 +74,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
   const levels = [0.25, 0.5, 0.75, 1.0];
   const numAxes = currentDataset.length;
 
-  // Vertex koordinatlar─▒n─▒ hesaplama
+  // Vertex koordinatlarını hesaplama
   const getCoordinates = (index: number, ratio: number) => {
     const angle = -Math.PI / 2 + (index * 2 * Math.PI) / numAxes;
     const x = cx + radius * ratio * Math.cos(angle);
@@ -91,18 +91,18 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
     })
     .join(' ');
 
-  // Dinamik Geli┼şim ├ûzeti Metinleri
+  // Dinamik Gelişim Özeti Metinleri
   const getSummaryText = () => {
     if (!hasData) {
-      return 'Hen├╝z yeterli soru ├ğ├Âz├╝m├╝ yap─▒lmad─▒. Soru ├ğ├Âzd├╝k├ğe bu radar analiz paneli g├╝├ğl├╝ ve zay─▒f konular─▒n─▒z─▒ otomatik olarak tespit edecektir.';
+      return 'Henüz yeterli soru çözümü yapılmadı. Soru çözdükçe bu radar analiz paneli güçlü ve zayıf konularınızı otomatik olarak tespit edecektir.';
     }
 
     if (activeTab === 'dersler') {
-      return 'Tarih (%88) ve T├╝rk├ğe (%82) derslerinde akademik yeterlilik d├╝zeyiniz g├╝├ğl├╝. Matematik (%65) ve G├╝ncel Bilgiler (%60) alanlar─▒nda soru prati─şi yaparak netlerinizi art─▒rabilirsiniz.';
+      return 'Tarih (%88) ve Türkçe (%82) derslerinde akademik yeterlilik düzeyiniz güçlü. Matematik (%65) ve Güncel Bilgiler (%60) alanlarında soru pratiği yaparak netlerinizi artırabilirsiniz.';
     } else if (activeTab === 'uniteler') {
-      return 'S├Âzc├╝kte Anlam (%90) ve ─░slamiyet ├ûncesi (%85) ├╝nitelerinde kavray─▒┼ş─▒n─▒z tam. Problemler (%58) ve T├╝rkiye Fiziki Yap─▒s─▒ (%68) ├╝nitelerindeki eksikleri gidermeye odaklanabilirsiniz.';
+      return 'Sözcükte Anlam (%90) ve İslamiyet Öncesi (%85) ünitelerinde kavrayışınız tam. Problemler (%58) ve Türkiye Fiziki Yapısı (%68) ünitelerindeki eksikleri gidermeye odaklanabilirsiniz.';
     } else {
-      return '─░lk T├╝rk Devletleri (%92) ve C├╝mlede Anlam (%88) konular─▒nda ba┼şar─▒ oran─▒n─▒z m├╝kemmel. Say─▒ Problemleri (%54) konusunda soru ├ğ├Âz├╝m videolar─▒n─▒ tekrar izlemeniz tavsiye edilir.';
+      return 'İlk Türk Devletleri (%92) ve Cümlede Anlam (%88) konularında başarı oranınız mükemmel. Sayı Problemleri (%54) konusunda soru çözüm videolarını tekrar izlemeniz tavsiye edilir.';
     }
   };
 
@@ -130,24 +130,24 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
         }
       `}</style>
 
-      {/* SOL KOLON: B─░LG─░, SEKME VE ├ûZET ALANI */}
+      {/* SOL KOLON: BİLGİ, SEKME VE ÖZET ALANI */}
       <div style={styles.leftCol}>
-        {/* ├£st Rozet */}
+        {/* Üst Rozet */}
         <div style={styles.badgeWrapper}>
-          <span style={styles.badgeText}>YETERL─░L─░K RADARI</span>
+          <span style={styles.badgeText}>YETERLİLİK RADARI</span>
         </div>
 
-        {/* Ana Ba┼şl─▒k */}
+        {/* Ana Başlık */}
         <h2 style={styles.headingTitle} className="radar-title-text">
-          Kazan─▒m &amp; Konu Analizi
+          Kazanım &amp; Konu Analizi
         </h2>
 
-        {/* A├ğ─▒klama Metni */}
+        {/* Açıklama Metni */}
         <p style={styles.descriptionText}>
-          ├ç├Âzd├╝─ş├╝n├╝z sorular─▒n ders, ├╝nite ve konu d├╝zeyindeki ba┼şar─▒ oranlar─▒na g├Âre akademik yeterlilik haritan─▒z ├ğ─▒kar─▒lm─▒┼şt─▒r.
+          Çözdüğünüz soruların ders, ünite ve konu düzeyindeki başarı oranlarına göre akademik yeterlilik haritanız çıkarılmıştır.
         </p>
 
-        {/* Segmented Switcher (Dersler / ├£niteler / Konular) */}
+        {/* Segmented Switcher (Dersler / Üniteler / Konular) */}
         <div style={styles.tabsContainer}>
           <button
             type="button"
@@ -161,7 +161,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
             onClick={() => setActiveTab('uniteler')}
             style={activeTab === 'uniteler' ? styles.tabBtnActive : styles.tabBtnInactive}
           >
-            ├£niteler
+            Üniteler
           </button>
           <button
             type="button"
@@ -172,35 +172,35 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
           </button>
         </div>
 
-        {/* Geli┼şim ├ûzeti Kart─▒ */}
+        {/* Gelişim Özeti Kartı */}
         <div style={styles.summaryCard}>
           <div style={styles.summaryHeader}>
             <Star size={15} color="#0F172A" strokeWidth={2.2} style={{ marginRight: '6px' }} />
-            <span style={styles.summaryTitle}>GEL─░┼Ş─░M ├ûZET─░N─░Z</span>
+            <span style={styles.summaryTitle}>GELİŞİM ÖZETİNİZ</span>
           </div>
           <p style={styles.summaryBodyText}>{getSummaryText()}</p>
         </div>
 
-        {/* Durum Ge├ği┼şi (Opsiyonel Canl─▒ / S─▒f─▒r Durumu ─░nceleme) */}
+        {/* Durum Geçişi (Opsiyonel Canlı / Sıfır Durumu İnceleme) */}
         <div style={styles.toggleRow}>
           <button
             type="button"
             onClick={() => setHasData(!hasData)}
             style={styles.toggleStateBtn}
           >
-            {hasData ? 'ÔÇó Bo┼ş / S─▒f─▒r Durumu G├Âr' : 'ÔÇó Analiz Verilerini G├Âster'}
+            {hasData ? '• Boş / Sıfır Durumu Gör' : '• Analiz Verilerini Göster'}
           </button>
         </div>
       </div>
 
-      {/* SA─Ş KOLON: ─░NTERAKT─░F RADAR / SPIDER CHART ALANI */}
+      {/* SAĞ KOLON: İNTERAKTİF RADAR / SPIDER CHART ALANI */}
       <div style={styles.rightCol} className="radar-svg-container">
         <svg
           viewBox={`0 0 ${size} ${size}`}
           style={styles.radarSvg}
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* 1. Konsantrik Izgara Halkalar─▒ (Seviyeler: 25, 50, 75, 100) */}
+          {/* 1. Konsantrik Izgara Halkaları (Seviyeler: 25, 50, 75, 100) */}
           {levels.map((level, idx) => {
             const points = Array.from({ length: numAxes })
               .map((_, i) => {
@@ -221,7 +221,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
             );
           })}
 
-          {/* 2. Merkezden K├Â┼şelere Uzanan Eksen ├çizgileri */}
+          {/* 2. Merkezden Köşelere Uzanan Eksen Çizgileri */}
           {Array.from({ length: numAxes }).map((_, i) => {
             const { x, y } = getCoordinates(i, 1.0);
             return (
@@ -238,7 +238,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
             );
           })}
 
-          {/* 3. Matematik Ekseni ├£zerindeki Say─▒sal ├ûl├ğek (0, 25, 50, 75, 100) */}
+          {/* 3. Matematik Ekseni Üzerindeki Sayısal Ölçek (0, 25, 50, 75, 100) */}
           {[0, 0.25, 0.5, 0.75, 1.0].map((val, idx) => {
             const { x, y } = getCoordinates(1, val);
             const labelText = idx === 0 ? '0' : String(idx * 25);
@@ -258,7 +258,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
             );
           })}
 
-          {/* 4. Veri Poligonu (E─şer veri varsa) */}
+          {/* 4. Veri Poligonu (Eğer veri varsa) */}
           {hasData && (
             <>
               <polygon
@@ -272,7 +272,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
                 }}
               />
 
-              {/* K├Â┼şe Noktalar─▒ (Vertices) */}
+              {/* Köşe Noktaları (Vertices) */}
               {currentDataset.map((d, i) => {
                 const ratio = Math.max(0.08, d.score / 100);
                 const { x, y } = getCoordinates(i, ratio);
@@ -295,7 +295,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
                       style={{ transition: 'r 0.15s ease' }}
                     />
 
-                    {/* Hover Edildi─şinde Skor Rozeti */}
+                    {/* Hover Edildiğinde Skor Rozeti */}
                     {isHovered && (
                       <g>
                         <rect
@@ -324,14 +324,14 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
             </>
           )}
 
-          {/* 5. K├Â┼şe ─░sim Etiketleri */}
+          {/* 5. Köşe İsim Etiketleri */}
           {currentDataset.map((d, i) => {
             const { x, y } = getCoordinates(i, 1.25);
             let textAnchor: 'start' | 'end' | 'middle' = 'middle';
             let dy = 4;
 
             if (i === 0) {
-              // ├£st
+              // Üst
               dy = -6;
               textAnchor = 'middle';
             } else if (i === 3) {
@@ -339,7 +339,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
               dy = 14;
               textAnchor = 'middle';
             } else if (x > cx) {
-              // Sa─ş
+              // Sağ
               textAnchor = 'start';
               dy = 4;
             } else {

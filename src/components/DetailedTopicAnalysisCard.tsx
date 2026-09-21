@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { studentProgressService, TopicRecord } from '../services/studentProgressService';
 
 interface DetailedTopicAnalysisCardProps {
@@ -6,7 +6,7 @@ interface DetailedTopicAnalysisCardProps {
 }
 
 export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps> = ({ onSelectTopic }) => {
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('T├╝rk├ğe');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('Türkçe');
   const [topicList, setTopicList] = useState<TopicRecord[]>([]);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
     setTopicList(list);
   };
 
-  const subjectFilters = ['T├╝rk├ğe', 'Tarih', 'Matematik', 'Co─şrafya', 'Vatanda┼şl─▒k', 'T├╝m├╝'];
+  const subjectFilters = ['Türkçe', 'Tarih', 'Matematik', 'Coğrafya', 'Vatandaşlık', 'Tümü'];
 
   return (
     <div style={styles.cardContainer} className="detailed-topic-analysis-card">
@@ -60,10 +60,10 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
         }
       `}</style>
 
-      {/* ├£ST BA┼ŞLIK VE DERS F─░LTRELER─░ */}
+      {/* ÜST BAŞLIK VE DERS FİLTRELERİ */}
       <div style={styles.headerArea}>
         <div style={styles.titleRow}>
-          <h2 style={styles.headingTitle}>Detayl─▒ Konu Bazl─▒ Analiz</h2>
+          <h2 style={styles.headingTitle}>Detaylı Konu Bazlı Analiz</h2>
 
           {/* Konu Ders Filtresi */}
           <div style={styles.filterPillsContainer}>
@@ -89,7 +89,7 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
         </div>
       </div>
 
-      {/* KONU L─░STES─░ SATIRLARI */}
+      {/* KONU LİSTESİ SATIRLARI */}
       <div style={styles.listContainer}>
         {topicList.map((item) => {
           const isNotAttempted = item.solvedCount === 0;
@@ -101,7 +101,7 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
               onClick={() => onSelectTopic && onSelectTopic(item.id)}
               style={{ cursor: onSelectTopic ? 'pointer' : 'default' }}
             >
-              {/* 1. S├╝tun: Konu Ad─▒ */}
+              {/* 1. Sütun: Konu Adı */}
               <div style={styles.titleCol} className="topic-col-title">
                 <span style={styles.topicTitleText} title={item.topicTitle}>
                   {item.topicTitle}
@@ -111,7 +111,7 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
                 )}
               </div>
 
-              {/* 2. S├╝tun: Durum Bilgisi */}
+              {/* 2. Sütun: Durum Bilgisi */}
               <div style={styles.statusCol}>
                 <span
                   style={{
@@ -120,11 +120,11 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
                     fontWeight: isNotAttempted ? 400 : 600,
                   }}
                 >
-                  {isNotAttempted ? 'Hen├╝z yok' : `${item.solvedCount} soru ├ğ├Âz├╝ld├╝`}
+                  {isNotAttempted ? 'Henüz yok' : `${item.solvedCount} soru çözüldü`}
                 </span>
               </div>
 
-              {/* 3. S├╝tun: ─░lerleme ├çubu─şu */}
+              {/* 3. Sütun: İlerleme Çubuğu */}
               <div style={styles.barCol} className="topic-col-bar">
                 <div style={styles.barTrack}>
                   <div
@@ -142,14 +142,14 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
                 </div>
               </div>
 
-              {/* 4. S├╝tun: Ba┼şar─▒ Y├╝zdesi */}
+              {/* 4. Sütun: Başarı Yüzdesi */}
               <div style={styles.percentCol}>
                 <span style={styles.percentText}>
                   %{item.percentage}
                 </span>
               </div>
 
-              {/* 5. S├╝tun: G├Âsterge */}
+              {/* 5. Sütun: Gösterge */}
               <div style={styles.actionCol}>
                 <span
                   style={{
@@ -158,7 +158,7 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
                     fontWeight: isNotAttempted ? 400 : 700,
                   }}
                 >
-                  {isNotAttempted ? '-' : 'Ô£ô'}
+                  {isNotAttempted ? '-' : '✓'}
                 </span>
               </div>
             </div>

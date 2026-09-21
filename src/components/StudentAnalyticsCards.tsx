@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 
 interface DayData {
   day: string;
@@ -20,11 +20,11 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
 }) => {
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
-  // G├╝nl├╝k Soru Da─ş─▒l─▒m─▒ (Referans g├Ârseldeki y├╝kseklikler ve toplam 340 soru)
+  // Günlük Soru Dağılımı (Referans görseldeki yükseklikler ve toplam 340 soru)
   const defaultWeeklyData: DayData[] = weeklyData || [
     { day: 'Pzt', count: 44 },
     { day: 'Sal', count: 52 },
-    { day: '├çar', count: 34 },
+    { day: 'Çar', count: 34 },
     { day: 'Per', count: 70 },
     { day: 'Cum', count: 46 },
     { day: 'Cmt', count: 74 },
@@ -32,7 +32,7 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
   ];
 
   const days = defaultWeeklyData;
-  const maxDayCount = 85; // ├£st tavan s─▒n─▒r
+  const maxDayCount = 85; // Üst tavan sınır
 
   // Halka Grafik (Donut Chart) Geometrisi
   const donutSize = 220;
@@ -43,7 +43,7 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
   const correctRatio = Math.min(100, Math.max(0, correctPercentage)) / 100;
   const correctDash = circumference * correctRatio;
 
-  // Hedef Y├╝zdesi
+  // Hedef Yüzdesi
   const goalPercentage = Math.min(100, Math.round((solvedCount / targetCount) * 100));
 
   return (
@@ -63,9 +63,9 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
         }
       `}</style>
 
-      {/* 1. KART: GENEL BA┼ŞARI DA─ŞILIMI */}
+      {/* 1. KART: GENEL BAŞARI DAĞILIMI */}
       <div style={styles.card}>
-        <h3 style={styles.cardHeading}>Genel Ba┼şar─▒ Da─ş─▒l─▒m─▒</h3>
+        <h3 style={styles.cardHeading}>Genel Başarı Dağılımı</h3>
 
         {/* Halka Grafik */}
         <div style={styles.donutWrapper}>
@@ -75,7 +75,7 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
             viewBox={`0 0 ${donutSize} ${donutSize}`}
             style={{ overflow: 'visible' }}
           >
-            {/* Yanl─▒┼ş / Bo┼ş Halka B├Âl├╝m├╝ (A├ğ─▒k Gri Arka Katman) */}
+            {/* Yanlış / Boş Halka Bölümü (Açık Gri Arka Katman) */}
             <circle
               cx={donutCenter}
               cy={donutCenter}
@@ -85,7 +85,7 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
               strokeWidth={strokeWidth}
             />
 
-            {/* Do─şru Halka B├Âl├╝m├╝ (Koyu Siyah / Lacivert) */}
+            {/* Doğru Halka Bölümü (Koyu Siyah / Lacivert) */}
             <circle
               cx={donutCenter}
               cy={donutCenter}
@@ -104,39 +104,39 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
           </svg>
         </div>
 
-        {/* Lejant (Do─şru / Yanl─▒┼ş-Bo┼ş) */}
+        {/* Lejant (Doğru / Yanlış-Boş) */}
         <div style={styles.legendRow}>
           <div style={styles.legendItem}>
             <span style={{ ...styles.legendDot, backgroundColor: '#0F172A' }} />
-            <span style={styles.legendText}>Do─şru</span>
+            <span style={styles.legendText}>Doğru</span>
           </div>
           <div style={styles.legendItem}>
             <span style={{ ...styles.legendDot, backgroundColor: '#E2E8F0' }} />
-            <span style={{ ...styles.legendText, color: '#94A3B8' }}>Yanl─▒┼ş/Bo┼ş</span>
+            <span style={{ ...styles.legendText, color: '#94A3B8' }}>Yanlış/Boş</span>
           </div>
         </div>
 
-        {/* Alt B├╝y├╝k Ba┼şar─▒ Skoru */}
+        {/* Alt Büyük Başarı Skoru */}
         <div style={styles.scoreContainer}>
           <div style={styles.scorePercentText}>%{correctPercentage}</div>
-          <div style={styles.scoreLabel}>BA┼ŞARI DA─ŞILIMI</div>
+          <div style={styles.scoreLabel}>BAŞARI DAĞILIMI</div>
         </div>
       </div>
 
-      {/* 2. KART: HAFTALIK SORU ├ç├ûZ├£M├£ */}
+      {/* 2. KART: HAFTALIK SORU ÇÖZÜMÜ */}
       <div style={styles.card}>
-        <h3 style={styles.cardHeading}>Haftal─▒k Soru ├ç├Âz├╝m├╝</h3>
+        <h3 style={styles.cardHeading}>Haftalık Soru Çözümü</h3>
 
-        {/* ├çubuk Grafik (Bar Chart) */}
+        {/* Çubuk Grafik (Bar Chart) */}
         <div style={styles.barChartWrapper}>
-          {/* Arka Plan Yatay ├çizgiler */}
+          {/* Arka Plan Yatay Çizgiler */}
           <div style={styles.guidelinesContainer}>
             <div style={styles.guideline} />
             <div style={styles.guideline} />
             <div style={styles.guideline} />
           </div>
 
-          {/* S├╝tunlar */}
+          {/* Sütunlar */}
           <div style={styles.barsFlexRow}>
             {days.map((item, idx) => {
               const heightPercent = Math.round((item.count / maxDayCount) * 100);
@@ -149,14 +149,14 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
                   onMouseEnter={() => setHoveredBarIndex(idx)}
                   onMouseLeave={() => setHoveredBarIndex(null)}
                 >
-                  {/* Hover Edildi─şinde Soru Say─▒s─▒ Tooltip */}
+                  {/* Hover Edildiğinde Soru Sayısı Tooltip */}
                   {isHovered && (
                     <div style={styles.tooltipBox}>
                       {item.count} soru
                     </div>
                   )}
 
-                  {/* S├╝tun ├çubu─şu */}
+                  {/* Sütun Çubuğu */}
                   <div style={styles.barTrack}>
                     <div
                       style={{
@@ -167,7 +167,7 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
                     />
                   </div>
 
-                  {/* G├╝n Etiketi */}
+                  {/* Gün Etiketi */}
                   <span style={styles.dayLabel}>{item.day}</span>
                 </div>
               );
@@ -175,10 +175,10 @@ export const StudentAnalyticsCards: React.FC<StudentAnalyticsCardsProps> = ({
           </div>
         </div>
 
-        {/* Alt Hedef ─░lerleme ├çubu─şu */}
+        {/* Alt Hedef İlerleme Çubuğu */}
         <div style={styles.goalSection}>
           <div style={styles.goalHeaderRow}>
-            <span style={styles.goalTitle}>TOPLAM SORU HEDEF─░</span>
+            <span style={styles.goalTitle}>TOPLAM SORU HEDEFİ</span>
             <span style={styles.goalCountText}>
               <strong style={{ color: '#0F172A' }}>{solvedCount}</strong> / {targetCount}
             </span>
@@ -270,7 +270,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     fontWeight: 700,
     letterSpacing: '0.8px',
-    color: '#10B981', // Canl─▒ Z├╝mr├╝t Ye┼şili
+    color: '#10B981', // Canlı Zümrüt Yeşili
     textAlign: 'center',
   },
   barChartWrapper: {

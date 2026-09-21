@@ -1,4 +1,4 @@
-﻿import { supabase, isSupabaseConfigured, getAdminClient } from './supabase';
+import { supabase, isSupabaseConfigured, getAdminClient } from './supabase';
 import { Subject, Unit, Topic, Question, OptionId } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 
@@ -162,19 +162,19 @@ const removeLocalQuestion = (id: string): void => {
   } catch {}
 };
 
-// Standart ba┼şlang─▒├ğ dersleri (UUID ve standart formatta)
+// Standart başlangıç dersleri (UUID ve standart formatta)
 const DEFAULT_SUBJECTS: Subject[] = [
-  { id: 'turkce', title: 'T├╝rk├ğe', totalUnits: 12, iconName: 'book-outline' },
+  { id: 'turkce', title: 'Türkçe', totalUnits: 12, iconName: 'book-outline' },
   { id: 'matematik', title: 'Matematik', totalUnits: 14, iconName: 'calculator-outline' },
   { id: 'tarih', title: 'Tarih', totalUnits: 16, iconName: 'landmark-outline' },
-  { id: 'cografya', title: 'Co─şrafya', totalUnits: 10, iconName: 'earth-outline' },
-  { id: 'vatandaslik', title: 'Vatanda┼şl─▒k', totalUnits: 8, iconName: 'shield-outline' },
-  { id: 'guncel', title: 'G├╝ncel Bilgiler', totalUnits: 6, iconName: 'newspaper-outline' },
+  { id: 'cografya', title: 'Coğrafya', totalUnits: 10, iconName: 'earth-outline' },
+  { id: 'vatandaslik', title: 'Vatandaşlık', totalUnits: 8, iconName: 'shield-outline' },
+  { id: 'guncel', title: 'Güncel Bilgiler', totalUnits: 6, iconName: 'newspaper-outline' },
 ];
 
 export const api = {
   // ==========================================
-  // ├û─ŞRENC─░ SERV─░SLER─░
+  // ÖĞRENCİ SERVİSLERİ
   // ==========================================
 
   async getSubjects(): Promise<Subject[]> {
@@ -196,7 +196,7 @@ export const api = {
       }
     }
 
-    // Yerel kay─▒tl─▒ derslerle birle┼ştir
+    // Yerel kayıtlı derslerle birleştir
     const localSubjects = getLocalSubjects();
     const combined = [...cloudSubjects];
 
@@ -216,7 +216,7 @@ export const api = {
   async getUnits(subjectId: string): Promise<Unit[]> {
     let cloudUnits: Unit[] = [];
 
-    // Supabase yaln─▒zca ge├ğerli bir UUID ise sorgulan─▒r (400 Bad Request hatas─▒n─▒ ├Ânler)
+    // Supabase yalnızca geçerli bir UUID ise sorgulanır (400 Bad Request hatasını önler)
     if (isSupabaseConfigured() && isUuid(subjectId)) {
       try {
         const { data, error } = await supabase
@@ -240,7 +240,7 @@ export const api = {
       }
     }
 
-    // Yerel kay─▒tl─▒ ├╝nitelerle birle┼ştir
+    // Yerel kayıtlı ünitelerle birleştir
     const localUnits = getLocalUnits().filter(u => u.subjectId === subjectId);
     const combined = [...cloudUnits];
 
@@ -257,12 +257,12 @@ export const api = {
     const lowerSub = subjectId.toLowerCase();
     if (lowerSub.includes('tarih') || subjectId === '11111111-1111-4111-8111-111111111111') {
       return [
-        { id: '1', subjectId, title: '─░slamiyet ├ûncesi T├╝rk Tarihi', unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
-        { id: '2', subjectId, title: '─░lk T├╝rk-─░slam Devletleri', unitNumber: 2, topicCount: 3, isLocked: false, isCompleted: false },
-        { id: '3', subjectId, title: 'Anadolu Sel├ğuklular─▒', unitNumber: 3, topicCount: 3, isLocked: false, isCompleted: false },
-        { id: '4', subjectId, title: 'Osmanl─▒ Tarihi', unitNumber: 4, topicCount: 4, isLocked: false, isCompleted: false },
-        { id: '5', subjectId, title: 'T├╝rkiye Cumhuriyeti Tarihi', unitNumber: 5, topicCount: 3, isLocked: false, isCompleted: false },
-        { id: '6', subjectId, title: '├ça─şda┼ş T├╝rk ve D├╝nya Tarihi', unitNumber: 6, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: '1', subjectId, title: 'İslamiyet Öncesi Türk Tarihi', unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
+        { id: '2', subjectId, title: 'İlk Türk-İslam Devletleri', unitNumber: 2, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: '3', subjectId, title: 'Anadolu Selçukluları', unitNumber: 3, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: '4', subjectId, title: 'Osmanlı Tarihi', unitNumber: 4, topicCount: 4, isLocked: false, isCompleted: false },
+        { id: '5', subjectId, title: 'Türkiye Cumhuriyeti Tarihi', unitNumber: 5, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: '6', subjectId, title: 'Çağdaş Türk ve Dünya Tarihi', unitNumber: 6, topicCount: 3, isLocked: false, isCompleted: false },
       ];
     }
 
@@ -270,56 +270,56 @@ export const api = {
       return [
         { id: 'turkce-anlam', subjectId, title: 'Anlam Bilgisi', unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
         { id: 'turkce-dilbilgisi', subjectId, title: 'Dil Bilgisi', unitNumber: 2, topicCount: 4, isLocked: false, isCompleted: false },
-        { id: 'turkce-yazim', subjectId, title: 'Yaz─▒m ve Noktalama', unitNumber: 3, topicCount: 2, isLocked: false, isCompleted: false },
-        { id: 'turkce-mantik', subjectId, title: 'S├Âzel Mant─▒k', unitNumber: 4, topicCount: 2, isLocked: false, isCompleted: false },
-        // Geriye d├Ân├╝k uyumluluk i├ğin eski ID'ler
-        { id: 'sozcukte-anlam', subjectId, title: 'S├Âzc├╝kte Anlam', unitNumber: 5, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: 'turkce-yazim', subjectId, title: 'Yazım ve Noktalama', unitNumber: 3, topicCount: 2, isLocked: false, isCompleted: false },
+        { id: 'turkce-mantik', subjectId, title: 'Sözel Mantık', unitNumber: 4, topicCount: 2, isLocked: false, isCompleted: false },
+        // Geriye dönük uyumluluk için eski ID'ler
+        { id: 'sozcukte-anlam', subjectId, title: 'Sözcükte Anlam', unitNumber: 5, topicCount: 3, isLocked: false, isCompleted: false },
       ];
     }
 
     if (lowerSub.includes('matematik')) {
       return [
-        { id: 'mat-sayilar', subjectId, title: 'Temel Matematik & Say─▒lar', unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
-        { id: 'mat-cebir', subjectId, title: 'Cebirsel ─░fadeler ve Denklemler', unitNumber: 2, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: 'mat-sayilar', subjectId, title: 'Temel Matematik & Sayılar', unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
+        { id: 'mat-cebir', subjectId, title: 'Cebirsel İfadeler ve Denklemler', unitNumber: 2, topicCount: 3, isLocked: false, isCompleted: false },
         { id: 'mat-problemler', subjectId, title: 'Problemler', unitNumber: 3, topicCount: 5, isLocked: false, isCompleted: false },
-        { id: 'mat-geometri', subjectId, title: 'Geometri & Say─▒sal Mant─▒k', unitNumber: 4, topicCount: 3, isLocked: false, isCompleted: false },
-        // Geriye d├Ân├╝k uyumluluk
+        { id: 'mat-geometri', subjectId, title: 'Geometri & Sayısal Mantık', unitNumber: 4, topicCount: 3, isLocked: false, isCompleted: false },
+        // Geriye dönük uyumluluk
         { id: 'temel-kavramlar', subjectId, title: 'Temel Kavramlar', unitNumber: 5, topicCount: 2, isLocked: false, isCompleted: false },
       ];
     }
 
     if (lowerSub.includes('cografya') || subjectId === '22222222-2222-4222-8222-222222222222') {
       return [
-        { id: 'cog-fiziki', subjectId, title: "T├╝rkiye'nin Fiziki Co─şrafyas─▒", unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
-        { id: 'cog-beseri', subjectId, title: "T├╝rkiye'nin Be┼şeri Co─şrafyas─▒", unitNumber: 2, topicCount: 2, isLocked: false, isCompleted: false },
-        { id: 'cog-ekonomik', subjectId, title: "T├╝rkiye'nin Ekonomik Co─şrafyas─▒", unitNumber: 3, topicCount: 3, isLocked: false, isCompleted: false },
-        // Geriye d├Ân├╝k uyumluluk
-        { id: 'cografi-konum', subjectId, title: "T├╝rkiye'nin Co─şrafi Konumu", unitNumber: 4, topicCount: 2, isLocked: false, isCompleted: false },
+        { id: 'cog-fiziki', subjectId, title: "Türkiye'nin Fiziki Coğrafyası", unitNumber: 1, topicCount: 4, isLocked: false, isCompleted: false },
+        { id: 'cog-beseri', subjectId, title: "Türkiye'nin Beşeri Coğrafyası", unitNumber: 2, topicCount: 2, isLocked: false, isCompleted: false },
+        { id: 'cog-ekonomik', subjectId, title: "Türkiye'nin Ekonomik Coğrafyası", unitNumber: 3, topicCount: 3, isLocked: false, isCompleted: false },
+        // Geriye dönük uyumluluk
+        { id: 'cografi-konum', subjectId, title: "Türkiye'nin Coğrafi Konumu", unitNumber: 4, topicCount: 2, isLocked: false, isCompleted: false },
       ];
     }
 
     if (lowerSub.includes('vatandaslik') || subjectId === '33333333-3333-4333-8333-333333333333') {
       return [
         { id: 'vat-temelhukuk', subjectId, title: 'Temel Hukuk Bilgisi', unitNumber: 1, topicCount: 2, isLocked: false, isCompleted: false },
-        { id: 'vat-anayasa', subjectId, title: 'Anayasa Hukuku & 1982 Anayasas─▒', unitNumber: 2, topicCount: 2, isLocked: false, isCompleted: false },
-        { id: 'vat-organlar', subjectId, title: 'Yasama, Y├╝r├╝tme, Yarg─▒', unitNumber: 3, topicCount: 3, isLocked: false, isCompleted: false },
-        { id: 'vat-idare', subjectId, title: '─░dare Hukuku', unitNumber: 4, topicCount: 2, isLocked: false, isCompleted: false },
-        // Geriye d├Ân├╝k uyumluluk
-        { id: 'temel-hukuk', subjectId, title: 'Temel Hukuk Kavramlar─▒', unitNumber: 5, topicCount: 2, isLocked: false, isCompleted: false },
+        { id: 'vat-anayasa', subjectId, title: 'Anayasa Hukuku & 1982 Anayasası', unitNumber: 2, topicCount: 2, isLocked: false, isCompleted: false },
+        { id: 'vat-organlar', subjectId, title: 'Yasama, Yürütme, Yargı', unitNumber: 3, topicCount: 3, isLocked: false, isCompleted: false },
+        { id: 'vat-idare', subjectId, title: 'İdare Hukuku', unitNumber: 4, topicCount: 2, isLocked: false, isCompleted: false },
+        // Geriye dönük uyumluluk
+        { id: 'temel-hukuk', subjectId, title: 'Temel Hukuk Kavramları', unitNumber: 5, topicCount: 2, isLocked: false, isCompleted: false },
       ];
     }
 
     if (lowerSub.includes('guncel')) {
       return [
-        { id: 'gun-kuruluslar', subjectId, title: 'Uluslararas─▒ Kurulu┼şlar ve Geli┼şmeler', unitNumber: 1, topicCount: 2, isLocked: false, isCompleted: false },
-        { id: 'gun-olaylar', subjectId, title: '2025-2026 T├╝rkiye ve D├╝nya G├╝ndemi', unitNumber: 2, topicCount: 2, isLocked: false, isCompleted: false },
-        // Geriye d├Ân├╝k uyumluluk
-        { id: 'guncel-olaylar-1', subjectId, title: '2025 Uluslararas─▒ Olaylar ve ├ûd├╝ller', unitNumber: 3, topicCount: 1, isLocked: false, isCompleted: false },
+        { id: 'gun-kuruluslar', subjectId, title: 'Uluslararası Kuruluşlar ve Gelişmeler', unitNumber: 1, topicCount: 2, isLocked: false, isCompleted: false },
+        { id: 'gun-olaylar', subjectId, title: '2025-2026 Türkiye ve Dünya Gündemi', unitNumber: 2, topicCount: 2, isLocked: false, isCompleted: false },
+        // Geriye dönük uyumluluk
+        { id: 'guncel-olaylar-1', subjectId, title: '2025 Uluslararası Olaylar ve Ödüller', unitNumber: 3, topicCount: 1, isLocked: false, isCompleted: false },
       ];
     }
 
     return [
-      { id: `${subjectId}-unit-1`, subjectId, title: '1. ├£nite', unitNumber: 1, topicCount: 2, isLocked: false, isCompleted: false },
+      { id: `${subjectId}-unit-1`, subjectId, title: '1. Ünite', unitNumber: 1, topicCount: 2, isLocked: false, isCompleted: false },
     ];
   },
 
@@ -363,148 +363,148 @@ export const api = {
       return combined;
     }
 
-    // Standart m├╝fredat konu haritas─▒
+    // Standart müfredat konu haritası
     const DEFAULT_TOPICS_MAP: Record<string, Topic[]> = {
-      // Tarih 01. ├£nite (─░slamiyet ├ûncesi T├╝rk Tarihi)
+      // Tarih 01. Ünite (İslamiyet Öncesi Türk Tarihi)
       '1': [
-        { id: 'tarih-1-1', unitId: '1', title: 'Orta Asya K├╝lt├╝r Merkezleri ve T├╝rk G├Â├ğleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-1-2', unitId: '1', title: '─░lk T├╝rk Devletleri (Hunlar, G├Âkt├╝rkler, Uygurlar)', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-1-3', unitId: '1', title: 'Di─şer T├╝rk Devletleri ve Boylar─▒', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-1-4', unitId: '1', title: '─░lk T├╝rk Devletlerinde K├╝lt├╝r ve Medeniyet', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-1-1', unitId: '1', title: 'Orta Asya Kültür Merkezleri ve Türk Göçleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-1-2', unitId: '1', title: 'İlk Türk Devletleri (Hunlar, Göktürkler, Uygurlar)', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-1-3', unitId: '1', title: 'Diğer Türk Devletleri ve Boyları', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-1-4', unitId: '1', title: 'İlk Türk Devletlerinde Kültür ve Medeniyet', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Tarih 02. ├£nite (─░lk T├╝rk-─░slam Devletleri)
+      // Tarih 02. Ünite (İlk Türk-İslam Devletleri)
       '2': [
-        { id: 'tarih-2-1', unitId: '2', title: 'T├╝rklerin ─░slamiyeti Kabul├╝ ve ─░lk Devletler', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-2-2', unitId: '2', title: 'B├╝y├╝k Sel├ğuklu Devleti ve Siyasi Tarih', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-2-3', unitId: '2', title: '─░lk T├╝rk-─░slam Devletlerinde K├╝lt├╝r ve Medeniyet', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-2-1', unitId: '2', title: 'Türklerin İslamiyeti Kabulü ve İlk Devletler', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-2-2', unitId: '2', title: 'Büyük Selçuklu Devleti ve Siyasi Tarih', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-2-3', unitId: '2', title: 'İlk Türk-İslam Devletlerinde Kültür ve Medeniyet', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Tarih 03. ├£nite (Anadolu Sel├ğuklular─▒)
+      // Tarih 03. Ünite (Anadolu Selçukluları)
       '3': [
-        { id: 'tarih-3-1', unitId: '3', title: '1. ve 2. D├Ânem Anadolu T├╝rk Beylikleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-3-2', unitId: '3', title: 'T├╝rkiye Sel├ğuklu Devleti', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-3-3', unitId: '3', title: 'Anadolu Sel├ğuklular─▒nda K├╝lt├╝r ve Medeniyet', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-3-1', unitId: '3', title: '1. ve 2. Dönem Anadolu Türk Beylikleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-3-2', unitId: '3', title: 'Türkiye Selçuklu Devleti', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-3-3', unitId: '3', title: 'Anadolu Selçuklularında Kültür ve Medeniyet', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Tarih 04. ├£nite (Osmanl─▒ Tarihi)
+      // Tarih 04. Ünite (Osmanlı Tarihi)
       '4': [
-        { id: 'tarih-4-1', unitId: '4', title: 'Osmanl─▒ Devleti Kurulu┼ş D├Ânemi (1299-1453)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-4-2', unitId: '4', title: 'Osmanl─▒ Devleti Y├╝kselme D├Ânemi (1453-1579)', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-4-3', unitId: '4', title: 'Duraklama ve Gerileme D├Ânemi (17-18. yy)', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-4-4', unitId: '4', title: 'Da─ş─▒lma D├Ânemi ve 19. Y├╝zy─▒l Islahatlar─▒', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-4-1', unitId: '4', title: 'Osmanlı Devleti Kuruluş Dönemi (1299-1453)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-4-2', unitId: '4', title: 'Osmanlı Devleti Yükselme Dönemi (1453-1579)', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-4-3', unitId: '4', title: 'Duraklama ve Gerileme Dönemi (17-18. yy)', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-4-4', unitId: '4', title: 'Dağılma Dönemi ve 19. Yüzyıl Islahatları', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Tarih 05. ├£nite (T├╝rkiye Cumhuriyeti Tarihi)
+      // Tarih 05. Ünite (Türkiye Cumhuriyeti Tarihi)
       '5': [
-        { id: 'tarih-5-1', unitId: '5', title: 'Kurtulu┼ş Sava┼ş─▒ Haz─▒rl─▒k D├Ânemi (Kongreler)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-5-2', unitId: '5', title: 'Kurtulu┼ş Sava┼ş─▒ Muharebeler ve Antla┼şmalar', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-5-3', unitId: '5', title: 'Atat├╝rk ─░lkeleri ve ─░nk─▒laplar─▒', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-5-1', unitId: '5', title: 'Kurtuluş Savaşı Hazırlık Dönemi (Kongreler)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-5-2', unitId: '5', title: 'Kurtuluş Savaşı Muharebeler ve Antlaşmalar', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-5-3', unitId: '5', title: 'Atatürk İlkeleri ve İnkılapları', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Tarih 06. ├£nite (├ça─şda┼ş T├╝rk ve D├╝nya Tarihi)
+      // Tarih 06. Ünite (Çağdaş Türk ve Dünya Tarihi)
       '6': [
-        { id: 'tarih-6-1', unitId: '6', title: 'II. D├╝nya Sava┼ş─▒ ve Sonras─▒ Geli┼şmeler', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-6-2', unitId: '6', title: 'So─şuk Sava┼ş ve Yumu┼şama (Detant) D├Ânemi', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'tarih-6-3', unitId: '6', title: 'K├╝reselle┼şen D├╝nya ve T├╝rk D─▒┼ş Politikas─▒', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-6-1', unitId: '6', title: 'II. Dünya Savaşı ve Sonrası Gelişmeler', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-6-2', unitId: '6', title: 'Soğuk Savaş ve Yumuşama (Detant) Dönemi', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'tarih-6-3', unitId: '6', title: 'Küreselleşen Dünya ve Türk Dış Politikası', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // T├╝rk├ğe
+      // Türkçe
       'turkce-anlam': [
-        { id: 'turkce-1-1', unitId: 'turkce-anlam', title: 'S├Âzc├╝kte Anlam ve Anlam ─░li┼şkileri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-1-2', unitId: 'turkce-anlam', title: 'C├╝mlede Anlam ve Anlat─▒m ├ûzellikleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-1-3', unitId: 'turkce-anlam', title: 'Paragrafta Ana D├╝┼ş├╝nce ve Yard─▒mc─▒ D├╝┼ş├╝nceler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-1-4', unitId: 'turkce-anlam', title: 'Paragrafta Yap─▒ ve Anlat─▒m Bi├ğimleri', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-1', unitId: 'turkce-anlam', title: 'Sözcükte Anlam ve Anlam İlişkileri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-2', unitId: 'turkce-anlam', title: 'Cümlede Anlam ve Anlatım Özellikleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-3', unitId: 'turkce-anlam', title: 'Paragrafta Ana Düşünce ve Yardımcı Düşünceler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-4', unitId: 'turkce-anlam', title: 'Paragrafta Yapı ve Anlatım Biçimleri', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'sozcukte-anlam': [
-        { id: 'turkce-1-1', unitId: 'sozcukte-anlam', title: 'Ger├ğek, Yan, Mecaz ve Terim Anlam', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-1-2', unitId: 'sozcukte-anlam', title: 'E┼ş, Z─▒t ve E┼ş Sesli S├Âzc├╝kler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-1-3', unitId: 'sozcukte-anlam', title: 'Deyimler, Atas├Âzleri ve ─░kilemeler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-1', unitId: 'sozcukte-anlam', title: 'Gerçek, Yan, Mecaz ve Terim Anlam', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-2', unitId: 'sozcukte-anlam', title: 'Eş, Zıt ve Eş Sesli Sözcükler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-1-3', unitId: 'sozcukte-anlam', title: 'Deyimler, Atasözleri ve İkilemeler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'turkce-dilbilgisi': [
         { id: 'turkce-2-1', unitId: 'turkce-dilbilgisi', title: 'Ses Bilgisi', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-2-2', unitId: 'turkce-dilbilgisi', title: 'S├Âzc├╝kte Yap─▒ ve Ekler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-2-3', unitId: 'turkce-dilbilgisi', title: 'S├Âzc├╝k T├╝rleri (─░sim, S─▒fat, Zamir, Zarf)', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-2-4', unitId: 'turkce-dilbilgisi', title: 'C├╝mlenin ├ûgeleri ve C├╝mle T├╝rleri', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-2-2', unitId: 'turkce-dilbilgisi', title: 'Sözcükte Yapı ve Ekler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-2-3', unitId: 'turkce-dilbilgisi', title: 'Sözcük Türleri (İsim, Sıfat, Zamir, Zarf)', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-2-4', unitId: 'turkce-dilbilgisi', title: 'Cümlenin Ögeleri ve Cümle Türleri', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'turkce-yazim': [
-        { id: 'turkce-3-1', unitId: 'turkce-yazim', title: 'Yaz─▒m Kurallar─▒', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-3-2', unitId: 'turkce-yazim', title: 'Noktalama ─░┼şaretleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-3-1', unitId: 'turkce-yazim', title: 'Yazım Kuralları', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-3-2', unitId: 'turkce-yazim', title: 'Noktalama İşaretleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'turkce-mantik': [
-        { id: 'turkce-4-1', unitId: 'turkce-mantik', title: 'S─▒ralama ve Tablo Yorumlama', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'turkce-4-2', unitId: 'turkce-mantik', title: 'E┼şle┼ştirme ve ┼Şifreleme Problemleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-4-1', unitId: 'turkce-mantik', title: 'Sıralama ve Tablo Yorumlama', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'turkce-4-2', unitId: 'turkce-mantik', title: 'Eşleştirme ve Şifreleme Problemleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       // Matematik
       'mat-sayilar': [
-        { id: 'mat-1-1', unitId: 'mat-sayilar', title: 'Say─▒ K├╝meleri ve Temel Kavramlar', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-1-2', unitId: 'mat-sayilar', title: 'Basamak Kavram─▒ ve Say─▒ ├ç├Âz├╝mleme', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-1-3', unitId: 'mat-sayilar', title: 'B├Âlme, B├Âl├╝nebilme ve EBOB-EKOK', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-1-4', unitId: 'mat-sayilar', title: 'Rasyonel Say─▒lar ve Ondal─▒k Say─▒lar', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-1-1', unitId: 'mat-sayilar', title: 'Sayı Kümeleri ve Temel Kavramlar', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-1-2', unitId: 'mat-sayilar', title: 'Basamak Kavramı ve Sayı Çözümleme', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-1-3', unitId: 'mat-sayilar', title: 'Bölme, Bölünebilme ve EBOB-EKOK', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-1-4', unitId: 'mat-sayilar', title: 'Rasyonel Sayılar ve Ondalık Sayılar', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'temel-kavramlar': [
-        { id: 'mat-1-1', unitId: 'temel-kavramlar', title: 'Say─▒ K├╝meleri, Tek-├çift ve Pozitif-Negatif Say─▒lar', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-1-2', unitId: 'temel-kavramlar', title: 'Ard─▒┼ş─▒k Say─▒lar ve Asal Say─▒lar', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-1-1', unitId: 'temel-kavramlar', title: 'Sayı Kümeleri, Tek-Çift ve Pozitif-Negatif Sayılar', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-1-2', unitId: 'temel-kavramlar', title: 'Ardışık Sayılar ve Asal Sayılar', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'mat-cebir': [
-        { id: 'mat-2-1', unitId: 'mat-cebir', title: '├çarpanlara Ay─▒rma ve Sadele┼ştirme', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-2-2', unitId: 'mat-cebir', title: 'Oran - Orant─▒', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-2-3', unitId: 'mat-cebir', title: 'Birinci Dereceden Denklemler ve E┼şitsizlikler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-2-1', unitId: 'mat-cebir', title: 'Çarpanlara Ayırma ve Sadeleştirme', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-2-2', unitId: 'mat-cebir', title: 'Oran - Orantı', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-2-3', unitId: 'mat-cebir', title: 'Birinci Dereceden Denklemler ve Eşitsizlikler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'mat-problemler': [
-        { id: 'mat-3-1', unitId: 'mat-problemler', title: 'Say─▒ ve Kesir Problemleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-3-2', unitId: 'mat-problemler', title: 'Ya┼ş Problemleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-3-3', unitId: 'mat-problemler', title: 'Y├╝zde, K├ór-Zarar ve Faiz Problemleri', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-3-4', unitId: 'mat-problemler', title: 'H─▒z ve Hareket Problemleri', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-3-5', unitId: 'mat-problemler', title: '─░┼ş├ği ve Havuz Problemleri', topicNumber: 5, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-3-1', unitId: 'mat-problemler', title: 'Sayı ve Kesir Problemleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-3-2', unitId: 'mat-problemler', title: 'Yaş Problemleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-3-3', unitId: 'mat-problemler', title: 'Yüzde, Kâr-Zarar ve Faiz Problemleri', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-3-4', unitId: 'mat-problemler', title: 'Hız ve Hareket Problemleri', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-3-5', unitId: 'mat-problemler', title: 'İşçi ve Havuz Problemleri', topicNumber: 5, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'mat-geometri': [
-        { id: 'mat-4-1', unitId: 'mat-geometri', title: 'A├ğ─▒lar ve ├£├ğgenler', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-4-2', unitId: 'mat-geometri', title: 'D├Ârtgenler ve ├çokgenler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'mat-4-3', unitId: 'mat-geometri', title: 'Say─▒sal Mant─▒k ve Ak─▒l Y├╝r├╝tme', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-4-1', unitId: 'mat-geometri', title: 'Açılar ve Üçgenler', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-4-2', unitId: 'mat-geometri', title: 'Dörtgenler ve Çokgenler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'mat-4-3', unitId: 'mat-geometri', title: 'Sayısal Mantık ve Akıl Yürütme', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Co─şrafya
+      // Coğrafya
       'cog-fiziki': [
-        { id: 'cog-1-1', unitId: 'cog-fiziki', title: 'T├╝rkiyeÔÇÖnin Co─şrafi Konumu ve Etkileri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-1-2', unitId: 'cog-fiziki', title: 'T├╝rkiyeÔÇÖnin Yer ┼Şekilleri (Da─şlar, Platolar, Ovalar)', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-1-3', unitId: 'cog-fiziki', title: 'T├╝rkiyeÔÇÖnin Su Varl─▒─ş─▒ (Akarsular, G├Âller, Denizler)', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-1-4', unitId: 'cog-fiziki', title: 'T├╝rkiyeÔÇÖnin ─░klimi ve Bitki ├ûrt├╝s├╝', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-1-1', unitId: 'cog-fiziki', title: 'Türkiye’nin Coğrafi Konumu ve Etkileri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-1-2', unitId: 'cog-fiziki', title: 'Türkiye’nin Yer Şekilleri (Dağlar, Platolar, Ovalar)', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-1-3', unitId: 'cog-fiziki', title: 'Türkiye’nin Su Varlığı (Akarsular, Göller, Denizler)', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-1-4', unitId: 'cog-fiziki', title: 'Türkiye’nin İklimi ve Bitki Örtüsü', topicNumber: 4, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'cografi-konum': [
-        { id: 'cog-1-1', unitId: 'cografi-konum', title: 'Matematiksel ve ├ûzel Konumun Sonu├ğlar─▒', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-1-2', unitId: 'cografi-konum', title: 'T├╝rkiye Saat Dilimi ve G├╝ne┼ş I┼ş─▒nlar─▒', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-1-1', unitId: 'cografi-konum', title: 'Matematiksel ve Özel Konumun Sonuçları', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-1-2', unitId: 'cografi-konum', title: 'Türkiye Saat Dilimi ve Güneş Işınları', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'cog-beseri': [
-        { id: 'cog-2-1', unitId: 'cog-beseri', title: 'T├╝rkiyeÔÇÖde N├╝fusun Da─ş─▒l─▒┼ş─▒ ve ├ûzellikleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-2-2', unitId: 'cog-beseri', title: 'T├╝rkiyeÔÇÖde G├Â├ğler ve Yerle┼şme Tipleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-2-1', unitId: 'cog-beseri', title: 'Türkiye’de Nüfusun Dağılışı ve Özellikleri', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-2-2', unitId: 'cog-beseri', title: 'Türkiye’de Göçler ve Yerleşme Tipleri', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'cog-ekonomik': [
-        { id: 'cog-3-1', unitId: 'cog-ekonomik', title: 'Tar─▒m ve Hayvanc─▒l─▒k', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-3-2', unitId: 'cog-ekonomik', title: 'Madenler ve Enerji Kaynaklar─▒', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'cog-3-3', unitId: 'cog-ekonomik', title: 'Sanayi, Ticaret ve Ula┼ş─▒m', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-3-1', unitId: 'cog-ekonomik', title: 'Tarım ve Hayvancılık', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-3-2', unitId: 'cog-ekonomik', title: 'Madenler ve Enerji Kaynakları', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'cog-3-3', unitId: 'cog-ekonomik', title: 'Sanayi, Ticaret ve Ulaşım', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // Vatanda┼şl─▒k
+      // Vatandaşlık
       'vat-temelhukuk': [
-        { id: 'vat-1-1', unitId: 'vat-temelhukuk', title: 'Hukukun Kaynaklar─▒ ve Hukuk Dallar─▒', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'vat-1-2', unitId: 'vat-temelhukuk', title: 'Hak Kavram─▒, Ehliyetler ve H─▒s─▒ml─▒k', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-1-1', unitId: 'vat-temelhukuk', title: 'Hukukun Kaynakları ve Hukuk Dalları', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-1-2', unitId: 'vat-temelhukuk', title: 'Hak Kavramı, Ehliyetler ve Hısımlık', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'temel-hukuk': [
-        { id: 'vat-1-1', unitId: 'temel-hukuk', title: 'Hukuk Kurallar─▒, Yapt─▒r─▒mlar ve Hukuk Dallar─▒', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'vat-1-2', unitId: 'temel-hukuk', title: 'Hak Kavram─▒, Ehliyetler ve H─▒s─▒ml─▒k', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-1-1', unitId: 'temel-hukuk', title: 'Hukuk Kuralları, Yaptırımlar ve Hukuk Dalları', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-1-2', unitId: 'temel-hukuk', title: 'Hak Kavramı, Ehliyetler ve Hısımlık', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'vat-anayasa': [
-        { id: 'vat-2-1', unitId: 'vat-anayasa', title: 'T├╝rk Anayasa Tarihi (1876-1982)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'vat-2-2', unitId: 'vat-anayasa', title: '1982 Anayasas─▒ Temel ─░lkeleri ve Haklar', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-2-1', unitId: 'vat-anayasa', title: 'Türk Anayasa Tarihi (1876-1982)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-2-2', unitId: 'vat-anayasa', title: '1982 Anayasası Temel İlkeleri ve Haklar', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'vat-organlar': [
         { id: 'vat-3-1', unitId: 'vat-organlar', title: 'TBMM ve Yasama Yetkisi', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'vat-3-2', unitId: 'vat-organlar', title: 'Cumhurba┼şkan─▒ ve Y├╝r├╝tme Organ─▒', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'vat-3-3', unitId: 'vat-organlar', title: 'Yarg─▒ Organ─▒ ve Y├╝ksek Mahkemeler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-3-2', unitId: 'vat-organlar', title: 'Cumhurbaşkanı ve Yürütme Organı', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-3-3', unitId: 'vat-organlar', title: 'Yargı Organı ve Yüksek Mahkemeler', topicNumber: 3, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'vat-idare': [
-        { id: 'vat-4-1', unitId: 'vat-idare', title: '─░dare Hukukunun Temel ─░lkeleri ve Te┼şkilat', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
-        { id: 'vat-4-2', unitId: 'vat-idare', title: 'Kamu G├Ârevlileri ve ─░dari ─░┼şlemler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-4-1', unitId: 'vat-idare', title: 'İdare Hukukunun Temel İlkeleri ve Teşkilat', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'vat-4-2', unitId: 'vat-idare', title: 'Kamu Görevlileri ve İdari İşlemler', topicNumber: 2, questionCount: 20, isLocked: false, isCompleted: false },
       ],
-      // G├╝ncel Bilgiler
+      // Güncel Bilgiler
       'gun-kuruluslar': [
-        { id: 'gun-1-1', unitId: 'gun-kuruluslar', title: 'Uluslararas─▒ ├ûrg├╝tler (BM, NATO, AB vb.)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'gun-1-1', unitId: 'gun-kuruluslar', title: 'Uluslararası Örgütler (BM, NATO, AB vb.)', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
       ],
       'gun-olaylar': [
-        { id: 'gun-2-1', unitId: 'gun-olaylar', title: '2025-2026 T├╝rkiye ve D├╝nya G├╝ndemi, ├ûd├╝ller', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
+        { id: 'gun-2-1', unitId: 'gun-olaylar', title: '2025-2026 Türkiye ve Dünya Gündemi, Ödüller', topicNumber: 1, questionCount: 20, isLocked: false, isCompleted: false },
       ],
     };
 
@@ -550,7 +550,7 @@ export const api = {
       }
     }
 
-    // Yerel sorularla birle┼ştir
+    // Yerel sorularla birleştir
     const localQ = getLocalQuestions().filter(q => q.topicId === id || q.unitId === id);
     const combined = [...cloudQuestions];
 
@@ -564,7 +564,7 @@ export const api = {
       return combined;
     }
 
-    // Her konu i├ğin standart 20 soruluk eksiksiz KPSS test paketi ├╝ret
+    // Her konu için standart 20 soruluk eksiksiz KPSS test paketi üret
     return SAMPLE_20_QUESTIONS.map((q, idx) => ({
       id: `${id}-q-${idx + 1}`,
       topicId: id,
@@ -630,12 +630,12 @@ export const api = {
   },
 
   // ==========================================
-  // ADM─░N PANEL─░ SERV─░SLER─░ (CRUD & BULUT/YEREL H─░BR─░T)
+  // ADMİN PANELİ SERVİSLERİ (CRUD & BULUT/YEREL HİBRİT)
   // ==========================================
 
   /**
-   * Ders ekler. Supabase'e eklemeyi dener; RLS kural─▒ engellerse
-   * yerel haf─▒zaya kaydederek y├Âneticinin ak─▒┼ş─▒n─▒ asla kilitlemez.
+   * Ders ekler. Supabase'e eklemeyi dener; RLS kuralı engellerse
+   * yerel hafızaya kaydederek yöneticinin akışını asla kilitlemez.
    */
   async adminCreateSubject(title: string, id?: string): Promise<{ success: boolean; isLocal?: boolean; error?: string; data?: any }> {
     const newId = (id && isUuid(id)) ? id : generateUuid();
@@ -663,14 +663,14 @@ export const api = {
         if (!error && data && data.length > 0) {
           cloudSaved = true;
           newSubject.id = data[0].id;
-          console.log('Ô£à [Supabase BA┼ŞARILI] Ders buluta kaydedildi:', data[0]);
+          console.log('✅ [Supabase BAŞARILI] Ders buluta kaydedildi:', data[0]);
         } else if (error) {
           cloudError = error.message;
-          console.warn('ÔÜá´©Å [Supabase RLS/Kural Uyar─▒s─▒] Bulut engelledi, yerel haf─▒zaya aktar─▒l─▒yor:', error);
+          console.warn('⚠️ [Supabase RLS/Kural Uyarısı] Bulut engelledi, yerel hafızaya aktarılıyor:', error);
         }
       } catch (err: any) {
         cloudError = err?.message;
-        console.warn('ÔÜá´©Å [Supabase ─░stisna]:', err);
+        console.warn('⚠️ [Supabase İstisna]:', err);
       }
     }
 
@@ -732,10 +732,10 @@ export const api = {
         if (!error && data && data.length > 0) {
           cloudSaved = true;
           newUnit.id = data[0].id;
-          console.log('Ô£à [Supabase BA┼ŞARILI] ├£nite buluta kaydedildi:', data[0]);
+          console.log('✅ [Supabase BAŞARILI] Ünite buluta kaydedildi:', data[0]);
         } else if (error) {
           cloudError = error.message;
-          console.warn('ÔÜá´©Å [Supabase RLS/Kural Uyar─▒s─▒] ├£nite bulut engeline tak─▒ld─▒, yerel kaydediliyor:', error);
+          console.warn('⚠️ [Supabase RLS/Kural Uyarısı] Ünite bulut engeline takıldı, yerel kaydediliyor:', error);
         }
       } catch (err: any) {
         cloudError = err?.message;
@@ -895,10 +895,10 @@ export const api = {
   },
 
   /**
-   * 20 Soruluk Soru Paketini ├£niteye Toplu Olarak Y├╝kler.
+   * 20 Soruluk Soru Paketini Üniteye Toplu Olarak Yükler.
    */
   /**
-   * 20 Soruluk Soru Paketini Konu veya ├£niteye Toplu Olarak Y├╝kler.
+   * 20 Soruluk Soru Paketini Konu veya Üniteye Toplu Olarak Yükler.
    */
   async adminUpload20QuestionPackage(targetId: string, questions: Question[], isTopic = true): Promise<{ success: boolean; count: number; isLocal?: boolean; error?: string }> {
     let cloudSaved = false;

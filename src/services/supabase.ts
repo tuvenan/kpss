@@ -1,4 +1,4 @@
-﻿import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl =
   (import.meta.env.VITE_SUPABASE_URL as string) ||
@@ -22,9 +22,9 @@ export const isSupabaseConfigured = (): boolean => {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Y├Ânetici yetkili istemcisi (Admin Client).
- * E─şer kullan─▒c─▒ veya ortam de─şi┼şkenleri 'service_role / secret' anahtar─▒ sa─şlam─▒┼şsa
- * RLS kurallar─▒n─▒ atlayarak do─şrudan tam yetkiyle ├ğal─▒┼ş─▒r; aksi halde standart istemciyi d├Âner.
+ * Yönetici yetkili istemcisi (Admin Client).
+ * Eğer kullanıcı veya ortam değişkenleri 'service_role / secret' anahtarı sağlamışsa
+ * RLS kurallarını atlayarak doğrudan tam yetkiyle çalışır; aksi halde standart istemciyi döner.
  */
 export const getAdminClient = (): SupabaseClient => {
   const secretKey =

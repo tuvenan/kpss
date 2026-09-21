@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Subject, Unit, Topic, Question, OptionId, UserAnswer, UnitResult } from '../types';
 import { CompetencyRadarCard } from '../components/CompetencyRadarCard';
@@ -54,20 +54,20 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     window.addEventListener('kpss_profile_updated', handleProfileUpdate);
     return () => window.removeEventListener('kpss_profile_updated', handleProfileUpdate);
   }, []);
-  const [errorFilter, setErrorFilter] = useState('T├╝m├╝');
+  const [errorFilter, setErrorFilter] = useState('Tümü');
 
   const errorQuestions = [
-    { id: '1', subject: 'Tarih', topic: '─░slamiyet ├ûncesi', unit: '─░slamiyet ├ûncesi T├╝rk Tarihi', qNumber: 'Soru 07', wrong: 'C', correct: 'B', icon: 'landmark' },
-    { id: '2', subject: 'T├╝rk├ğe', topic: 'S├Âzc├╝kte Anlam', unit: 'S├Âzc├╝kte Anlam', qNumber: 'Soru 13', wrong: 'D', correct: 'A', icon: 'book' },
+    { id: '1', subject: 'Tarih', topic: 'İslamiyet Öncesi', unit: 'İslamiyet Öncesi Türk Tarihi', qNumber: 'Soru 07', wrong: 'C', correct: 'B', icon: 'landmark' },
+    { id: '2', subject: 'Türkçe', topic: 'Sözcükte Anlam', unit: 'Sözcükte Anlam', qNumber: 'Soru 13', wrong: 'D', correct: 'A', icon: 'book' },
     { id: '3', subject: 'Matematik', topic: 'Problemler', unit: 'Problemler', qNumber: 'Soru 05', wrong: 'B', correct: 'C', icon: 'calculator' },
-    { id: '4', subject: 'Co─şrafya', topic: "T├╝rkiye Fiziki Yap─▒s─▒", unit: "T├╝rkiye'nin Fiziki Yap─▒s─▒", qNumber: 'Soru 11', wrong: 'A', correct: 'earth' },
+    { id: '4', subject: 'Coğrafya', topic: "Türkiye Fiziki Yapısı", unit: "Türkiye'nin Fiziki Yapısı", qNumber: 'Soru 11', wrong: 'A', correct: 'earth' },
   ];
 
-  const filteredErrorQuestions = errorFilter === 'T├╝m├╝'
+  const filteredErrorQuestions = errorFilter === 'Tümü'
     ? errorQuestions
     : errorQuestions.filter((q) => q.subject.toLowerCase() === errorFilter.toLowerCase());
 
-  // G├╝nl├╝k ─░lerleme Verileri
+  // Günlük İlerleme Verileri
   const dailyProgress = {
     current: 42,
     target: 60,
@@ -77,19 +77,19 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   // KPSS Genel Yetenek Dersleri
   const generalTalentSubjects = [
-    { id: 'turkce', title: 'T├╝rk├ğe', unitCount: 12, percentage: 58, icon: 'book' },
+    { id: 'turkce', title: 'Türkçe', unitCount: 12, percentage: 58, icon: 'book' },
     { id: 'matematik', title: 'Matematik', unitCount: 14, percentage: 42, icon: 'calculator' },
   ];
 
-  // KPSS Genel K├╝lt├╝r Dersleri
+  // KPSS Genel Kültür Dersleri
   const generalCultureSubjects = [
     { id: 'tarih', title: 'Tarih', unitCount: 16, percentage: 71, icon: 'landmark' },
-    { id: 'cografya', title: 'Co─şrafya', unitCount: 10, percentage: 0, icon: 'globe' },
-    { id: 'vatandaslik', title: 'Vatanda┼şl─▒k', unitCount: 8, percentage: 38, icon: 'users' },
-    { id: 'guncel', title: 'G├╝ncel Bilgiler', unitCount: 6, percentage: 25, icon: 'newspaper' },
+    { id: 'cografya', title: 'Coğrafya', unitCount: 10, percentage: 0, icon: 'globe' },
+    { id: 'vatandaslik', title: 'Vatandaşlık', unitCount: 8, percentage: 38, icon: 'users' },
+    { id: 'guncel', title: 'Güncel Bilgiler', unitCount: 6, percentage: 25, icon: 'newspaper' },
   ];
 
-  // S─▒nav Durumu
+  // Sınav Durumu
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, UserAnswer>>({});
@@ -168,7 +168,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       api.markQuestionResolved(currentQ.id);
     }
 
-    // Ger├ğek ├Â─şrenci analiti─şine kaydet
+    // Gerçek öğrenci analitiğine kaydet
     const topicKey = selectedTopic?.title || selectedTopic?.id || selectedUnit?.title || 'Genel';
     studentProgressService.recordAnswer(topicKey, isCorrect);
 
@@ -274,12 +274,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
     return (
       <div>
-        {/* ├£st Geri Tu┼şu ve Ba┼şl─▒k */}
+        {/* Üst Geri Tuşu ve Başlık */}
         <div style={styles.unitHeader}>
           <button
             onClick={() => setViewState('topics')}
             style={styles.unitBackButton}
-            title="Konulara D├Ân"
+            title="Konulara Dön"
           >
             <ChevronLeft size={22} color="#111" />
           </button>
@@ -287,54 +287,54 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           <div style={{ width: '40px' }} />
         </div>
 
-        {/* Sonu├ğ Kart─▒ / Ba┼şar─▒ Halkas─▒ Alan─▒ */}
+        {/* Sonuç Kartı / Başarı Halkası Alanı */}
         <div style={styles.resultCardNew}>
-          <div style={styles.resultMainTitleNew}>Test Tamamland─▒</div>
+          <div style={styles.resultMainTitleNew}>Test Tamamlandı</div>
 
-          {/* Ba┼şar─▒ Halkas─▒ */}
+          {/* Başarı Halkası */}
           <div style={styles.circleContainerNew}>
             <div style={styles.scoreTextNew}>{correct} / {total}</div>
-            <div style={styles.percentageTextNew}>%{percentage} Ba┼şar─▒</div>
+            <div style={styles.percentageTextNew}>%{percentage} Başarı</div>
           </div>
 
-          {/* Do─şru - Yanl─▒┼ş - Bo┼ş ─░statistikleri */}
+          {/* Doğru - Yanlış - Boş İstatistikleri */}
           <div style={styles.statsRowNew}>
             <div style={styles.statItemNew}>
               <div style={{ ...styles.statDotNew, backgroundColor: '#2E7D32' }} />
-              <div style={styles.statLabelNew}>Do─şru</div>
+              <div style={styles.statLabelNew}>Doğru</div>
               <div style={styles.statValueNew}>{correct}</div>
             </div>
             <div style={styles.statDividerNew} />
             <div style={styles.statItemNew}>
               <div style={{ ...styles.statDotNew, backgroundColor: '#D32F2F' }} />
-              <div style={styles.statLabelNew}>Yanl─▒┼ş</div>
+              <div style={styles.statLabelNew}>Yanlış</div>
               <div style={styles.statValueNew}>{wrong}</div>
             </div>
             <div style={styles.statDividerNew} />
             <div style={styles.statItemNew}>
               <div style={{ ...styles.statDotNew, backgroundColor: '#888' }} />
-              <div style={styles.statLabelNew}>Bo┼ş</div>
+              <div style={styles.statLabelNew}>Boş</div>
               <div style={styles.statValueNew}>{empty}</div>
             </div>
           </div>
         </div>
 
-        {/* Hata Bilgilendirme Banner'─▒ */}
+        {/* Hata Bilgilendirme Banner'ı */}
         <div style={styles.errorBannerNew}>
           <Info size={18} color="#666" style={{ marginRight: '8px', flexShrink: 0 }} />
           <span style={styles.errorBannerTextNew}>
-            {wrong > 0 ? `${wrong} soru hata havuzuna eklendi.` : 'Tebrikler! Hi├ğ hata yapmad─▒n─▒z.'}
+            {wrong > 0 ? `${wrong} soru hata havuzuna eklendi.` : 'Tebrikler! Hiç hata yapmadınız.'}
           </span>
         </div>
 
-        {/* Y├Ânlendirme Butonlar─▒ */}
+        {/* Yönlendirme Butonları */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {wrong > 0 && (
             <button
               onClick={handleRetryWrong}
               style={styles.resultPrimaryButton}
             >
-              Hatalar─▒m─▒ ├ç├Âz
+              Hatalarımı Çöz
             </button>
           )}
 
@@ -349,7 +349,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             onClick={() => setViewState('topics')}
             style={styles.resultOutlineButton}
           >
-            Konulara D├Ân
+            Konulara Dön
           </button>
         </div>
       </div>
@@ -381,9 +381,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           <span style={styles.subjectTitle}>{subject.title}</span>
           <ChevronRight size={18} color="#666" />
         </div>
-        <div style={styles.unitText}>{subject.unitCount} ├£nite</div>
+        <div style={styles.unitText}>{subject.unitCount} Ünite</div>
 
-        {/* ─░lerleme ├çubu─şu ve Y├╝zde */}
+        {/* İlerleme Çubuğu ve Yüzde */}
         <div style={styles.progressRow}>
           <div style={styles.progressBarBg}>
             <div style={{ ...styles.cardProgressBarFill, width: `${subject.percentage}%` }} />
@@ -399,7 +399,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     .filter(
       (s) =>
         !standardIds.has(s.id.toLowerCase()) &&
-        !['t├╝rk├ğe', 'matematik', 'tarih', 'co─şrafya', 'vatanda┼şl─▒k', 'g├╝ncel bilgiler'].includes(s.title.toLowerCase())
+        !['türkçe', 'matematik', 'tarih', 'coğrafya', 'vatandaşlık', 'güncel bilgiler'].includes(s.title.toLowerCase())
     )
     .map((s) => ({
       id: s.id,
@@ -411,9 +411,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   const handleStartPlan = async (planIndex: number) => {
     let subTitleQuery = 'tarih';
-    if (planIndex === 2) subTitleQuery = 't├╝rk';
+    if (planIndex === 2) subTitleQuery = 'türk';
     if (planIndex === 3) subTitleQuery = 'mat';
-    if (planIndex === 4) subTitleQuery = 'co─ş';
+    if (planIndex === 4) subTitleQuery = 'coğ';
     const targetSubject = subjects.find((s) => s.title.toLowerCase().includes(subTitleQuery)) || subjects[0];
     if (targetSubject) {
       setSelectedSubject(targetSubject);
@@ -498,7 +498,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
         }
       `}</style>
 
-      {/* 1. SOL KENAR ├çUBU─ŞU (SIDEBAR) */}
+      {/* 1. SOL KENAR ÇUBUĞU (SIDEBAR) */}
       <aside className="web-sidebar-desktop" style={styles.webSidebar}>
         <div>
           <div style={styles.sidebarBrand}>
@@ -531,7 +531,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               style={activeTab === 'errors' && viewState === 'subjects' ? styles.sidebarNavItemActive : styles.sidebarNavItem}
             >
               <AlertCircle size={18} style={{ marginRight: '12px' }} />
-              <span>Hatalar─▒m</span>
+              <span>Hatalarım</span>
             </button>
 
             <button
@@ -552,22 +552,22 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </nav>
         </div>
 
-        {/* Sol Alt Motivasyon Alan─▒ */}
+        {/* Sol Alt Motivasyon Alanı */}
         <div style={styles.sidebarQuoteBox}>
           <div style={styles.quoteMark}>66</div>
-          <div style={styles.quoteContent}>K├╝├ğ├╝k ad─▒mlar b├╝y├╝k hedeflere g├Ât├╝r├╝r.</div>
-          <div style={styles.quoteFooter}>Ba┼şar─▒ seninle.</div>
+          <div style={styles.quoteContent}>Küçük adımlar büyük hedeflere götürür.</div>
+          <div style={styles.quoteFooter}>Başarı seninle.</div>
         </div>
       </aside>
 
-      {/* 2. SA─Ş ─░├çER─░K ALANI */}
+      {/* 2. SAĞ İÇERİK ALANI */}
       <div style={styles.webRightArea}>
-        {/* ├£st Header */}
+        {/* Üst Header */}
         <header className="web-header" style={styles.webHeader}>
           <div className="header-search-box" style={styles.headerSearchBox}>
             <Search size={16} color="#888" style={{ marginRight: '10px', flexShrink: 0 }} />
             <input
-              placeholder="Ders, ├╝nite veya konu ara..."
+              placeholder="Ders, ünite veya konu ara..."
               style={styles.headerSearchInput}
             />
           </div>
@@ -591,35 +591,35 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </div>
         </header>
 
-        {/* Ana ─░├ğerik Scroll Alan─▒ */}
+        {/* Ana İçerik Scroll Alanı */}
         <main className="web-main-scroll" style={styles.webMainScroll}>
           {viewState === 'subjects' && activeTab === 'home' && (
             <div className="dashboard-container" style={styles.dashboardContainer}>
-              {/* SOL KOLON (ANA AKI┼Ş) */}
+              {/* SOL KOLON (ANA AKIŞ) */}
               <div className="dashboard-left-col" style={styles.dashboardLeftCol}>
-                {/* Kar┼ş─▒lama ve G├╝nl├╝k ─░lerleme */}
+                {/* Karşılama ve Günlük İlerleme */}
                 <div className="welcome-row" style={styles.welcomeRow}>
                   <div>
                     <h1 className="welcome-heading" style={styles.welcomeHeading}>Merhaba, {userProfile.name.split(' ')[0] || 'Ali'}</h1>
-                    <div style={styles.welcomeSubheading}>Bug├╝n ne ├ğal─▒┼şal─▒m?</div>
+                    <div style={styles.welcomeSubheading}>Bugün ne çalışalım?</div>
                   </div>
                   <div className="date-badge-container" style={styles.dateBadgeContainer}>
                     <Calendar size={18} color="#444" style={{ marginRight: '10px' }} />
                     <div>
-                      <div style={styles.dateBadgeTitle}>24 Eyl├╝l 2025</div>
-                      <div style={styles.dateBadgeSub}>├çar┼şamba</div>
+                      <div style={styles.dateBadgeTitle}>24 Eylül 2025</div>
+                      <div style={styles.dateBadgeSub}>Çarşamba</div>
                     </div>
                   </div>
                 </div>
 
-                {/* G├╝nl├╝k Hedef Kart─▒ */}
+                {/* Günlük Hedef Kartı */}
                 <div style={styles.goalCardContainer}>
                   <div style={styles.goalHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={styles.goalTargetIconBox}>
                         <Target size={18} color="#111" />
                       </div>
-                      <span style={styles.goalTitleText}>G├╝nl├╝k ─░lerleme</span>
+                      <span style={styles.goalTitleText}>Günlük İlerleme</span>
                     </div>
                     <span style={styles.goalTargetText}>Hedef: 60 soru</span>
                   </div>
@@ -634,24 +634,24 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
 
                   <div style={styles.goalFooterRow}>
-                    <span>42 soru ├ğ├Âz├╝ld├╝</span>
+                    <span>42 soru çözüldü</span>
                   </div>
                 </div>
 
-                {/* Dersler B├Âl├╝m├╝ (Grid) */}
+                {/* Dersler Bölümü (Grid) */}
                 <div style={styles.sectionTitleRow}>
                   <h2 style={styles.sectionHeadingTitle}>Dersler</h2>
                   <button
                     onClick={() => setActiveTab('subjects')}
                     style={styles.textLinkBtn}
                   >
-                    <span>T├╝m├╝n├╝ G├Âr ÔåÆ</span>
+                    <span>Tümünü Gör →</span>
                   </button>
                 </div>
 
                 <div style={styles.categorySubTitle}>KPSS Genel Yetenek</div>
                 <div className="subjects-grid-2" style={styles.subjectsGrid2}>
-                  {/* T├╝rk├ğe */}
+                  {/* Türkçe */}
                   <div
                     onClick={() => handleSubjectClick(generalTalentSubjects[0])}
                     style={styles.dashSubjectCard}
@@ -661,10 +661,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>T├╝rk├ğe</span>
+                        <span style={styles.dashSubjectName}>Türkçe</span>
                         <ChevronRight size={16} color="#666" />
                       </div>
-                      <div style={styles.dashSubjectUnits}>12 / 20 ├╝nite</div>
+                      <div style={styles.dashSubjectUnits}>12 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
                         <div style={{ ...styles.dashMiniBarFill, width: '58%' }} />
                       </div>
@@ -685,7 +685,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <span style={styles.dashSubjectName}>Matematik</span>
                         <ChevronRight size={16} color="#666" />
                       </div>
-                      <div style={styles.dashSubjectUnits}>8 / 20 ├╝nite</div>
+                      <div style={styles.dashSubjectUnits}>8 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
                         <div style={{ ...styles.dashMiniBarFill, width: '42%' }} />
                       </div>
@@ -694,7 +694,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
                 </div>
 
-                <div style={{ ...styles.categorySubTitle, marginTop: '18px' }}>KPSS Genel K├╝lt├╝r</div>
+                <div style={{ ...styles.categorySubTitle, marginTop: '18px' }}>KPSS Genel Kültür</div>
                 <div className="subjects-grid-2" style={styles.subjectsGrid2}>
                   {/* Tarih */}
                   <div
@@ -709,7 +709,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <span style={styles.dashSubjectName}>Tarih</span>
                         <ChevronRight size={16} color="#666" />
                       </div>
-                      <div style={styles.dashSubjectUnits}>5 / 20 ├╝nite</div>
+                      <div style={styles.dashSubjectUnits}>5 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
                         <div style={{ ...styles.dashMiniBarFill, width: '71%' }} />
                       </div>
@@ -717,7 +717,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     <span style={styles.dashPercentNum}>%71</span>
                   </div>
 
-                  {/* Co─şrafya */}
+                  {/* Coğrafya */}
                   <div
                     onClick={() => handleSubjectClick(generalCultureSubjects[1])}
                     style={styles.dashSubjectCard}
@@ -727,10 +727,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Co─şrafya</span>
+                        <span style={styles.dashSubjectName}>Coğrafya</span>
                         <ChevronRight size={16} color="#666" />
                       </div>
-                      <div style={styles.dashSubjectUnits}>0 / 20 ├╝nite</div>
+                      <div style={styles.dashSubjectUnits}>0 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
                         <div style={{ ...styles.dashMiniBarFill, width: '0%' }} />
                       </div>
@@ -738,7 +738,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     <span style={styles.dashPercentNum}>%0</span>
                   </div>
 
-                  {/* Vatanda┼şl─▒k */}
+                  {/* Vatandaşlık */}
                   <div
                     onClick={() => handleSubjectClick(generalCultureSubjects[2])}
                     style={styles.dashSubjectCard}
@@ -748,10 +748,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Vatanda┼şl─▒k</span>
+                        <span style={styles.dashSubjectName}>Vatandaşlık</span>
                         <ChevronRight size={16} color="#666" />
                       </div>
-                      <div style={styles.dashSubjectUnits}>8 / 20 ├╝nite</div>
+                      <div style={styles.dashSubjectUnits}>8 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
                         <div style={{ ...styles.dashMiniBarFill, width: '38%' }} />
                       </div>
@@ -759,7 +759,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     <span style={styles.dashPercentNum}>%38</span>
                   </div>
 
-                  {/* G├╝ncel Bilgiler */}
+                  {/* Güncel Bilgiler */}
                   <div
                     onClick={() => handleSubjectClick(generalCultureSubjects[3])}
                     style={styles.dashSubjectCard}
@@ -769,10 +769,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>G├╝ncel Bilgiler</span>
+                        <span style={styles.dashSubjectName}>Güncel Bilgiler</span>
                         <ChevronRight size={16} color="#666" />
                       </div>
-                      <div style={styles.dashSubjectUnits}>6 / 20 ├╝nite</div>
+                      <div style={styles.dashSubjectUnits}>6 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
                         <div style={{ ...styles.dashMiniBarFill, width: '25%' }} />
                       </div>
@@ -781,8 +781,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
                 </div>
 
-                {/* H─▒zl─▒ Eri┼şim */}
-                <div style={styles.quickAccessTitle}>H─▒zl─▒ Eri┼şim</div>
+                {/* Hızlı Erişim */}
+                <div style={styles.quickAccessTitle}>Hızlı Erişim</div>
                 <div className="quick-access-row" style={styles.quickAccessRow}>
                   <div
                     onClick={() => handleStartPlan(1)}
@@ -792,8 +792,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       <Play size={16} color="#111" />
                     </div>
                     <div>
-                      <div style={styles.quickAccessTitleText}>Soru ├ç├Âz</div>
-                      <div style={styles.quickAccessSubText}>Teste ba┼şla</div>
+                      <div style={styles.quickAccessTitleText}>Soru Çöz</div>
+                      <div style={styles.quickAccessSubText}>Teste başla</div>
                     </div>
                   </div>
 
@@ -806,7 +806,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Hata Havuzu</div>
-                      <div style={styles.quickAccessSubText}>Yanl─▒┼şlar─▒n─▒ tekrar et</div>
+                      <div style={styles.quickAccessSubText}>Yanlışlarını tekrar et</div>
                     </div>
                   </div>
 
@@ -819,7 +819,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Dersler</div>
-                      <div style={styles.quickAccessSubText}>T├╝m derslere g├Âz at</div>
+                      <div style={styles.quickAccessSubText}>Tüm derslere göz at</div>
                     </div>
                   </div>
 
@@ -832,22 +832,22 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Profil</div>
-                      <div style={styles.quickAccessSubText}>─░statistiklerini g├Âr</div>
+                      <div style={styles.quickAccessSubText}>İstatistiklerini gör</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* SA─Ş KOLON (├çALI┼ŞMA PLANI & ─░STAT─░ST─░KLER) */}
+              {/* SAĞ KOLON (ÇALIŞMA PLANI & İSTATİSTİKLER) */}
               <div className="dashboard-right-col" style={styles.dashboardRightCol}>
-                {/* 1. Bug├╝n├╝n ├çal─▒┼şma Plan─▒ */}
+                {/* 1. Bugünün Çalışma Planı */}
                 <div style={styles.widgetBox}>
                   <div style={styles.widgetHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <Calendar size={18} color="#111" style={{ marginRight: '8px' }} />
-                      <span style={styles.widgetTitleText}>Bug├╝n├╝n ├çal─▒┼şma Plan─▒</span>
+                      <span style={styles.widgetTitleText}>Bugünün Çalışma Planı</span>
                     </div>
-                    <button style={styles.widgetLinkBtn}>D├╝zenle</button>
+                    <button style={styles.widgetLinkBtn}>Düzenle</button>
                   </div>
 
                   <div style={styles.planItemsContainer}>
@@ -857,7 +857,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     >
                       <span style={styles.planNumBadge}>01</span>
                       <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Tarih ÔÇö ─░slamiyet ├ûncesi T├╝rk Tarihi</div>
+                        <div style={styles.planItemTitle}>Tarih — İslamiyet Öncesi Türk Tarihi</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
                       <ChevronRight size={16} color="#666" />
@@ -869,7 +869,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     >
                       <span style={styles.planNumBadge}>02</span>
                       <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>T├╝rk├ğe ÔÇö S├Âzc├╝kte Anlam</div>
+                        <div style={styles.planItemTitle}>Türkçe — Sözcükte Anlam</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
                       <ChevronRight size={16} color="#666" />
@@ -881,7 +881,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     >
                       <span style={styles.planNumBadge}>03</span>
                       <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Matematik ÔÇö Problemler</div>
+                        <div style={styles.planItemTitle}>Matematik — Problemler</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
                       <ChevronRight size={16} color="#666" />
@@ -893,7 +893,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     >
                       <span style={styles.planNumBadge}>04</span>
                       <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Co─şrafya ÔÇö T├╝rkiye Fiziki Yap─▒s─▒</div>
+                        <div style={styles.planItemTitle}>Coğrafya — Türkiye Fiziki Yapısı</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
                       <ChevronRight size={16} color="#666" />
@@ -904,22 +904,22 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     onClick={() => handleStartPlan(1)}
                     style={styles.startPlanBlackBtn}
                   >
-                    ├çal─▒┼şmaya Ba┼şla
+                    Çalışmaya Başla
                   </button>
                 </div>
 
-                {/* 2. Sonu├ğlar─▒m */}
+                {/* 2. Sonuçlarım */}
                 <div style={styles.widgetBox}>
                   <div style={styles.widgetHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <BarChart2 size={18} color="#111" style={{ marginRight: '8px' }} />
-                      <span style={styles.widgetTitleText}>Sonu├ğlar─▒m</span>
+                      <span style={styles.widgetTitleText}>Sonuçlarım</span>
                     </div>
                     <button
                       onClick={() => setActiveTab('subjects')}
                       style={styles.widgetLinkBtn}
                     >
-                      T├╝m├╝n├╝ G├Âr ÔåÆ
+                      Tümünü Gör →
                     </button>
                   </div>
 
@@ -929,15 +929,15 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       <div style={styles.statMiniVal}>1.240</div>
                     </div>
                     <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Do─şru</div>
+                      <div style={styles.statMiniLabel}>Doğru</div>
                       <div style={{ ...styles.statMiniVal, color: '#16A34A' }}>982</div>
                     </div>
                     <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Yanl─▒┼ş</div>
+                      <div style={styles.statMiniLabel}>Yanlış</div>
                       <div style={{ ...styles.statMiniVal, color: '#DC2626' }}>258</div>
                     </div>
                     <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Ba┼şar─▒ Oran─▒</div>
+                      <div style={styles.statMiniLabel}>Başarı Oranı</div>
                       <div style={styles.statMiniVal}>%79</div>
                     </div>
                   </div>
@@ -954,7 +954,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
                       style={styles.widgetLinkBtn}
                     >
-                      T├╝m├╝n├╝ G├Âr ÔåÆ
+                      Tümünü Gör →
                     </button>
                   </div>
                   <div style={styles.errorSubCountMini}>4 hata sorusu</div>
@@ -965,10 +965,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       style={styles.errorMiniItem}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Tarih ÔÇö ─░slamiyet ├ûncesi</div>
+                        <div style={styles.errorItemTitle}>Tarih — İslamiyet Öncesi</div>
                         <div style={styles.errorItemSub}>Soru 07</div>
                       </div>
-                      <span style={styles.errorRedPill}>Yanl─▒┼ş</span>
+                      <span style={styles.errorRedPill}>Yanlış</span>
                       <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
                     </div>
 
@@ -977,10 +977,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       style={styles.errorMiniItem}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>T├╝rk├ğe ÔÇö S├Âzc├╝kte Anlam</div>
+                        <div style={styles.errorItemTitle}>Türkçe — Sözcükte Anlam</div>
                         <div style={styles.errorItemSub}>Soru 13</div>
                       </div>
-                      <span style={styles.errorRedPill}>Yanl─▒┼ş</span>
+                      <span style={styles.errorRedPill}>Yanlış</span>
                       <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
                     </div>
 
@@ -989,10 +989,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       style={styles.errorMiniItem}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Matematik ÔÇö Problemler</div>
+                        <div style={styles.errorItemTitle}>Matematik — Problemler</div>
                         <div style={styles.errorItemSub}>Soru 05</div>
                       </div>
-                      <span style={styles.errorRedPill}>Yanl─▒┼ş</span>
+                      <span style={styles.errorRedPill}>Yanlış</span>
                       <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
                     </div>
 
@@ -1001,10 +1001,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       style={styles.errorMiniItem}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Co─şrafya ÔÇö T├╝rkiye Fiziki Yap─▒s─▒</div>
+                        <div style={styles.errorItemTitle}>Coğrafya — Türkiye Fiziki Yapısı</div>
                         <div style={styles.errorItemSub}>Soru 11</div>
                       </div>
-                      <span style={styles.errorRedPill}>Yanl─▒┼ş</span>
+                      <span style={styles.errorRedPill}>Yanlış</span>
                       <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
                     </div>
                   </div>
@@ -1013,24 +1013,24 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             </div>
           )}
 
-          {/* DERSLER SEKMES─░ */}
+          {/* DERSLER SEKMESİ */}
           {viewState === 'subjects' && activeTab === 'subjects' && (
             <div style={{ maxWidth: '780px', margin: '0 auto', width: '100%' }}>
               <h1 style={styles.mainTitle}>Dersler</h1>
               <div style={styles.categoryTitle}>KPSS Genel Yetenek</div>
               {generalTalentSubjects.map(renderSubjectCard)}
-              <div style={{ ...styles.categoryTitle, marginTop: '24px' }}>KPSS Genel K├╝lt├╝r</div>
+              <div style={{ ...styles.categoryTitle, marginTop: '24px' }}>KPSS Genel Kültür</div>
               {generalCultureSubjects.map(renderSubjectCard)}
               {extraSubjects.length > 0 && (
                 <>
-                  <div style={{ ...styles.categoryTitle, marginTop: '24px' }}>├ûzel Eklenen Dersler</div>
+                  <div style={{ ...styles.categoryTitle, marginTop: '24px' }}>Özel Eklenen Dersler</div>
                   {extraSubjects.map(renderSubjectCard)}
                 </>
               )}
             </div>
           )}
 
-          {/* HATALARIM SEKMES─░ */}
+          {/* HATALARIM SEKMESİ */}
           {viewState === 'subjects' && activeTab === 'errors' && (
             <div style={{ maxWidth: '780px', margin: '0 auto', width: '100%' }}>
               <div style={styles.errorHeaderRow}>
@@ -1040,7 +1040,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 </div>
                 <button
                   onClick={() => {
-                    const filters = ['T├╝m├╝', 'Tarih', 'T├╝rk├ğe', 'Matematik', 'Co─şrafya'];
+                    const filters = ['Tümü', 'Tarih', 'Türkçe', 'Matematik', 'Coğrafya'];
                     const nextIdx = (filters.indexOf(errorFilter) + 1) % filters.length;
                     setErrorFilter(filters[nextIdx]);
                   }}
@@ -1064,8 +1064,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={styles.errorCardRight}>
                       <div style={styles.errorBadgeRow}>
-                        <span style={styles.errorWrongBadge}>Yanl─▒┼ş: {item.wrong}</span>
-                        <span style={styles.errorCorrectBadge}>Do─şru: {item.correct}</span>
+                        <span style={styles.errorWrongBadge}>Yanlış: {item.wrong}</span>
+                        <span style={styles.errorCorrectBadge}>Doğru: {item.correct}</span>
                       </div>
                       <ChevronRight size={18} color="#666" style={{ marginTop: '8px' }} />
                     </div>
@@ -1075,14 +1075,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             </div>
           )}
 
-          {/* PROF─░L SEKMES─░ */}
+          {/* PROFİL SEKMESİ */}
           {viewState === 'subjects' && activeTab === 'profile' && (() => {
             const overallStats = studentProgressService.getOverallStats();
             const weeklyData = studentProgressService.getWeeklyActivity();
 
             return (
               <div style={{ maxWidth: '980px', margin: '0 auto', width: '100%' }}>
-                <h1 style={styles.mainTitle}>├û─şrenci Profili</h1>
+                <h1 style={styles.mainTitle}>Öğrenci Profili</h1>
                 <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EFEFF2', padding: '24px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -1090,10 +1090,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <User size={28} color="#111" />
                       </div>
                       <div>
-                        <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{userProfile.name || '├û─şrenci'}</h2>
+                        <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{userProfile.name || 'Öğrenci'}</h2>
                         <div style={{ fontSize: '14px', color: '#666' }}>
-                          {userProfile.examType} Aday─▒ ÔÇó Hedef: {userProfile.targetScore}+ Puan
-                          {userProfile.branch ? ` ÔÇó ${userProfile.branch}` : ''}
+                          {userProfile.examType} Adayı • Hedef: {userProfile.targetScore}+ Puan
+                          {userProfile.branch ? ` • ${userProfile.branch}` : ''}
                         </div>
                       </div>
                     </div>
@@ -1115,29 +1115,29 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       }}
                     >
                       <Settings size={16} color="#4B5563" />
-                      <span>Ayarlar─▒ D├╝zenle</span>
+                      <span>Ayarları Düzenle</span>
                     </button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                     <div style={{ padding: '14px', backgroundColor: '#F9F9FB', borderRadius: '12px', border: '1px solid #EFEFF2' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>├ç├Âz├╝len Soru</div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Çözülen Soru</div>
                       <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#111' }}>{overallStats.totalSolved}</div>
                     </div>
                     <div style={{ padding: '14px', backgroundColor: '#F9F9FB', borderRadius: '12px', border: '1px solid #EFEFF2' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Ba┼şar─▒ Oran─▒</div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Başarı Oranı</div>
                       <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2E7D32' }}>%{overallStats.percentage}</div>
                     </div>
                     <div style={{ padding: '14px', backgroundColor: '#F9F9FB', borderRadius: '12px', border: '1px solid #EFEFF2' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>G├╝nl├╝k Hedef</div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Günlük Hedef</div>
                       <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2563EB' }}>{userProfile.dailyGoal} Soru</div>
                     </div>
                   </div>
                 </div>
 
-                {/* 1. BLOK: YETERL─░L─░K RADARI & KAZANIM-KONU ANAL─░Z─░ */}
+                {/* 1. BLOK: YETERLİLİK RADARI & KAZANIM-KONU ANALİZİ */}
                 <CompetencyRadarCard />
 
-                {/* 2. BLOK: GENEL BA┼ŞARI DA─ŞILIMI & HAFTALIK SORU ├ç├ûZ├£M├£ */}
+                {/* 2. BLOK: GENEL BAŞARI DAĞILIMI & HAFTALIK SORU ÇÖZÜMÜ */}
                 <StudentAnalyticsCards
                   correctPercentage={overallStats.percentage}
                   solvedCount={overallStats.totalSolved}
@@ -1145,37 +1145,37 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   weeklyData={weeklyData}
                 />
 
-                {/* 3. BLOK: DETAYLI KONU BAZLI ANAL─░Z */}
+                {/* 3. BLOK: DETAYLI KONU BAZLI ANALİZ */}
                 <DetailedTopicAnalysisCard />
               </div>
             );
           })()}
 
-          {/* AYARLAR & PROF─░L D├£ZENLEME SEKMES─░ */}
+          {/* AYARLAR & PROFİL DÜZENLEME SEKMESİ */}
           {viewState === 'subjects' && activeTab === 'settings' && (
             <StudentSettingsView />
           )}
 
-        {/* 2. ├£N─░TE SE├ç─░M─░ (UNITS SCREEN) */}
+        {/* 2. ÜNİTE SEÇİMİ (UNITS SCREEN) */}
         {viewState === 'units' && selectedSubject && (
           <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%' }}>
-            {/* ├£st Geri Tu┼şu ve Ba┼şl─▒k */}
+            {/* Üst Geri Tuşu ve Başlık */}
             <div style={styles.unitHeader}>
               <button
                 onClick={() => setViewState('subjects')}
                 style={styles.unitBackButton}
-                title="Derslere D├Ân"
+                title="Derslere Dön"
               >
                 <ChevronLeft size={22} color="#111" />
               </button>
               <div style={styles.unitHeaderTitle}>{selectedSubject.title}</div>
-              <div style={{ width: '40px' }} /> {/* Dengeleme bo┼şlu─şu */}
+              <div style={{ width: '40px' }} /> {/* Dengeleme boşluğu */}
             </div>
 
-            {/* Sayfa Alt Ba┼şl─▒─ş─▒ */}
-            <h1 style={styles.subTitle}>{selectedSubject.title} ├£niteleri</h1>
+            {/* Sayfa Alt Başlığı */}
+            <h1 style={styles.subTitle}>{selectedSubject.title} Üniteleri</h1>
 
-            {/* ├£nite Listesi Kartlar─▒ */}
+            {/* Ünite Listesi Kartları */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {units.map((unit, index) => {
                 const formattedNumber = String(unit.unitNumber || index + 1).padStart(2, '0');
@@ -1190,7 +1190,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={styles.unitInfo}>
                       <div style={styles.unitName}>{unit.title}</div>
-                      <div style={styles.unitQuestionText}>{unit.topicCount || 3} Konu ÔÇó Testler</div>
+                      <div style={styles.unitQuestionText}>{unit.topicCount || 3} Konu • Testler</div>
                     </div>
                     <ChevronRight size={18} color="#666" />
                   </div>
@@ -1200,15 +1200,15 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </div>
         )}
 
-        {/* 2.2 KONU SE├ç─░M─░ (TOPICS SCREEN) */}
+        {/* 2.2 KONU SEÇİMİ (TOPICS SCREEN) */}
         {viewState === 'topics' && selectedUnit && (
           <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%' }}>
-            {/* ├£st Geri Tu┼şu ve Ba┼şl─▒k */}
+            {/* Üst Geri Tuşu ve Başlık */}
             <div style={styles.unitHeader}>
               <button
                 onClick={() => setViewState('units')}
                 style={styles.unitBackButton}
-                title="├£nitelere D├Ân"
+                title="Ünitelere Dön"
               >
                 <ChevronLeft size={22} color="#111" />
               </button>
@@ -1216,10 +1216,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               <div style={{ width: '40px' }} />
             </div>
 
-            {/* Sayfa Alt Ba┼şl─▒─ş─▒ */}
-            <h1 style={styles.subTitle}>{selectedUnit.title} Konular─▒</h1>
+            {/* Sayfa Alt Başlığı */}
+            <h1 style={styles.subTitle}>{selectedUnit.title} Konuları</h1>
 
-            {/* Konu Listesi Kartlar─▒ */}
+            {/* Konu Listesi Kartları */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {topics.map((topic, index) => {
                 const formattedNumber = String(topic.topicNumber || index + 1).padStart(2, '0');
@@ -1234,7 +1234,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div style={styles.unitInfo}>
                       <div style={styles.unitName}>{topic.title}</div>
-                      <div style={styles.unitQuestionText}>{topic.questionCount || 20} Soru ÔÇó Test</div>
+                      <div style={styles.unitQuestionText}>{topic.questionCount || 20} Soru • Test</div>
                     </div>
                     <ChevronRight size={18} color="#666" />
                   </div>
@@ -1244,15 +1244,15 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </div>
         )}
 
-        {/* 2.5 KONU/TEST DETAY / BA┼ŞLANGI├ç EKRANI (TOPIC DETAIL SCREEN) */}
+        {/* 2.5 KONU/TEST DETAY / BAŞLANGIÇ EKRANI (TOPIC DETAIL SCREEN) */}
         {viewState === 'unit-detail' && (selectedTopic || selectedUnit) && (
           <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingBottom: '120px' }}>
-            {/* ├£st Geri Tu┼şu ve Ba┼şl─▒k */}
+            {/* Üst Geri Tuşu ve Başlık */}
             <div style={styles.unitHeader}>
               <button
                 onClick={() => setViewState('topics')}
                 style={styles.unitBackButton}
-                title="Konulara D├Ân"
+                title="Konulara Dön"
               >
                 <ChevronLeft size={22} color="#111" />
               </button>
@@ -1260,7 +1260,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               <div style={{ width: '40px' }} />
             </div>
 
-            {/* B├╝y├╝k Numara ve Konu Ba┼şl─▒k Kart─▒ */}
+            {/* Büyük Numara ve Konu Başlık Kartı */}
             <div style={styles.heroCard}>
               <div style={styles.heroBadge}>
                 <span style={styles.heroBadgeText}>
@@ -1271,7 +1271,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               <div style={styles.heroQuestionCount}>{questions.length || 20} Soru</div>
             </div>
 
-            {/* Test Kurallar─▒ / Bilgi Kutusu */}
+            {/* Test Kuralları / Bilgi Kutusu */}
             <div style={styles.rulesCard}>
               <div style={styles.rulesCardTitle}>Bu testte:</div>
 
@@ -1282,12 +1282,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
               <div style={styles.ruleItem}>
                 <div style={styles.ruleDot} />
-                <span style={styles.ruleText}>S─▒ral─▒ ilerleme (1'den {questions.length || 20}'ye)</span>
+                <span style={styles.ruleText}>Sıralı ilerleme (1'den {questions.length || 20}'ye)</span>
               </div>
 
               <div style={styles.ruleItem}>
                 <div style={styles.ruleDot} />
-                <span style={styles.ruleText}>Sorular─▒ atlayamazs─▒n─▒z</span>
+                <span style={styles.ruleText}>Soruları atlayamazsınız</span>
               </div>
 
               <div style={styles.ruleItem}>
@@ -1296,34 +1296,34 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               </div>
             </div>
 
-            {/* Sabit Alt Teste Ba┼şla Butonu */}
+            {/* Sabit Alt Teste Başla Butonu */}
             <div style={styles.footerContainer}>
               <button
                 onClick={handleStartQuiz}
                 style={styles.startButton}
               >
-                Teste Ba┼şla
+                Teste Başla
               </button>
 
               <div style={styles.footerInfoRow}>
                 <Info size={16} color="#666" style={{ marginRight: '6px' }} />
-                <span style={styles.footerInfoText}>Test s─▒ras─▒nda sorular─▒ atlayamazs─▒n─▒z.</span>
+                <span style={styles.footerInfoText}>Test sırasında soruları atlayamazsınız.</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* 3. SORU ├ç├ûZ├£M├£ VEYA SONU├ç EKRANI */}
+        {/* 3. SORU ÇÖZÜMÜ VEYA SONUÇ EKRANI */}
         {viewState === 'quiz' && (
           <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingBottom: '110px' }}>
             {!isCompleted ? (
               <div>
-                {/* ├£st Navigasyon ve Saya├ğ */}
+                {/* Üst Navigasyon ve Sayaç */}
                 <div style={styles.quizNavHeader}>
                   <button
                     onClick={() => setViewState('topics')}
                     style={styles.quizBackButton}
-                    title="Testten ├ç─▒k"
+                    title="Testten Çık"
                   >
                     <ChevronLeft size={22} color="#111" />
                   </button>
@@ -1332,13 +1332,13 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
                   <button
                     style={styles.quizMenuButton}
-                    title="Se├ğenekler"
+                    title="Seçenekler"
                   >
                     <MoreVertical size={18} color="#111" />
                   </button>
                 </div>
 
-                {/* ─░lerleme ├çubu─şu */}
+                {/* İlerleme Çubuğu */}
                 <div style={styles.progressBarBg}>
                   <div
                     style={{
@@ -1348,7 +1348,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   />
                 </div>
 
-                {/* Soru Kart─▒ */}
+                {/* Soru Kartı */}
                 <div style={styles.questionCard}>
                   <div style={styles.questionLabel}>
                     SORU {String(currentIndex + 1).padStart(2, '0')}
@@ -1356,7 +1356,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <div style={styles.questionText}>{currentQ?.questionText}</div>
                 </div>
 
-                {/* ┼Ş─▒klar Listesi */}
+                {/* Şıklar Listesi */}
                 <div>
                   {currentQ?.options.map((opt) => {
                     const isSelected = stagedOption === opt.id;
@@ -1414,11 +1414,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   })}
                 </div>
 
-                {/* ├ç├Âz├╝m A├ğ─▒klamas─▒ */}
+                {/* Çözüm Açıklaması */}
                 {isAnswered && (
                   <div style={styles.explanationBox}>
                     <div style={styles.explanationTitle}>
-                      {currentAns?.isCorrect ? 'Ô£à Do─şru Cevap!' : 'ÔØî Yanl─▒┼ş Cevap!'} &bull; ├ç├Âz├╝m ve A├ğ─▒klama
+                      {currentAns?.isCorrect ? '✅ Doğru Cevap!' : '❌ Yanlış Cevap!'} &bull; Çözüm ve Açıklama
                     </div>
                     <div style={styles.explanationText}>{currentQ?.explanation}</div>
                   </div>
@@ -1436,14 +1436,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         cursor: stagedOption ? 'pointer' : 'not-allowed',
                       }}
                     >
-                      Cevab─▒ ─░┼şaretle
+                      Cevabı İşaretle
                     </button>
                   ) : (
                     <button
                       onClick={handleNext}
                       style={styles.actionButton}
                     >
-                      {currentIndex === questions.length - 1 ? 'Sonu├ğlar─▒ G├Âr' : 'Sonraki Soru ÔåÆ'}
+                      {currentIndex === questions.length - 1 ? 'Sonuçları Gör' : 'Sonraki Soru →'}
                     </button>
                   )}
                 </div>
@@ -1454,10 +1454,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </div>
         )}
 
-        {/* 4. FEEDBACK / ├ç├ûZ├£M VE A├çIKLAMA EKRANI */}
+        {/* 4. FEEDBACK / ÇÖZÜM VE AÇIKLAMA EKRANI */}
         {viewState === 'feedback' && currentQ && (
           <div style={{ maxWidth: '440px', margin: '0 auto', width: '100%', padding: '48px 24px 110px' }}>
-            {/* ├£st Durum Alan─▒ (Dairesel ─░kon, Ba┼şl─▒k ve Alt Ba┼şl─▒k) */}
+            {/* Üst Durum Alanı (Dairesel İkon, Başlık ve Alt Başlık) */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
               <div
                 style={{
@@ -1479,14 +1479,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 )}
               </div>
               <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827', marginBottom: '6px', textAlign: 'center' }}>
-                {currentAns?.isCorrect ? 'Do─şru Cevap' : 'Yanl─▒┼ş Cevap'}
+                {currentAns?.isCorrect ? 'Doğru Cevap' : 'Yanlış Cevap'}
               </div>
               <div style={{ fontSize: '15px', color: '#6B7280', textAlign: 'center' }}>
-                {currentAns?.isCorrect ? 'Tebrikler, do─şru cevaplad─▒n─▒z.' : 'Maalesef, yanl─▒┼ş cevaplad─▒n─▒z.'}
+                {currentAns?.isCorrect ? 'Tebrikler, doğru cevapladınız.' : 'Maalesef, yanlış cevapladınız.'}
               </div>
             </div>
 
-            {/* A├ğ─▒klama ve Do─şru Cevap Kart─▒ */}
+            {/* Açıklama ve Doğru Cevap Kartı */}
             <div
               style={{
                 backgroundColor: currentAns?.isCorrect ? '#EDF7EE' : '#FEE2E2',
@@ -1503,13 +1503,13 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   marginBottom: '12px',
                 }}
               >
-                Do─şru cevap:  {currentQ.correctOption}
+                Doğru cevap:  {currentQ.correctOption}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>
-                A├ğ─▒klama:
+                Açıklama:
               </div>
               <div style={{ fontSize: '14px', color: '#374151', lineHeight: '22px', whiteSpace: 'pre-line' }}>
-                {currentQ.explanation || 'Osmanl─▒ Devleti\'nde ─▒slahat hareketleri, ├Âzellikle 18. y├╝zy─▒ldan itibaren Avrupa\'daki geli┼şmelerin etkisiyle h─▒z kazanm─▒┼şt─▒r.'}
+                {currentQ.explanation || 'Osmanlı Devleti\'nde ıslahat hareketleri, özellikle 18. yüzyıldan itibaren Avrupa\'daki gelişmelerin etkisiyle hız kazanmıştır.'}
               </div>
             </div>
 
@@ -1519,14 +1519,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 onClick={handleNextFromFeedback}
                 style={styles.feedbackNextButton}
               >
-                {currentIndex === questions.length - 1 ? 'Sonu├ğlar─▒ G├Âr' : 'Sonraki Soru'}
+                {currentIndex === questions.length - 1 ? 'Sonuçları Gör' : 'Sonraki Soru'}
               </button>
             </div>
           </div>
         )}
         </main>
 
-        {/* Mobil Alt Men├╝ (Yaln─▒zca mobilde CSS ile g├Âr├╝n├╝r) */}
+        {/* Mobil Alt Menü (Yalnızca mobilde CSS ile görünür) */}
         <nav className="web-mobile-bottom-nav" style={styles.mobileBottomNav}>
           <button
             onClick={() => { setActiveTab('home'); setViewState('subjects'); }}
@@ -1570,7 +1570,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               ...styles.mobileBottomNavLabel,
               color: activeTab === 'errors' && viewState === 'subjects' ? '#111' : '#888',
               fontWeight: activeTab === 'errors' && viewState === 'subjects' ? 600 : 500,
-            }}>Hatalar─▒m</span>
+            }}>Hatalarım</span>
           </button>
 
           <button

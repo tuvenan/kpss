@@ -1,4 +1,4 @@
-﻿export interface UserProfile {
+export interface UserProfile {
   name: string;
   email: string;
   phone: string;
@@ -22,7 +22,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   email: 'ali.kpss2026@gmail.com',
   phone: '+90 (555) 123 45 67',
   username: 'alikaya',
-  bio: '2026 KPSS Lisans s─▒nav─▒nda Genel Yetenek ve Genel K├╝lt├╝r alan─▒nda derece hedefliyorum.',
+  bio: '2026 KPSS Lisans sınavında Genel Yetenek ve Genel Kültür alanında derece hedefliyorum.',
   examType: 'KPSS Lisans (GY-GK)',
   targetScore: 88,
   dailyGoal: 60,
@@ -52,7 +52,7 @@ export const userProfileService = {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-      // ├ûzel event tetikle, sayfalar an─▒nda g├╝ncellensin
+      // Özel event tetikle, sayfalar anında güncellensin
       window.dispatchEvent(new Event('kpss_profile_updated'));
     } catch (e) {
       console.warn('saveProfile error:', e);
