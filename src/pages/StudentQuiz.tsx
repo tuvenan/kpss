@@ -46,6 +46,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [activeTab, setActiveTab] = useState<'home' | 'subjects' | 'errors' | 'profile' | 'settings'>('home');
   const [userProfile, setUserProfile] = useState<UserProfile>(() => userProfileService.getProfile());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -54,7 +56,24 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     window.addEventListener('kpss_profile_updated', handleProfileUpdate);
     return () => window.removeEventListener('kpss_profile_updated', handleProfileUpdate);
   }, []);
+
+  // Arama: ders/ünite/konu bazlı filtre
+  const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      setActiveTab('subjects');
+      setViewState('subjects');
+    }
+  };
+
+  const notifications = [
+    { id: 1, icon: '🎯', title: 'Günlük hedefin tamamlandı!', sub: 'Bugün 60 soru çözdün. Harika!', time: '5 dk önce', unread: true },
+    { id: 2, icon: '🔥', title: '7 günlük seri devam ediyor', sub: 'Her gün düzenli çalışıyorsun.', time: '1 saat önce', unread: true },
+    { id: 3, icon: '📊', title: 'Haftalık rapor hazır', sub: 'Bu hafta 240 soru çözdün.', time: '2 saat önce', unread: false },
+  ];
+  const unreadCount = notifications.filter(n => n.unread).length;
+
   const [errorFilter, setErrorFilter] = useState('Tümü');
+
 
   const errorQuestions = [
     { id: '1', subject: 'Tarih', topic: 'İslamiyet Öncesi', unit: 'İslamiyet Öncesi Türk Tarihi', qNumber: 'Soru 07', wrong: 'C', correct: 'B', icon: 'landmark' },
@@ -569,13 +588,93 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             <input
               placeholder="Ders, ünite veya konu ara..."
               style={styles.headerSearchInput}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchSubmit}
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', color: '#999' }}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <div style={styles.headerRightActions}>
-            <button style={styles.headerIconBtn} title="Bildirimler">
-              <Bell size={18} color="#333" />
-            </button>
+            {/* Bildirimler */}
+            <div style={{ position: 'relative' }}>
+              <button
+                style={styles.headerIconBtn}
+                title="Bildirimler"
+                onClick={() => setShowNotifications(n => !n)}
+              >
+                <Bell size={18} color={showNotifications ? '#111' : '#333'} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '4px', right: '4px',
+                    width: '16px', height: '16px', borderRadius: '50%',
+                    backgroundColor: '#EF4444', color: '#fff',
+                    fontSize: '10px', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    lineHeight: 1,
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Bildirim Paneli */}
+              {showNotifications && (
+                <>
+                  {/* Overlay - dışarı tıklayınca kapat */}
+                  <div
+                    onClick={() => setShowNotifications(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+                  />
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+                    width: '320px', backgroundColor: '#fff',
+                    borderRadius: '14px', border: '1px solid #E5E7EB',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    zIndex: 200, overflow: 'hidden',
+                  }}>
+                    <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>Bildirimler</span>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: '13px' }}
+                      >
+                        Tümünü gör →
+                      </button>
+                    </div>
+                    {notifications.map(n => (
+                      <div
+                        key={n.id}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '12px',
+                          padding: '12px 18px',
+                          backgroundColor: n.unread ? '#F9FAFB' : '#fff',
+                          borderBottom: '1px solid #F3F4F6',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>{n.icon}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: n.unread ? 700 : 500, color: '#111', marginBottom: '2px' }}>{n.title}</div>
+                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{n.sub}</div>
+                          <div style={{ fontSize: '11px', color: '#999' }}>{n.time}</div>
+                        </div>
+                        {n.unread && (
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0, marginTop: '4px' }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             <div
               onClick={() => { setActiveTab('profile'); setViewState('subjects'); }}
