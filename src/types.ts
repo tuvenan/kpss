@@ -36,8 +36,23 @@ export interface Topic {
   bankType?: string;
 }
 
+export interface QuestionBank {
+  id: string;
+  topicId: string;
+  unitId?: string;
+  title: string;
+  description?: string;
+  bankType?: string;
+  targetQuestionCount?: number;
+  questionCount?: number;
+  isLocked?: boolean;
+  orderNumber?: number;
+  createdAt?: string;
+}
+
 export interface Question {
   id: string;
+  bankId?: string;
   topicId?: string;
   unitId?: string;
   questionNumber: number;

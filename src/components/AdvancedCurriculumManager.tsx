@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
-import { Subject, Unit, Topic, Question, OptionId } from '../types';
+import { Subject, Unit, Topic, Question, OptionId, QuestionBank } from '../types';
 import {
   FolderTree,
   Plus,
@@ -15,6 +15,7 @@ import {
   BookOpen,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   Check,
   X,
   RefreshCw,
@@ -55,9 +56,14 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
 
-  // 4. Kolon: Seçili Konuya Bağlı Soru Bankası ve Soruları
-  const [topicQuestions, setTopicQuestions] = useState<Question[]>([]);
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState<boolean>(false);
+  // 4. Kolon: Seçili Konuya Ait Soru Bankaları Listesi
+  const [topicBanks, setTopicBanks] = useState<QuestionBank[]>([]);
+  const [isLoadingBanks, setIsLoadingBanks] = useState<boolean>(false);
+
+  // Bir Soru Bankasının Sorularını Yönetme Durumu
+  const [managingBank, setManagingBank] = useState<QuestionBank | null>(null);
+  const [bankQuestions, setBankQuestions] = useState<Question[]>([]);
+  const [isLoadingBankQuestions, setIsLoadingBankQuestions] = useState<boolean>(false);
 
   // Görünüm Modu: 4 Kolonlu veya Ağaç (Tree) Görünümü
   const [viewMode, setViewMode] = useState<'columns' | 'tree'>('columns');
@@ -92,7 +98,16 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const [topicFormTitle, setTopicFormTitle] = useState('');
   const [topicFormQuestionCount, setTopicFormQuestionCount] = useState(20);
 
-  // 4. Kolon: Soru Ekle / Düzenle Modalı
+  // 4. Kolon: Soru Bankası Oluştur / Düzenle Modalı (+ butonuna basınca açılır)
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [editingBank, setEditingBank] = useState<QuestionBank | null>(null);
+  const [bankFormTitle, setBankFormTitle] = useState('');
+  const [bankFormDescription, setBankFormDescription] = useState('');
+  const [bankFormTargetCount, setBankFormTargetCount] = useState(20);
+  const [bankFormType, setBankFormType] = useState('Standart Konu Testi');
+  const [bankFormLocked, setBankFormLocked] = useState(false);
+
+  // Soru Ekle / Düzenle Modalı
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [qFormText, setQFormText] = useState('');
@@ -105,14 +120,6 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const [qFormExplanation, setQFormExplanation] = useState('');
   const [qFormDifficulty, setQFormDifficulty] = useState<'Kolay' | 'Orta' | 'Zor'>('Orta');
   const [qFormYear, setQFormYear] = useState('');
-
-  // 4. Kolon: Özelleştirilebilir Soru Bankası Ayarları Modalı
-  const [showBankCustomizationModal, setShowBankCustomizationModal] = useState(false);
-  const [bankFormTitle, setBankFormTitle] = useState('');
-  const [bankFormDescription, setBankFormDescription] = useState('');
-  const [bankFormTargetCount, setBankFormTargetCount] = useState(20);
-  const [bankFormType, setBankFormType] = useState('Standart Konu Testi');
-  const [bankFormLocked, setBankFormLocked] = useState(false);
 
   // ----------------------------------------------------
   // VERİLERİ İLK YÜKLEME
@@ -172,24 +179,24 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       .sort((a, b) => (a.topicNumber || 0) - (b.topicNumber || 0));
   }, [topics, selectedUnitId]);
 
-  // Seçili konuya ait soruları yükle
+  // Seçili konuya ait soru bankalarını yükle
   useEffect(() => {
     if (selectedTopicId) {
-      loadTopicQuestions(selectedTopicId);
+      loadTopicBanks(selectedTopicId);
     } else {
-      setTopicQuestions([]);
+      setTopicBanks([]);
     }
-  }, [selectedTopicId]);
+  }, [selectedTopicId, selectedUnitId]);
 
-  const loadTopicQuestions = async (tId: string) => {
-    setIsLoadingQuestions(true);
+  const loadTopicBanks = async (tId: string) => {
+    setIsLoadingBanks(true);
     try {
-      const qList = await api.getQuestions(tId);
-      setTopicQuestions(qList);
+      const banks = await api.getQuestionBanks(tId, selectedUnitId);
+      setTopicBanks(banks);
     } catch (e) {
-      console.warn('Soru yükleme hatası:', e);
+      console.warn('Soru bankaları yükleme hatası:', e);
     } finally {
-      setIsLoadingQuestions(false);
+      setIsLoadingBanks(false);
     }
   };
 
@@ -238,13 +245,137 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   };
 
   // ----------------------------------------------------
-  // 4. KOLON: SORU & SORU BANKASI AKSİYONLARI
+  // 4. KOLON: SORU BANKASI OLUŞTURMA / YÖNETME AKSİYONLARI
   // ----------------------------------------------------
-  const openNewQuestionModal = () => {
+  const openNewBankModal = () => {
     if (!selectedTopicId) {
       onNotify('Lütfen önce 3. kolondan bir alt konu seçiniz.', 'error');
       return;
     }
+    setEditingBank(null);
+    setBankFormTitle(`${currentTopic?.title || 'Konu'} Testi ${topicBanks.length + 1}`);
+    setBankFormDescription('');
+    setBankFormTargetCount(20);
+    setBankFormType('Standart Konu Testi');
+    setBankFormLocked(false);
+    setShowBankModal(true);
+  };
+
+  const openEditBankModal = (b: QuestionBank) => {
+    setEditingBank(b);
+    setBankFormTitle(b.title);
+    setBankFormDescription(b.description || '');
+    setBankFormTargetCount(b.targetQuestionCount || 20);
+    setBankFormType(b.bankType || 'Standart Konu Testi');
+    setBankFormLocked(Boolean(b.isLocked));
+    setShowBankModal(true);
+  };
+
+  const handleSaveBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTopicId) return;
+    if (!bankFormTitle.trim()) {
+      alert('Lütfen soru bankası başlığını giriniz.');
+      return;
+    }
+
+    try {
+      if (editingBank) {
+        const updated: QuestionBank = {
+          ...editingBank,
+          title: bankFormTitle.trim(),
+          description: bankFormDescription.trim(),
+          targetQuestionCount: bankFormTargetCount,
+          bankType: bankFormType,
+          isLocked: bankFormLocked,
+        };
+        await api.adminUpdateQuestionBank(updated);
+        setTopicBanks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+        if (managingBank && managingBank.id === updated.id) {
+          setManagingBank(updated);
+        }
+        onNotify(`"${updated.title}" soru bankası güncellendi.`);
+      } else {
+        const newBank: QuestionBank = {
+          id: `${selectedTopicId}-bank-${Date.now()}`,
+          topicId: selectedTopicId,
+          unitId: selectedUnitId,
+          title: bankFormTitle.trim(),
+          description: bankFormDescription.trim(),
+          targetQuestionCount: bankFormTargetCount,
+          questionCount: 0,
+          bankType: bankFormType,
+          isLocked: bankFormLocked,
+          orderNumber: topicBanks.length + 1,
+        };
+        await api.adminCreateQuestionBank(newBank);
+        setTopicBanks((prev) => [...prev, newBank]);
+        onNotify(`Yeni soru bankası "${newBank.title}" başarıyla oluşturuldu.`);
+      }
+      markAsDraft();
+      setShowBankModal(false);
+    } catch {
+      onNotify('Soru bankası kaydedilemedi', 'error');
+    }
+  };
+
+  const handleDeleteBank = async (bankId: string, title: string) => {
+    if (!confirm(`"${title}" soru bankasını ve içindeki soruları silmek istediğinize emin misiniz?`)) return;
+    try {
+      await api.adminDeleteQuestionBank(bankId);
+      setTopicBanks((prev) => prev.filter((b) => b.id !== bankId));
+      if (managingBank && managingBank.id === bankId) {
+        setManagingBank(null);
+      }
+      markAsDraft();
+      onNotify(`"${title}" soru bankası silindi.`);
+    } catch {
+      onNotify('Soru bankası silinemedi', 'error');
+    }
+  };
+
+  const handleMoveBank = async (idx: number, direction: 'UP' | 'DOWN') => {
+    const targetIdx = direction === 'UP' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= topicBanks.length) return;
+
+    const newBanks = [...topicBanks];
+    const [moved] = newBanks.splice(idx, 1);
+    newBanks.splice(targetIdx, 0, moved);
+
+    newBanks.forEach((b, i) => {
+      b.orderNumber = i + 1;
+    });
+
+    setTopicBanks(newBanks);
+    markAsDraft();
+
+    for (const b of newBanks) {
+      await api.adminUpdateQuestionBank(b);
+    }
+  };
+
+  // ----------------------------------------------------
+  // BİR SORU BANKASININ SORULARINI YÖNETME AKSİYONLARI
+  // ----------------------------------------------------
+  const openManageBankQuestions = async (bank: QuestionBank) => {
+    setManagingBank(bank);
+    setIsLoadingBankQuestions(true);
+    try {
+      const allQ = await api.getQuestions(bank.topicId);
+      // Bu bankId ile eşleşen veya tek banka varsa tüm sorular
+      const filtered = allQ.filter(
+        (q) => q.bankId === bank.id || (!q.bankId && topicBanks.length === 1)
+      );
+      setBankQuestions(filtered);
+    } catch (e) {
+      console.warn('Bank soruları yükleme hatası:', e);
+    } finally {
+      setIsLoadingBankQuestions(false);
+    }
+  };
+
+  const openNewQuestionModal = () => {
+    if (!managingBank) return;
     setEditingQuestion(null);
     setQFormText('');
     setQFormA('');
@@ -277,10 +408,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
 
   const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTopicId) {
-      onNotify('Her soru bankası mutlaka bir alt konuya bağlı olmalıdır.', 'error');
-      return;
-    }
+    if (!managingBank) return;
     if (!qFormText.trim()) {
       alert('Lütfen soru metnini yazınız.');
       return;
@@ -291,10 +419,11 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
     }
 
     const questionData: Question = {
-      id: editingQuestion ? editingQuestion.id : `${selectedTopicId}-q${Date.now()}`,
-      topicId: selectedTopicId,
-      unitId: selectedUnitId,
-      questionNumber: editingQuestion ? editingQuestion.questionNumber : topicQuestions.length + 1,
+      id: editingQuestion ? editingQuestion.id : `${managingBank.id}-q${Date.now()}`,
+      bankId: managingBank.id,
+      topicId: managingBank.topicId,
+      unitId: managingBank.unitId,
+      questionNumber: editingQuestion ? editingQuestion.questionNumber : bankQuestions.length + 1,
       questionText: qFormText.trim(),
       options: [
         { id: 'A', text: qFormA.trim() },
@@ -312,20 +441,20 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
     try {
       if (editingQuestion) {
         await api.adminUpdateQuestion(questionData);
-        setTopicQuestions((prev) =>
+        setBankQuestions((prev) =>
           prev.map((q) => (q.id === questionData.id ? questionData : q))
         );
         onNotify('Soru başarıyla güncellendi.');
       } else {
         await api.adminCreateQuestion(questionData);
-        setTopicQuestions((prev) => [...prev, questionData]);
-        setTopics((prev) =>
-          prev.map((t) =>
-            t.id === selectedTopicId
-              ? { ...t, questionCount: (t.questionCount || 0) + 1 }
-              : t
-          )
-        );
+        const newQuestions = [...bankQuestions, questionData];
+        setBankQuestions(newQuestions);
+
+        // Bankadaki soru sayısını güncelle
+        const updatedBank = { ...managingBank, questionCount: newQuestions.length };
+        setManagingBank(updatedBank);
+        setTopicBanks((prev) => prev.map((b) => (b.id === managingBank.id ? updatedBank : b)));
+        await api.adminUpdateQuestionBank(updatedBank);
         onNotify('Yeni soru soru bankasına eklendi.');
       }
       markAsDraft();
@@ -337,16 +466,17 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
 
   const handleDeleteQuestion = async (qId: string) => {
     if (!confirm('Bu soruyu soru bankasından silmek istediğinize emin misiniz?')) return;
+    if (!managingBank) return;
     try {
       await api.adminDeleteQuestion(qId);
-      setTopicQuestions((prev) => prev.filter((q) => q.id !== qId));
-      setTopics((prev) =>
-        prev.map((t) =>
-          t.id === selectedTopicId
-            ? { ...t, questionCount: Math.max(0, (t.questionCount || 1) - 1) }
-            : t
-        )
-      );
+      const newQuestions = bankQuestions.filter((q) => q.id !== qId);
+      setBankQuestions(newQuestions);
+
+      const updatedBank = { ...managingBank, questionCount: newQuestions.length };
+      setManagingBank(updatedBank);
+      setTopicBanks((prev) => prev.map((b) => (b.id === managingBank.id ? updatedBank : b)));
+      await api.adminUpdateQuestionBank(updatedBank);
+
       markAsDraft();
       onNotify('Soru silindi.');
     } catch {
@@ -356,9 +486,9 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
 
   const handleMoveQuestion = async (idx: number, direction: 'UP' | 'DOWN') => {
     const targetIdx = direction === 'UP' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= topicQuestions.length) return;
+    if (targetIdx < 0 || targetIdx >= bankQuestions.length) return;
 
-    const newQuestions = [...topicQuestions];
+    const newQuestions = [...bankQuestions];
     const [moved] = newQuestions.splice(idx, 1);
     newQuestions.splice(targetIdx, 0, moved);
 
@@ -366,7 +496,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       q.questionNumber = i + 1;
     });
 
-    setTopicQuestions(newQuestions);
+    setBankQuestions(newQuestions);
     markAsDraft();
 
     for (const q of newQuestions) {
@@ -374,60 +504,29 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
     }
   };
 
-  const handleLoadSample20 = async () => {
-    if (!selectedTopicId) return;
+  const handleLoadSample20ForBank = async (bank: QuestionBank) => {
     try {
-      const res = await api.adminLoadSamplePackage(selectedTopicId, selectedUnitId);
+      const res = await api.adminLoadSamplePackage(bank.topicId, bank.unitId, bank.id);
       if (res.success) {
-        const qList = await api.getQuestions(selectedTopicId);
-        setTopicQuestions(qList);
-        setTopics((prev) =>
-          prev.map((t) =>
-            t.id === selectedTopicId
-              ? { ...t, questionCount: qList.length }
-              : t
-          )
+        const allQ = await api.getQuestions(bank.topicId);
+        const filtered = allQ.filter(
+          (q) => q.bankId === bank.id || (!q.bankId && topicBanks.length === 1)
         );
+        setBankQuestions(filtered);
+
+        const newCount = (bank.questionCount || 0) + res.count;
+        const updatedBank = { ...bank, questionCount: newCount };
+        if (managingBank && managingBank.id === bank.id) {
+          setManagingBank(updatedBank);
+        }
+        setTopicBanks((prev) => prev.map((b) => (b.id === bank.id ? updatedBank : b)));
+        await api.adminUpdateQuestionBank(updatedBank);
         markAsDraft();
-        onNotify('Bu konu için 20 soruluk örnek paket yüklendi ve yayına hazırlandı!');
+        onNotify(`"${bank.title}" için 20 soruluk paket yüklendi ve yayına hazırlandı!`, 'success');
       }
     } catch {
       onNotify('Örnek paket yüklenemedi', 'error');
     }
-  };
-
-  // Soru Bankasını Özelleştir Modalı
-  const openBankCustomizationModal = () => {
-    if (!currentTopic) {
-      onNotify('Lütfen önce bir alt konu seçiniz.', 'error');
-      return;
-    }
-    setBankFormTitle(currentTopic.bankTitle || `${currentTopic.title} Soru Bankası`);
-    setBankFormDescription(currentTopic.bankDescription || '');
-    setBankFormTargetCount(currentTopic.questionCount || 20);
-    setBankFormType(currentTopic.bankType || 'Standart Konu Testi');
-    setBankFormLocked(Boolean(currentTopic.isLocked));
-    setShowBankCustomizationModal(true);
-  };
-
-  const handleSaveBankCustomization = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentTopic) return;
-
-    const updatedTopic: Topic = {
-      ...currentTopic,
-      bankTitle: bankFormTitle.trim(),
-      bankDescription: bankFormDescription.trim(),
-      questionCount: bankFormTargetCount,
-      bankType: bankFormType,
-      isLocked: bankFormLocked,
-    };
-
-    setTopics((prev) => prev.map((t) => (t.id === currentTopic.id ? updatedTopic : t)));
-    await api.adminUpdateTopic(updatedTopic.id, updatedTopic.title, updatedTopic.topicNumber);
-    markAsDraft();
-    setShowBankCustomizationModal(false);
-    onNotify(`"${updatedTopic.bankTitle}" soru bankası ayarları başarıyla güncellendi.`);
   };
 
   // ----------------------------------------------------
@@ -1065,149 +1164,170 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
             </div>
           </div>
 
-          {/* 4. KOLON: ÖZELLEŞTİRİLEBİLİR SORU BANKASI */}
+          {/* 4. KOLON: ÖZELLEŞTİRİLEBİLİR SORU BANKALARI */}
           <div style={styles.columnCard}>
             <div style={styles.columnHeader}>
               <div>
                 <h3 style={styles.columnTitle}>
-                  4. Soru Bankası ({topicQuestions.length})
+                  4. Soru Bankaları ({topicBanks.length})
                 </h3>
                 <p style={styles.columnSub} title={currentTopic ? currentTopic.title : undefined}>
                   {currentTopic ? `${currentTopic.topicNumber}. ${currentTopic.title}` : 'Alt Konu Seçiniz'}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={openBankCustomizationModal}
-                  disabled={!selectedTopicId}
-                  style={{
-                    ...styles.colAddBtn,
-                    backgroundColor: '#F1F5F9',
-                    borderColor: '#CBD5E1',
-                    color: '#334155',
-                    opacity: selectedTopicId ? 1 : 0.4,
-                  }}
-                  title="Soru Bankasını Özelleştir / Ayarları"
-                >
-                  <Sliders size={15} />
-                </button>
-                <button
-                  onClick={openNewQuestionModal}
-                  disabled={!selectedTopicId}
-                  style={{ ...styles.colAddBtn, opacity: selectedTopicId ? 1 : 0.4 }}
-                  title="Yeni Soru Ekle"
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
+              <button
+                onClick={openNewBankModal}
+                disabled={!selectedTopicId}
+                style={{ ...styles.colAddBtn, opacity: selectedTopicId ? 1 : 0.4 }}
+                title="Yeni Soru Bankası Oluştur"
+              >
+                <Plus size={16} />
+              </button>
             </div>
 
             <div style={styles.itemsList}>
               {!selectedTopicId ? (
                 <div style={styles.emptyNotice}>
-                  Lütfen soru bankasını görüntülemek ve yönetmek için 3. kolondan bir <b>Alt Konu / Kazanım</b> seçiniz.
+                  Lütfen soru bankalarını görüntülemek ve yönetmek için 3. kolondan bir <b>Alt Konu / Kazanım</b> seçiniz.
+                </div>
+              ) : isLoadingBanks ? (
+                <div style={styles.emptyNotice}>Soru bankaları yükleniyor...</div>
+              ) : topicBanks.length === 0 ? (
+                <div style={{ ...styles.emptyNotice, padding: '24px 12px' }}>
+                  <Database size={28} color="#94A3B8" style={{ marginBottom: '8px' }} />
+                  <div>Bu alt konuya ait henüz bir soru bankası oluşturulmadı.</div>
+                  <button
+                    onClick={openNewBankModal}
+                    style={{ ...styles.btnPrimary, marginTop: '12px', fontSize: '12px' }}
+                  >
+                    <Plus size={14} style={{ marginRight: '4px' }} />
+                    + Yeni Soru Bankası Oluştur
+                  </button>
                 </div>
               ) : (
-                <>
-                  {/* Soru Bankası Özelleştirme & 20 Soru Yayın Kuralı Durum Paneli */}
-                  <div
-                    style={{
-                      padding: '12px',
-                      backgroundColor: '#F8FAFC',
-                      borderRadius: '10px',
-                      border: '1.5px solid #E2E8F0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <Database size={14} color="#4F46E5" />
-                          <span>{currentTopic?.bankTitle || `${currentTopic?.title} Soru Bankası`}</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                          Tür: <b>{currentTopic?.bankType || 'Standart Konu Testi'}</b>
-                        </div>
-                      </div>
-                      <button
-                        onClick={openBankCustomizationModal}
-                        style={{
-                          background: '#EEF2FF',
-                          border: '1px solid #C7D2FE',
-                          borderRadius: '6px',
-                          color: '#4F46E5',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          padding: '3px 8px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Sliders size={11} /> Özelleştir
-                      </button>
-                    </div>
+                topicBanks.map((bank, idx) => {
+                  const qCount = bank.questionCount || 0;
+                  const isPublished = qCount >= 20;
 
-                    {currentTopic?.bankDescription && (
-                      <div style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic', backgroundColor: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px solid #F1F5F9' }}>
-                        "{currentTopic.bankDescription}"
-                      </div>
-                    )}
-
-                    {/* 20 Soru Yayınlanma Kuralı & Progress */}
+                  return (
                     <div
+                      key={bank.id}
                       style={{
-                        padding: '8px 10px',
-                        borderRadius: '8px',
-                        backgroundColor: topicQuestions.length >= 20 ? '#F0FDF4' : '#FEF2F2',
-                        border: `1px solid ${topicQuestions.length >= 20 ? '#BBF7D0' : '#FECACA'}`,
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #E2E8F0',
+                        backgroundColor: '#FFFFFF',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: topicQuestions.length >= 20 ? '#15803D' : '#B91C1C' }}>
-                          {topicQuestions.length >= 20 ? '🟢 Yayında (Aktif)' : '🔴 Yayınlanamaz (Hazırlıkta)'}
-                        </span>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: topicQuestions.length >= 20 ? '#15803D' : '#B91C1C' }}>
-                          {topicQuestions.length} / 20 Soru
-                        </span>
+                      {/* Üst Satır: İsim, Tür, Rozetler & Sıralama/Aksiyon */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={styles.orderPill}>#{bank.orderNumber || idx + 1}</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {bank.title}
+                            </span>
+                            {bank.isLocked && (
+                              <span title="Kilitli Soru Bankası">
+                                <Lock size={12} color="#D97706" />
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                            Tür: <b>{bank.bankType || 'Standart Konu Testi'}</b>
+                          </div>
+                        </div>
+
+                        {/* Sıralama & Düzenleme Butonları */}
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleMoveBank(idx, 'UP')}
+                            disabled={idx === 0}
+                            style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                            title="Yukarı Taşı"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleMoveBank(idx, 'DOWN')}
+                            disabled={idx === topicBanks.length - 1}
+                            style={{ ...styles.microBtn, opacity: idx === topicBanks.length - 1 ? 0.3 : 1 }}
+                            title="Aşağı Taşı"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                          <button
+                            onClick={() => openEditBankModal(bank)}
+                            style={styles.microBtn}
+                            title="Soru Bankasını Düzenle"
+                          >
+                            <Edit3 size={12} color="#4F46E5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBank(bank.id, bank.title)}
+                            style={{ ...styles.microBtn, color: '#EF4444' }}
+                            title="Soru Bankasını Sil"
+                          >
+                            <Trash2 size={12} color="#EF4444" />
+                          </button>
+                        </div>
                       </div>
 
-                      {/* İlerleme Çubuğu */}
-                      <div style={{ height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            height: '100%',
-                            width: `${Math.min(100, Math.round((topicQuestions.length / 20) * 100))}%`,
-                            backgroundColor: topicQuestions.length >= 20 ? '#22C55E' : '#EF4444',
-                            borderRadius: '3px',
-                            transition: 'width 0.3s ease',
-                          }}
-                        />
+                      {bank.description && (
+                        <div style={{ fontSize: '11px', color: '#64748B', fontStyle: 'italic', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: '6px' }}>
+                          "{bank.description}"
+                        </div>
+                      )}
+
+                      {/* 20 Soru Yayınlanma Kuralı Rozeti & İlerleme Çubuğu */}
+                      <div
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: isPublished ? '#F0FDF4' : '#FEF2F2',
+                          border: `1px solid ${isPublished ? '#BBF7D0' : '#FECACA'}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                          <span style={{ fontSize: '10.5px', fontWeight: 700, color: isPublished ? '#15803D' : '#B91C1C' }}>
+                            {isPublished ? '🟢 Yayında (Aktif)' : '🔴 Yayınlanamaz (Hazırlıkta)'}
+                          </span>
+                          <span style={{ fontSize: '10.5px', fontWeight: 700, color: isPublished ? '#15803D' : '#B91C1C' }}>
+                            {qCount} / 20 Soru
+                          </span>
+                        </div>
+
+                        {/* Mini İlerleme Çubuğu */}
+                        <div style={{ height: '4px', backgroundColor: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              height: '100%',
+                              width: `${Math.min(100, Math.round((qCount / 20) * 100))}%`,
+                              backgroundColor: isPublished ? '#22C55E' : '#EF4444',
+                              borderRadius: '2px',
+                              transition: 'width 0.3s ease',
+                            }}
+                          />
+                        </div>
                       </div>
 
-                      <div style={{ fontSize: '10px', color: topicQuestions.length >= 20 ? '#166534' : '#991B1B', marginTop: '5px', lineHeight: 1.3 }}>
-                        {topicQuestions.length >= 20
-                          ? '✅ Bu soru bankası 20 soru kuralını karşıladığı için sitede yayınlanmaktadır.'
-                          : '⚠️ Soru bankasının sitede yayınlanması için en az 20 soru eklenmelidir.'}
-                      </div>
-
-                      {topicQuestions.length < 20 && (
+                      {/* Alt Aksiyon Butonları */}
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
                         <button
-                          onClick={handleLoadSample20}
+                          onClick={() => openManageBankQuestions(bank)}
                           style={{
-                            marginTop: '8px',
-                            width: '100%',
-                            backgroundColor: '#4F46E5',
-                            color: '#FFFFFF',
-                            border: 'none',
+                            flex: 1,
+                            backgroundColor: '#EEF2FF',
+                            color: '#4F46E5',
+                            border: '1px solid #C7D2FE',
                             borderRadius: '6px',
-                            padding: '6px 8px',
-                            fontSize: '11px',
-                            fontWeight: 600,
+                            padding: '6px 10px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -1215,146 +1335,36 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                             gap: '5px',
                           }}
                         >
-                          <PackagePlus size={13} />
-                          Tek Tıkla 20 Soru Paketi Doldur
+                          <HelpCircle size={13} />
+                          Soruları Yönet ({qCount})
                         </button>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Soru Listesi Başlığı & Hızlı Ekle */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', padding: '0 2px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                      Sorular ({topicQuestions.length})
-                    </span>
-                    <button
-                      onClick={openNewQuestionModal}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#4F46E5',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        padding: 0,
-                      }}
-                    >
-                      <Plus size={13} /> Yeni Soru
-                    </button>
-                  </div>
-
-                  {/* Soruların Kartları */}
-                  {isLoadingQuestions ? (
-                    <div style={styles.emptyNotice}>Sorular yükleniyor...</div>
-                  ) : topicQuestions.length === 0 ? (
-                    <div style={{ ...styles.emptyNotice, padding: '20px 8px' }}>
-                      <HelpCircle size={28} color="#94A3B8" style={{ marginBottom: '6px' }} />
-                      <div>Bu soru bankasında henüz soru yok.</div>
-                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
-                        Yukarıdaki "Tek Tıkla 20 Soru Paketi Doldur" butonuna tıklayarak anında doldurabilirsiniz.
+                        {!isPublished && (
+                          <button
+                            onClick={() => handleLoadSample20ForBank(bank)}
+                            style={{
+                              backgroundColor: '#4F46E5',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                            }}
+                            title="Tek tıkla bu soru bankasına 20 soru doldur"
+                          >
+                            <PackagePlus size={13} /> 20 Soru Ekle
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    topicQuestions.map((q, qIdx) => (
-                      <div
-                        key={q.id}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          backgroundColor: '#FFFFFF',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={styles.orderPill}>#{q.questionNumber || qIdx + 1}</span>
-                            <span
-                              style={{
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                backgroundColor:
-                                  q.difficulty === 'Zor' ? '#FEE2E2' : q.difficulty === 'Kolay' ? '#DCFCE7' : '#FEF3C7',
-                                color:
-                                  q.difficulty === 'Zor' ? '#DC2626' : q.difficulty === 'Kolay' ? '#15803D' : '#D97706',
-                              }}
-                            >
-                              {q.difficulty || 'Orta'}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                backgroundColor: '#EEF2FF',
-                                color: '#4F46E5',
-                              }}
-                            >
-                              Cevap: {q.correctOption}
-                            </span>
-                          </div>
-
-                          {/* Sıralama & Düzenleme */}
-                          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                            <button
-                              onClick={() => handleMoveQuestion(qIdx, 'UP')}
-                              disabled={qIdx === 0}
-                              style={{ ...styles.microBtn, opacity: qIdx === 0 ? 0.3 : 1 }}
-                              title="Yukarı Taşı"
-                            >
-                              <ArrowUp size={12} />
-                            </button>
-                            <button
-                              onClick={() => handleMoveQuestion(qIdx, 'DOWN')}
-                              disabled={qIdx === topicQuestions.length - 1}
-                              style={{ ...styles.microBtn, opacity: qIdx === topicQuestions.length - 1 ? 0.3 : 1 }}
-                              title="Aşağı Taşı"
-                            >
-                              <ArrowDown size={12} />
-                            </button>
-                            <button
-                              onClick={() => openEditQuestionModal(q)}
-                              style={styles.microBtn}
-                              title="Soruyu Düzenle"
-                            >
-                              <Edit3 size={12} color="#4F46E5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteQuestion(q.id)}
-                              style={{ ...styles.microBtn, color: '#EF4444' }}
-                              title="Soruyu Sil"
-                            >
-                              <Trash2 size={12} color="#EF4444" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Soru Metni Önizleme */}
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: '#1E293B',
-                            lineHeight: 1.4,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {q.questionText}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1535,22 +1545,22 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                                             setSelectedSubjectId(sub.id);
                                             setSelectedUnitId(u.id);
                                             setSelectedTopicId(t.id);
-                                            openBankCustomizationModal();
+                                            setViewMode('columns');
                                           }}
                                           style={{ ...styles.microBtn, color: '#4F46E5' }}
-                                          title="Soru Bankasını Özelleştir"
+                                          title="Soru Bankalarını Yönet (4. Kolona Git)"
                                         >
-                                          <Sliders size={12} color="#4F46E5" />
+                                          <Database size={12} color="#4F46E5" />
                                         </button>
                                         <button
                                           onClick={() => {
                                             setSelectedSubjectId(sub.id);
                                             setSelectedUnitId(u.id);
                                             setSelectedTopicId(t.id);
-                                            openNewQuestionModal();
+                                            openNewBankModal();
                                           }}
                                           style={{ ...styles.microBtn, color: '#059669' }}
-                                          title="Yeni Soru Ekle"
+                                          title="Yeni Soru Bankası Ekle"
                                         >
                                           <Plus size={12} color="#059669" />
                                         </button>
@@ -1710,24 +1720,26 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       )}
 
       {/* ============================================================== */}
-      {/* MODAL 4: SORU BANKASINI ÖZELLEŞTİR */}
+      {/* MODAL 4: SORU BANKASI OLUŞTUR / DÜZENLE */}
       {/* ============================================================== */}
-      {showBankCustomizationModal && (
+      {showBankModal && (
         <div style={styles.modalBackdrop}>
           <div style={{ ...styles.modalCard, maxWidth: '480px' }}>
             <div style={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sliders size={18} color="#4F46E5" />
-                <h3 style={styles.modalTitle}>Soru Bankasını Özelleştir</h3>
+                <Database size={18} color="#4F46E5" />
+                <h3 style={styles.modalTitle}>
+                  {editingBank ? 'Soru Bankasını Düzenle' : 'Yeni Soru Bankası Oluştur'}
+                </h3>
               </div>
-              <button onClick={() => setShowBankCustomizationModal(false)} style={styles.modalCloseBtn}>
+              <button onClick={() => setShowBankModal(false)} style={styles.modalCloseBtn}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveBankCustomization} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSaveBank} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={styles.fieldLabel}>Soru Bankası Özel Başlığı:</label>
+                <label style={styles.fieldLabel}>Soru Bankası Başlığı:</label>
                 <input
                   type="text"
                   placeholder="Örn: İslamiyet Öncesi Kültür Testi..."
@@ -1787,15 +1799,15 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
               </label>
 
               <div style={{ padding: '8px 12px', backgroundColor: '#FEF3C7', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '12px', color: '#92400E' }}>
-                💡 <b>Bilgi:</b> Soru bankasının sitede yayınlanabilmesi için en az 20 adet soru içermesi gerekmektedir.
+                💡 <b>Kural:</b> Her soru bankasının sitede yayına çıkabilmesi için en az <b>20 adet soru</b> barındırması zorunludur.
               </div>
 
               <div style={styles.modalActionsRow}>
-                <button type="button" onClick={() => setShowBankCustomizationModal(false)} style={styles.btnSecondary}>
+                <button type="button" onClick={() => setShowBankModal(false)} style={styles.btnSecondary}>
                   Vazgeç
                 </button>
                 <button type="submit" style={styles.btnPrimary}>
-                  Ayarları Kaydet
+                  {editingBank ? 'Güncelle' : 'Soru Bankası Oluştur'}
                 </button>
               </div>
             </form>
@@ -1804,7 +1816,262 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       )}
 
       {/* ============================================================== */}
-      {/* MODAL 5: SORU EKLE / DÜZENLE */}
+      {/* MODAL 5: BİR SORU BANKASININ SORULARINI YÖNETME MERKEZİ */}
+      {/* ============================================================== */}
+      {managingBank && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: '820px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Modal Başlığı */}
+            <div style={styles.modalHeader}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Database size={18} color="#4F46E5" />
+                  <h3 style={styles.modalTitle}>{managingBank.title} — Soru Yönetimi</h3>
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                  {managingBank.bankType || 'Standart Test'} • Toplam {bankQuestions.length} Soru
+                </div>
+              </div>
+              <button onClick={() => setManagingBank(null)} style={styles.modalCloseBtn}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Durum & 20 Soru Kuralı Barı */}
+            <div
+              style={{
+                backgroundColor: bankQuestions.length >= 20 ? '#F0FDF4' : '#FEF2F2',
+                border: `1px solid ${bankQuestions.length >= 20 ? '#BBF7D0' : '#FECACA'}`,
+                borderRadius: '10px',
+                padding: '12px 16px',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: bankQuestions.length >= 20 ? '#DCFCE7' : '#FEE2E2',
+                      color: bankQuestions.length >= 20 ? '#15803D' : '#DC2626',
+                    }}
+                  >
+                    {bankQuestions.length >= 20 ? 'YAYINDA 🟢' : 'HAZIRLIKTA (YAYINLANAMAZ) 🔴'}
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>
+                    {bankQuestions.length >= 20
+                      ? '20 Soru barajı tamamlandı! Sitede öğrenciler tarafından çözülebilir.'
+                      : `Sitede yayınlanabilmesi için en az 20 soru olmalıdır. (Kalan: ${20 - bankQuestions.length} soru)`}
+                  </span>
+                </div>
+
+                {/* İlerleme Çubuğu */}
+                <div style={{ width: '220px', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', marginTop: '6px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.min(100, (bankQuestions.length / 20) * 100)}%`,
+                      backgroundColor: bankQuestions.length >= 20 ? '#22C55E' : '#EAB308',
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Aksiyon Butonları */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleLoadSample20ForBank(managingBank)}
+                  style={{
+                    ...styles.btnSecondary,
+                    fontSize: '12px',
+                    gap: '4px',
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#FDE68A',
+                    color: '#92400E',
+                  }}
+                  title="Tek tıkla bu soru bankasına 20 adet hazır KPSS sorusu ekler"
+                >
+                  <Sparkles size={14} color="#D97706" />
+                  +20 Soru Paketi Doldur
+                </button>
+                <button
+                  type="button"
+                  onClick={openNewQuestionModal}
+                  style={{ ...styles.btnPrimary, fontSize: '12px', gap: '4px' }}
+                >
+                  <Plus size={14} />
+                  Yeni Soru Ekle
+                </button>
+              </div>
+            </div>
+
+            {/* Sorular Listesi */}
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '55vh', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+              {isLoadingBankQuestions ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748B' }}>
+                  Sorular yükleniyor...
+                </div>
+              ) : bankQuestions.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1' }}>
+                  <FileText size={36} color="#94A3B8" style={{ margin: '0 auto 8px', display: 'block' }} />
+                  <div style={{ fontWeight: 600, fontSize: '14px', color: '#334155' }}>Bu Soru Bankasında Henüz Soru Yok</div>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                    Yukarıdaki "Yeni Soru Ekle" butonuna tıklayarak kendi sorularınızı ekleyebilir veya "+20 Soru Paketi Doldur" butonuyla anında 20 soru yükleyebilirsiniz.
+                  </div>
+                </div>
+              ) : (
+                bankQuestions.map((q, qIdx) => {
+                  return (
+                    <div
+                      key={q.id}
+                      style={{
+                        padding: '10px 14px',
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                        <span style={{ ...styles.orderPill, minWidth: '26px', textAlign: 'center' }}>
+                          #{q.questionNumber || qIdx + 1}
+                        </span>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              color: '#1E293B',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={q.questionText}
+                          >
+                            {q.questionText}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor:
+                                  q.difficulty === 'Zor' ? '#FEE2E2' : q.difficulty === 'Kolay' ? '#DCFCE7' : '#FEF3C7',
+                                color:
+                                  q.difficulty === 'Zor' ? '#DC2626' : q.difficulty === 'Kolay' ? '#16A34A' : '#D97706',
+                              }}
+                            >
+                              {q.difficulty || 'Orta'}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: '#E0E7FF',
+                                color: '#4338CA',
+                              }}
+                            >
+                              Doğru: {q.correctOption}
+                            </span>
+                            {q.year && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: 600,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: '#F1F5F9',
+                                  color: '#475569',
+                                }}
+                              >
+                                {q.year}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sıralama ve İşlem Butonları */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveQuestion(qIdx, 'UP')}
+                          disabled={qIdx === 0}
+                          style={{
+                            ...styles.microBtn,
+                            opacity: qIdx === 0 ? 0.3 : 1,
+                            cursor: qIdx === 0 ? 'not-allowed' : 'pointer',
+                          }}
+                          title="Yukarı Taşı"
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveQuestion(qIdx, 'DOWN')}
+                          disabled={qIdx === bankQuestions.length - 1}
+                          style={{
+                            ...styles.microBtn,
+                            opacity: qIdx === bankQuestions.length - 1 ? 0.3 : 1,
+                            cursor: qIdx === bankQuestions.length - 1 ? 'not-allowed' : 'pointer',
+                          }}
+                          title="Aşağı Taşı"
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditQuestionModal(q)}
+                          style={styles.microBtn}
+                          title="Soruyu Düzenle"
+                        >
+                          <Edit3 size={13} color="#64748B" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          style={{ ...styles.microBtn, color: '#EF4444' }}
+                          title="Soruyu Sil"
+                        >
+                          <Trash2 size={13} color="#EF4444" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Alt Kapatma Çubuğu */}
+            <div style={{ ...styles.modalActionsRow, marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #E2E8F0' }}>
+              <button type="button" onClick={() => setManagingBank(null)} style={styles.btnSecondary}>
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 6: SORU EKLE / DÜZENLE */}
       {/* ============================================================== */}
       {showQuestionModal && (
         <div style={styles.modalBackdrop}>

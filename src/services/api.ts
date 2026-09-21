@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured, getAdminClient } from './supabase';
-import { Subject, Unit, Topic, Question, OptionId } from '../types';
+import { Subject, Unit, Topic, Question, OptionId, QuestionBank } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 
 // ==========================================
@@ -9,6 +9,7 @@ const LOCAL_SUBJECTS_KEY = 'kpss_local_custom_subjects';
 const LOCAL_UNITS_KEY = 'kpss_local_custom_units';
 const LOCAL_TOPICS_KEY = 'kpss_local_custom_topics';
 const LOCAL_QUESTIONS_KEY = 'kpss_local_custom_questions';
+const LOCAL_QUESTION_BANKS_KEY = 'kpss_local_custom_question_banks';
 
 export const isUuid = (val?: string): boolean => {
   if (!val) return false;
@@ -159,6 +160,40 @@ const removeLocalQuestion = (id: string): void => {
   try {
     const list = getLocalQuestions().filter(q => q.id !== id);
     localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(list));
+  } catch {}
+};
+
+const getLocalQuestionBanks = (): QuestionBank[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_QUESTION_BANKS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalQuestionBank = (bank: QuestionBank): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = getLocalQuestionBanks();
+    const idx = list.findIndex(b => b.id === bank.id);
+    if (idx >= 0) {
+      list[idx] = bank;
+    } else {
+      list.push(bank);
+    }
+    localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn('saveLocalQuestionBank error:', e);
+  }
+};
+
+const removeLocalQuestionBank = (id: string): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = getLocalQuestionBanks().filter(b => b.id !== id);
+    localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(list));
   } catch {}
 };
 
@@ -978,11 +1013,71 @@ export const api = {
     return { success: true, isLocal: !cloudUpdated, error: cloudError };
   },
 
-  async adminLoadSamplePackage(topicId: string, unitId?: string): Promise<{ success: boolean; count: number }> {
+  async getQuestionBanks(topicId: string, unitId?: string): Promise<QuestionBank[]> {
+    const list = getLocalQuestionBanks().filter((b) => b.topicId === topicId);
+    if (list.length > 0) {
+      return list.sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
+    }
+
+    // Eğer henüz bu alt konu için soru bankası kaydı yoksa, konunun sorularına bakalım
+    const existingQuestions = await this.getQuestions(topicId);
+    const initialBank: QuestionBank = {
+      id: `${topicId}-bank-1`,
+      topicId,
+      unitId,
+      title: 'Konu Tarama Testi 1',
+      bankType: 'Standart Konu Testi',
+      targetQuestionCount: 20,
+      questionCount: existingQuestions.length,
+      orderNumber: 1,
+      isLocked: false,
+    };
+    saveLocalQuestionBank(initialBank);
+
+    // Sorulara bankId iliştir
+    if (typeof window !== 'undefined') {
+      const localQ = getLocalQuestions();
+      let qChanged = false;
+      for (const q of localQ) {
+        if ((q.topicId === topicId || q.unitId === unitId) && !q.bankId) {
+          q.bankId = initialBank.id;
+          qChanged = true;
+        }
+      }
+      if (qChanged) {
+        localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(localQ));
+      }
+    }
+
+    return [initialBank];
+  },
+
+  async adminCreateQuestionBank(bank: QuestionBank): Promise<{ success: boolean; data: QuestionBank }> {
+    const newBank: QuestionBank = {
+      ...bank,
+      id: bank.id || `${bank.topicId}-bank-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    saveLocalQuestionBank(newBank);
+    return { success: true, data: newBank };
+  },
+
+  async adminUpdateQuestionBank(bank: QuestionBank): Promise<{ success: boolean; data: QuestionBank }> {
+    saveLocalQuestionBank(bank);
+    return { success: true, data: bank };
+  },
+
+  async adminDeleteQuestionBank(id: string): Promise<{ success: boolean }> {
+    removeLocalQuestionBank(id);
+    return { success: true };
+  },
+
+  async adminLoadSamplePackage(topicId: string, unitId?: string, bankId?: string): Promise<{ success: boolean; count: number }> {
     const listToSave: Question[] = SAMPLE_20_QUESTIONS.map((q, idx) => ({
       id: `${topicId}-sample-${Date.now()}-${idx + 1}`,
       topicId,
       unitId,
+      bankId,
       questionNumber: idx + 1,
       questionText: q.questionText,
       options: q.options,
@@ -1008,6 +1103,16 @@ export const api = {
         } catch {}
       }
     }
+
+    if (bankId) {
+      const banks = getLocalQuestionBanks();
+      const b = banks.find((x) => x.id === bankId);
+      if (b) {
+        b.questionCount = (b.questionCount || 0) + listToSave.length;
+        saveLocalQuestionBank(b);
+      }
+    }
+
     return { success: true, count: listToSave.length };
   },
 
