@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import { Subject, Unit, Topic, Question, OptionId, QuestionBank } from '../types';
+import { studentProgressService } from '../services/studentProgressService';
 import {
   FolderTree,
   Plus,
@@ -33,6 +34,7 @@ import {
   HelpCircle,
   FileText,
   PackagePlus,
+  LayoutGrid,
 } from 'lucide-react';
 
 interface AdvancedCurriculumManagerProps {
@@ -55,6 +57,12 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
+
+  // 4 Kolon İçin Hızlı Satır İçi (Inline) Ekleme Girişleri
+  const [quickSubjectInput, setQuickSubjectInput] = useState('');
+  const [quickUnitInput, setQuickUnitInput] = useState('');
+  const [quickTopicInput, setQuickTopicInput] = useState('');
+  const [quickBankInput, setQuickBankInput] = useState('');
 
   // 4. Kolon: Seçili Konuya Ait Soru Bankaları Listesi
   const [topicBanks, setTopicBanks] = useState<QuestionBank[]>([]);
@@ -149,17 +157,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       setUnits(allUnits);
       setTopics(allTopics);
 
-      if (subs.length > 0) {
-        setSelectedSubjectId(subs[0].id);
-        const subUnits = allUnits.filter((u) => u.subjectId === subs[0].id);
-        if (subUnits.length > 0) {
-          setSelectedUnitId(subUnits[0].id);
-          const unitTopics = allTopics.filter((t) => t.unitId === subUnits[0].id);
-          if (unitTopics.length > 0) {
-            setSelectedTopicId(unitTopics[0].id);
-          }
-        }
-      }
+      // İlk yüklemede seçim yapılmaz; kullanıcı referans görseldeki gibi temiz boş panelle karşılanır
     } catch (e) {
       console.warn('Müfredat verisi yükleme hatası:', e);
     }
@@ -205,36 +203,126 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
     return topics.find((t) => t.id === selectedTopicId);
   }, [topics, selectedTopicId]);
 
-  // Kademeli seçim fonksiyonları
+  // Kademeli seçim fonksiyonları (Cascading)
   const handleSelectSubject = (subId: string) => {
     setSelectedSubjectId(subId);
-    const subUnits = units.filter((u) => u.subjectId === subId).sort((a, b) => (a.unitNumber || 0) - (b.unitNumber || 0));
-    if (subUnits.length > 0) {
-      setSelectedUnitId(subUnits[0].id);
-      const unitTopics = topics.filter((t) => t.unitId === subUnits[0].id).sort((a, b) => (a.topicNumber || 0) - (b.topicNumber || 0));
-      if (unitTopics.length > 0) {
-        setSelectedTopicId(unitTopics[0].id);
-      } else {
-        setSelectedTopicId('');
-      }
-    } else {
-      setSelectedUnitId('');
-      setSelectedTopicId('');
-    }
+    setSelectedUnitId('');
+    setSelectedTopicId('');
+    setTopicBanks([]);
   };
 
   const handleSelectUnit = (unitId: string) => {
     setSelectedUnitId(unitId);
-    const unitTopics = topics.filter((t) => t.unitId === unitId).sort((a, b) => (a.topicNumber || 0) - (b.topicNumber || 0));
-    if (unitTopics.length > 0) {
-      setSelectedTopicId(unitTopics[0].id);
-    } else {
-      setSelectedTopicId('');
-    }
+    setSelectedTopicId('');
+    setTopicBanks([]);
   };
 
   const handleSelectTopic = (topicId: string) => {
     setSelectedTopicId(topicId);
+  };
+
+  // ----------------------------------------------------
+  // HIZLI SATIR İÇİ (INLINE) EKLEME FONKSİYONLARI (KOLON ÜSTÜ)
+  // ----------------------------------------------------
+  const handleQuickAddSubject = () => {
+    if (!quickSubjectInput.trim()) return;
+    const newSub: Subject = {
+      id: `sub-${Date.now()}`,
+      title: quickSubjectInput.trim(),
+      totalUnits: 0,
+    };
+    setSubjects((prev) => [...prev, newSub]);
+    setSelectedSubjectId(newSub.id);
+    setSelectedUnitId('');
+    setSelectedTopicId('');
+    setQuickSubjectInput('');
+    markAsDraft();
+    onNotify(`"${newSub.title}" dersi başarıyla eklendi (Taslak).`, 'success');
+  };
+
+  const handleQuickAddUnit = () => {
+    if (!selectedSubjectId) {
+      alert('Lütfen önce bir ders seçiniz.');
+      return;
+    }
+    if (!quickUnitInput.trim()) return;
+    const newUnit: Unit = {
+      id: `unit-${Date.now()}`,
+      subjectId: selectedSubjectId,
+      title: quickUnitInput.trim(),
+      unitNumber: currentUnits.length + 1,
+      isLocked: false,
+      isCompleted: false,
+    };
+    setUnits((prev) => [...prev, newUnit]);
+    setSelectedUnitId(newUnit.id);
+    setSelectedTopicId('');
+    setQuickUnitInput('');
+    markAsDraft();
+    onNotify(`"${newUnit.title}" ünitesi başarıyla eklendi (Taslak).`, 'success');
+  };
+
+  const handleQuickAddTopic = async () => {
+    if (!selectedUnitId) {
+      alert('Lütfen önce bir ünite seçiniz.');
+      return;
+    }
+    if (!quickTopicInput.trim()) return;
+    const newTopic: Topic = {
+      id: `topic-${Date.now()}`,
+      unitId: selectedUnitId,
+      title: quickTopicInput.trim(),
+      topicNumber: currentTopics.length + 1,
+      questionCount: 0,
+      isLocked: false,
+      isCompleted: false,
+    };
+    setTopics((prev) => [...prev, newTopic]);
+    setSelectedTopicId(newTopic.id);
+    setQuickTopicInput('');
+
+    // Otomatik olarak bu konuya ait 1. varsayılan Soru Bankasını da oluştur
+    const defaultBank: QuestionBank = {
+      id: `${newTopic.id}-bank-1`,
+      topicId: newTopic.id,
+      unitId: selectedUnitId,
+      title: `${newTopic.title} Testi 1`,
+      bankType: 'Standart Konu Testi',
+      targetQuestionCount: 20,
+      questionCount: 0,
+      orderNumber: 1,
+      isLocked: false,
+    };
+    await api.adminCreateQuestionBank(defaultBank);
+    setTopicBanks([defaultBank]);
+
+    markAsDraft();
+    onNotify(`"${newTopic.title}" alt konusu ve soru bankası eklendi (Taslak).`, 'success');
+  };
+
+  const handleQuickAddBank = async () => {
+    if (!selectedTopicId) {
+      alert('Lütfen önce bir alt konu seçiniz.');
+      return;
+    }
+    if (!quickBankInput.trim()) return;
+    const newBank: QuestionBank = {
+      id: `${selectedTopicId}-bank-${Date.now()}`,
+      topicId: selectedTopicId,
+      unitId: selectedUnitId,
+      title: quickBankInput.trim(),
+      description: '',
+      targetQuestionCount: 20,
+      questionCount: 0,
+      bankType: 'Standart Konu Testi',
+      isLocked: false,
+      orderNumber: topicBanks.length + 1,
+    };
+    await api.adminCreateQuestionBank(newBank);
+    setTopicBanks((prev) => [...prev, newBank]);
+    setQuickBankInput('');
+    markAsDraft();
+    onNotify(`"${newBank.title}" soru bankası başarıyla eklendi (Taslak).`, 'success');
   };
 
   // ----------------------------------------------------
@@ -571,6 +659,9 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const handleSaveSubject = () => {
     if (!subjectFormTitle.trim()) return;
     if (editingSubject) {
+      if (editingSubject.title !== subjectFormTitle.trim()) {
+        studentProgressService.renameTopicKey(editingSubject.title, subjectFormTitle.trim());
+      }
       setSubjects((prev) =>
         prev.map((s) => (s.id === editingSubject.id ? { ...s, title: subjectFormTitle.trim() } : s))
       );
@@ -590,11 +681,20 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   };
 
   const handleDeleteSubject = (id: string, title: string) => {
-    if (!confirm(`"${title}" dersini ve altındaki tüm ünite/konuları taslaktan silmek istediğinize emin misiniz?`)) {
+    const subUnits = units.filter((u) => u.subjectId === id);
+    const subTopics = topics.filter((t) => subUnits.some((u) => u.id === t.unitId));
+    if (!confirm(`"${title}" dersini silmek altındaki ${subUnits.length} ünite ve ${subTopics.length} alt konuyu silecektir. Bu işlemi onaylıyor musunuz?`)) {
       return;
     }
     setSubjects((prev) => prev.filter((s) => s.id !== id));
     setUnits((prev) => prev.filter((u) => u.subjectId !== id));
+    setTopics((prev) => prev.filter((t) => !subUnits.some((u) => u.id === t.unitId)));
+    if (selectedSubjectId === id) {
+      setSelectedSubjectId('');
+      setSelectedUnitId('');
+      setSelectedTopicId('');
+      setTopicBanks([]);
+    }
     markAsDraft();
     onNotify(`"${title}" dersi silindi (Taslak).`);
   };
@@ -660,9 +760,15 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   };
 
   const handleDeleteUnit = (id: string, title: string) => {
-    if (!confirm(`"${title}" ünitesini taslaktan silmek istediğinize emin misiniz?`)) return;
+    const unitTopics = topics.filter((t) => t.unitId === id);
+    if (!confirm(`"${title}" ünitesini silmek altındaki ${unitTopics.length} alt konuyu ve bağlı soru bankalarını silecektir. Bu işlemi onaylıyor musunuz?`)) return;
     setUnits((prev) => prev.filter((u) => u.id !== id));
     setTopics((prev) => prev.filter((t) => t.unitId !== id));
+    if (selectedUnitId === id) {
+      setSelectedUnitId('');
+      setSelectedTopicId('');
+      setTopicBanks([]);
+    }
     markAsDraft();
     onNotify(`"${title}" ünitesi silindi (Taslak).`);
   };
@@ -710,6 +816,9 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const handleSaveTopic = () => {
     if (!topicFormTitle.trim()) return;
     if (editingTopic) {
+      if (editingTopic.title !== topicFormTitle.trim()) {
+        studentProgressService.renameTopicKey(editingTopic.title, topicFormTitle.trim());
+      }
       setTopics((prev) =>
         prev.map((t) =>
           t.id === editingTopic.id
@@ -737,8 +846,12 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   };
 
   const handleDeleteTopic = (id: string, title: string) => {
-    if (!confirm(`"${title}" alt konusunu taslaktan silmek istediğinize emin misiniz?`)) return;
+    if (!confirm(`"${title}" alt konusunu ve bağlı soru bankalarını silmek istediğinize emin misiniz?`)) return;
     setTopics((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTopicId === id) {
+      setSelectedTopicId('');
+      setTopicBanks([]);
+    }
     markAsDraft();
     onNotify(`"${title}" alt konusu silindi (Taslak).`);
   };
@@ -863,510 +976,598 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       {/* ============================================================== */}
       {viewMode === 'columns' && (
         <div style={styles.columnsContainer}>
-          {/* 1. KOLON: DERSLER */}
+          {/* 1. KOLON: DERS LİSTESİ */}
           <div style={styles.columnCard}>
             <div style={styles.columnHeader}>
-              <div>
-                <h3 style={styles.columnTitle}>1. Dersler ({subjects.length})</h3>
-                <p style={styles.columnSub}>Ana KPSS alanları</p>
+              <h3 style={styles.columnTitle}>1. DERS LİSTESİ</h3>
+              <span style={styles.columnBadge}>{subjects.length} DERS</span>
+            </div>
+
+            {/* Hızlı Ders Ekleme */}
+            <div style={styles.quickAddBox}>
+              <label style={styles.quickAddLabel}>YENİ DERS EKLE</label>
+              <div style={styles.quickAddInputRow}>
+                <input
+                  type="text"
+                  placeholder="Ders adı giriniz..."
+                  value={quickSubjectInput}
+                  onChange={(e) => setQuickSubjectInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAddSubject()}
+                  style={styles.quickAddInput}
+                />
+                <button
+                  type="button"
+                  onClick={handleQuickAddSubject}
+                  style={styles.quickAddBtn}
+                  title="Dersi Ekle"
+                >
+                  <Plus size={16} />
+                </button>
               </div>
-              <button onClick={openNewSubjectModal} style={styles.colAddBtn} title="Yeni Ders Ekle">
-                <Plus size={16} />
-              </button>
             </div>
 
             <div style={styles.itemsList}>
-              {subjects.map((sub, idx) => {
-                const isSelected = sub.id === selectedSubjectId;
-                const subUnitCount = units.filter((u) => u.subjectId === sub.id).length;
+              {subjects.length === 0 ? (
+                <div style={styles.emptyNotice}>Henüz ders eklenmedi.</div>
+              ) : (
+                subjects.map((sub, idx) => {
+                  const isSelected = sub.id === selectedSubjectId;
+                  const subUnitCount = units.filter((u) => u.subjectId === sub.id).length;
 
-                return (
-                  <div
-                    key={sub.id}
-                    onClick={() => handleSelectSubject(sub.id)}
-                    style={{
-                      ...styles.itemBox,
-                      borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
-                      backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: isSelected ? 700 : 600, color: '#0F172A' }}>
-                        {sub.title}
+                  return (
+                    <div
+                      key={sub.id}
+                      onClick={() => handleSelectSubject(sub.id)}
+                      style={{
+                        ...styles.itemBox,
+                        borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                        backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13.5px', fontWeight: isSelected ? 700 : 600, color: '#0F172A' }}>
+                          {sub.title}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                          {subUnitCount} Ünite
+                        </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                        {subUnitCount} Ünite
+
+                      {/* Sıralama & Düzenleme Butonları */}
+                      <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveSubject(idx, 'UP');
+                          }}
+                          disabled={idx === 0}
+                          style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                          title="Yukarı Taşı"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveSubject(idx, 'DOWN');
+                          }}
+                          disabled={idx === subjects.length - 1}
+                          style={{ ...styles.microBtn, opacity: idx === subjects.length - 1 ? 0.3 : 1 }}
+                          title="Aşağı Taşı"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditSubjectModal(sub);
+                          }}
+                          style={styles.microBtn}
+                          title="Düzenle"
+                        >
+                          <Edit3 size={13} color="#4F46E5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSubject(sub.id, sub.title);
+                          }}
+                          style={{ ...styles.microBtn, color: '#EF4444' }}
+                          title="Sil"
+                        >
+                          <Trash2 size={13} color="#EF4444" />
+                        </button>
                       </div>
                     </div>
-
-                    {/* Sıralama & Düzenleme Butonları */}
-                    <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveSubject(idx, 'UP');
-                        }}
-                        disabled={idx === 0}
-                        style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
-                        title="Yukarı Taşı"
-                      >
-                        <ArrowUp size={13} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveSubject(idx, 'DOWN');
-                        }}
-                        disabled={idx === subjects.length - 1}
-                        style={{ ...styles.microBtn, opacity: idx === subjects.length - 1 ? 0.3 : 1 }}
-                        title="Aşağı Taşı"
-                      >
-                        <ArrowDown size={13} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditSubjectModal(sub);
-                        }}
-                        style={styles.microBtn}
-                        title="Düzenle"
-                      >
-                        <Edit3 size={13} color="#4F46E5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSubject(sub.id, sub.title);
-                        }}
-                        style={{ ...styles.microBtn, color: '#EF4444' }}
-                        title="Sil"
-                      >
-                        <Trash2 size={13} color="#EF4444" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 
           {/* 2. KOLON: ÜNİTELER */}
           <div style={styles.columnCard}>
             <div style={styles.columnHeader}>
-              <div>
-                <h3 style={styles.columnTitle}>2. Üniteler ({currentUnits.length})</h3>
-                <p style={styles.columnSub}>
-                  {subjects.find((s) => s.id === selectedSubjectId)?.title || 'Ders Seçiniz'}
-                </p>
+              <h3 style={styles.columnTitle}>2. ÜNİTELER</h3>
+              <span style={styles.columnBadge}>{currentUnits.length} ÜNİTE</span>
+            </div>
+
+            {!selectedSubjectId ? (
+              <div style={styles.emptyDashedBox}>
+                <LayoutGrid size={32} color="#94A3B8" strokeWidth={1.5} />
+                <div style={styles.emptyDashedTitle}>Lütfen soldan bir Ders seçin.</div>
+                <p style={styles.emptyDashedSub}>Seçtiğiniz derse ait üniteleri yönetebilirsiniz.</p>
               </div>
-              <button
-                onClick={openNewUnitModal}
-                disabled={!selectedSubjectId}
-                style={{ ...styles.colAddBtn, opacity: selectedSubjectId ? 1 : 0.5 }}
-                title="Yeni Ünite Ekle"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-
-            <div style={styles.itemsList}>
-              {currentUnits.length === 0 ? (
-                <div style={styles.emptyNotice}>Bu derse ait ünite bulunamadı.</div>
-              ) : (
-                currentUnits.map((unit, idx) => {
-                  const isSelected = unit.id === selectedUnitId;
-                  const unitTopicCount = topics.filter((t) => t.unitId === unit.id).length;
-
-                  return (
-                    <div
-                      key={unit.id}
-                      onClick={() => handleSelectUnit(unit.id)}
-                      style={{
-                        ...styles.itemBox,
-                        borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
-                        backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
-                      }}
+            ) : (
+              <>
+                {/* Hızlı Ünite Ekleme */}
+                <div style={styles.quickAddBox}>
+                  <label style={styles.quickAddLabel}>YENİ ÜNİTE EKLE</label>
+                  <div style={styles.quickAddInputRow}>
+                    <input
+                      type="text"
+                      placeholder="Ünite adı giriniz..."
+                      value={quickUnitInput}
+                      onChange={(e) => setQuickUnitInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleQuickAddUnit()}
+                      style={styles.quickAddInput}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleQuickAddUnit}
+                      style={styles.quickAddBtn}
+                      title="Üniteyi Ekle"
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: isSelected ? 700 : 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={styles.orderPill}>{unit.unitNumber || idx + 1}</span>
-                          <span>{unit.title}</span>
-                          {unit.isLocked && (
-                            <span title="Kilitli Ünite">
-                              <Lock size={12} color="#D97706" />
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>
-                          {unitTopicCount} Alt Konu
-                        </div>
-                      </div>
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
 
-                      {/* Sıralama & Düzenleme Butonları */}
-                      <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveUnit(idx, 'UP');
+                <div style={styles.itemsList}>
+                  {currentUnits.length === 0 ? (
+                    <div style={styles.emptyNotice}>Bu derse ait ünite bulunamadı. Yukarıdan yeni ünite ekleyebilirsiniz.</div>
+                  ) : (
+                    currentUnits.map((unit, idx) => {
+                      const isSelected = unit.id === selectedUnitId;
+                      const unitTopicCount = topics.filter((t) => t.unitId === unit.id).length;
+
+                      return (
+                        <div
+                          key={unit.id}
+                          onClick={() => handleSelectUnit(unit.id)}
+                          style={{
+                            ...styles.itemBox,
+                            borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                            backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
                           }}
-                          disabled={idx === 0}
-                          style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
-                          title="Yukarı Taşı"
                         >
-                          <ArrowUp size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveUnit(idx, 'DOWN');
-                          }}
-                          disabled={idx === currentUnits.length - 1}
-                          style={{ ...styles.microBtn, opacity: idx === currentUnits.length - 1 ? 0.3 : 1 }}
-                          title="Aşağı Taşı"
-                        >
-                          <ArrowDown size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditUnitModal(unit);
-                          }}
-                          style={styles.microBtn}
-                          title="Düzenle"
-                        >
-                          <Edit3 size={13} color="#4F46E5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteUnit(unit.id, unit.title);
-                          }}
-                          style={{ ...styles.microBtn, color: '#EF4444' }}
-                          title="Sil"
-                        >
-                          <Trash2 size={13} color="#EF4444" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: isSelected ? 700 : 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={styles.orderPill}>{unit.unitNumber || idx + 1}</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{unit.title}</span>
+                              {unit.isLocked && (
+                                <span title="Kilitli Ünite">
+                                  <Lock size={12} color="#D97706" />
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>
+                              {unitTopicCount} Alt Konu
+                            </div>
+                          </div>
+
+                          {/* Sıralama & Düzenleme Butonları */}
+                          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveUnit(idx, 'UP');
+                              }}
+                              disabled={idx === 0}
+                              style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                              title="Yukarı Taşı"
+                            >
+                              <ChevronUp size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveUnit(idx, 'DOWN');
+                              }}
+                              disabled={idx === currentUnits.length - 1}
+                              style={{ ...styles.microBtn, opacity: idx === currentUnits.length - 1 ? 0.3 : 1 }}
+                              title="Aşağı Taşı"
+                            >
+                              <ChevronDown size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditUnitModal(unit);
+                              }}
+                              style={styles.microBtn}
+                              title="Düzenle"
+                            >
+                              <Edit3 size={13} color="#4F46E5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUnit(unit.id, unit.title);
+                              }}
+                              style={{ ...styles.microBtn, color: '#EF4444' }}
+                              title="Sil"
+                            >
+                              <Trash2 size={13} color="#EF4444" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* 3. KOLON: ALT KONULAR & KAZANIMLAR */}
+          {/* 3. KOLON: ALT KONULAR */}
           <div style={styles.columnCard}>
             <div style={styles.columnHeader}>
-              <div>
-                <h3 style={styles.columnTitle}>3. Alt Konular / Kazanımlar ({currentTopics.length})</h3>
-                <p style={styles.columnSub}>
-                  {units.find((u) => u.id === selectedUnitId)?.title || 'Ünite Seçiniz'}
-                </p>
+              <h3 style={styles.columnTitle}>3. ALT KONULAR</h3>
+              <span style={styles.columnBadge}>{currentTopics.length} KONU</span>
+            </div>
+
+            {!selectedSubjectId || !selectedUnitId ? (
+              <div style={styles.emptyDashedBox}>
+                <LayoutGrid size={32} color="#94A3B8" strokeWidth={1.5} />
+                <div style={styles.emptyDashedTitle}>Lütfen soldan Ders ve Ünite seçin.</div>
+                <p style={styles.emptyDashedSub}>Grup altındaki alt konu kazanımlarını silebilir veya ekleyebilirsiniz.</p>
               </div>
-              <button
-                onClick={openNewTopicModal}
-                disabled={!selectedUnitId}
-                style={{ ...styles.colAddBtn, opacity: selectedUnitId ? 1 : 0.5 }}
-                title="Yeni Alt Konu Ekle"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-
-            <div style={styles.itemsList}>
-              {currentTopics.length === 0 ? (
-                <div style={styles.emptyNotice}>Bu üniteye ait alt konu (kazanım) bulunamadı.</div>
-              ) : (
-                currentTopics.map((topic, idx) => {
-                  const isSelected = topic.id === selectedTopicId;
-
-                  return (
-                    <div
-                      key={topic.id}
-                      onClick={() => handleSelectTopic(topic.id)}
-                      style={{
-                        ...styles.itemBox,
-                        borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
-                        backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
-                      }}
+            ) : (
+              <>
+                {/* Hızlı Alt Konu Ekleme */}
+                <div style={styles.quickAddBox}>
+                  <label style={styles.quickAddLabel}>YENİ ALT KONU EKLE</label>
+                  <div style={styles.quickAddInputRow}>
+                    <input
+                      type="text"
+                      placeholder="Alt konu / kazanım adı giriniz..."
+                      value={quickTopicInput}
+                      onChange={(e) => setQuickTopicInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleQuickAddTopic()}
+                      style={styles.quickAddInput}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleQuickAddTopic}
+                      style={styles.quickAddBtn}
+                      title="Alt Konuyu Ekle"
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: isSelected ? 700 : 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={styles.orderPill}>{topic.topicNumber || idx + 1}</span>
-                          <span>{topic.title}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                          <span style={{ fontSize: '11px', color: '#64748B' }}>
-                            🎯 {topic.questionCount || 0} Soru
-                          </span>
-                          <span style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            backgroundColor: (topic.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
-                            color: (topic.questionCount || 0) >= 20 ? '#166534' : '#991B1B',
-                          }}>
-                            {(topic.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta 🔴'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Sıralama & Düzenleme Butonları */}
-                      <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveTopic(idx, 'UP');
-                          }}
-                          disabled={idx === 0}
-                          style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
-                          title="Yukarı Taşı"
-                        >
-                          <ArrowUp size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveTopic(idx, 'DOWN');
-                          }}
-                          disabled={idx === currentTopics.length - 1}
-                          style={{ ...styles.microBtn, opacity: idx === currentTopics.length - 1 ? 0.3 : 1 }}
-                          title="Aşağı Taşı"
-                        >
-                          <ArrowDown size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditTopicModal(topic);
-                          }}
-                          style={styles.microBtn}
-                          title="Düzenle"
-                        >
-                          <Edit3 size={13} color="#4F46E5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTopic(topic.id, topic.title);
-                          }}
-                          style={{ ...styles.microBtn, color: '#EF4444' }}
-                          title="Sil"
-                        >
-                          <Trash2 size={13} color="#EF4444" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* 4. KOLON: ÖZELLEŞTİRİLEBİLİR SORU BANKALARI */}
-          <div style={styles.columnCard}>
-            <div style={styles.columnHeader}>
-              <div>
-                <h3 style={styles.columnTitle}>
-                  4. Soru Bankaları ({topicBanks.length})
-                </h3>
-                <p style={styles.columnSub} title={currentTopic ? currentTopic.title : undefined}>
-                  {currentTopic ? `${currentTopic.topicNumber}. ${currentTopic.title}` : 'Alt Konu Seçiniz'}
-                </p>
-              </div>
-              <button
-                onClick={openNewBankModal}
-                disabled={!selectedTopicId}
-                style={{ ...styles.colAddBtn, opacity: selectedTopicId ? 1 : 0.4 }}
-                title="Yeni Soru Bankası Oluştur"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-
-            <div style={styles.itemsList}>
-              {!selectedTopicId ? (
-                <div style={styles.emptyNotice}>
-                  Lütfen soru bankalarını görüntülemek ve yönetmek için 3. kolondan bir <b>Alt Konu / Kazanım</b> seçiniz.
+                      <Plus size={16} />
+                    </button>
+                  </div>
                 </div>
-              ) : isLoadingBanks ? (
-                <div style={styles.emptyNotice}>Soru bankaları yükleniyor...</div>
-              ) : topicBanks.length === 0 ? (
-                <div style={{ ...styles.emptyNotice, padding: '24px 12px' }}>
-                  <Database size={28} color="#94A3B8" style={{ marginBottom: '8px' }} />
-                  <div>Bu alt konuya ait henüz bir soru bankası oluşturulmadı.</div>
-                  <button
-                    onClick={openNewBankModal}
-                    style={{ ...styles.btnPrimary, marginTop: '12px', fontSize: '12px' }}
-                  >
-                    <Plus size={14} style={{ marginRight: '4px' }} />
-                    + Yeni Soru Bankası Oluştur
-                  </button>
-                </div>
-              ) : (
-                topicBanks.map((bank, idx) => {
-                  const qCount = bank.questionCount || 0;
-                  const isPublished = qCount >= 20;
 
-                  return (
-                    <div
-                      key={bank.id}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '10px',
-                        border: '1.5px solid #E2E8F0',
-                        backgroundColor: '#FFFFFF',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                      }}
-                    >
-                      {/* Üst Satır: İsim, Tür, Rozetler & Sıralama/Aksiyon */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={styles.orderPill}>#{bank.orderNumber || idx + 1}</span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {bank.title}
-                            </span>
-                            {bank.isLocked && (
-                              <span title="Kilitli Soru Bankası">
-                                <Lock size={12} color="#D97706" />
+                <div style={styles.itemsList}>
+                  {currentTopics.length === 0 ? (
+                    <div style={styles.emptyNotice}>Bu üniteye ait alt konu (kazanım) bulunamadı. Yukarıdan yeni alt konu ekleyebilirsiniz.</div>
+                  ) : (
+                    currentTopics.map((topic, idx) => {
+                      const isSelected = topic.id === selectedTopicId;
+
+                      return (
+                        <div
+                          key={topic.id}
+                          onClick={() => handleSelectTopic(topic.id)}
+                          style={{
+                            ...styles.itemBox,
+                            borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                            backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: isSelected ? 700 : 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={styles.orderPill}>{topic.topicNumber || idx + 1}</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{topic.title}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                🎯 {topic.questionCount || 0} Soru
                               </span>
-                            )}
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                backgroundColor: (topic.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
+                                color: (topic.questionCount || 0) >= 20 ? '#166534' : '#991B1B',
+                              }}>
+                                {(topic.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta 🔴'}
+                              </span>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                            Tür: <b>{bank.bankType || 'Standart Konu Testi'}</b>
+
+                          {/* Sıralama & Düzenleme Butonları */}
+                          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveTopic(idx, 'UP');
+                              }}
+                              disabled={idx === 0}
+                              style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                              title="Yukarı Taşı"
+                            >
+                              <ChevronUp size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveTopic(idx, 'DOWN');
+                              }}
+                              disabled={idx === currentTopics.length - 1}
+                              style={{ ...styles.microBtn, opacity: idx === currentTopics.length - 1 ? 0.3 : 1 }}
+                              title="Aşağı Taşı"
+                            >
+                              <ChevronDown size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditTopicModal(topic);
+                              }}
+                              style={styles.microBtn}
+                              title="Düzenle"
+                            >
+                              <Edit3 size={13} color="#4F46E5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTopic(topic.id, topic.title);
+                              }}
+                              style={{ ...styles.microBtn, color: '#EF4444' }}
+                              title="Sil"
+                            >
+                              <Trash2 size={13} color="#EF4444" />
+                            </button>
                           </div>
                         </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
-                        {/* Sıralama & Düzenleme Butonları */}
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          <button
-                            onClick={() => handleMoveBank(idx, 'UP')}
-                            disabled={idx === 0}
-                            style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
-                            title="Yukarı Taşı"
-                          >
-                            <ArrowUp size={12} />
-                          </button>
-                          <button
-                            onClick={() => handleMoveBank(idx, 'DOWN')}
-                            disabled={idx === topicBanks.length - 1}
-                            style={{ ...styles.microBtn, opacity: idx === topicBanks.length - 1 ? 0.3 : 1 }}
-                            title="Aşağı Taşı"
-                          >
-                            <ArrowDown size={12} />
-                          </button>
-                          <button
-                            onClick={() => openEditBankModal(bank)}
-                            style={styles.microBtn}
-                            title="Soru Bankasını Düzenle"
-                          >
-                            <Edit3 size={12} color="#4F46E5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteBank(bank.id, bank.title)}
-                            style={{ ...styles.microBtn, color: '#EF4444' }}
-                            title="Soru Bankasını Sil"
-                          >
-                            <Trash2 size={12} color="#EF4444" />
-                          </button>
-                        </div>
-                      </div>
+          {/* 4. KOLON: SORU BANKALARI */}
+          <div style={styles.columnCard}>
+            <div style={styles.columnHeader}>
+              <h3 style={styles.columnTitle}>4. SORU BANKALARI</h3>
+              <span style={styles.columnBadge}>{topicBanks.length} BANKA</span>
+            </div>
 
-                      {bank.description && (
-                        <div style={{ fontSize: '11px', color: '#64748B', fontStyle: 'italic', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: '6px' }}>
-                          "{bank.description}"
-                        </div>
-                      )}
+            {!selectedTopicId ? (
+              <div style={styles.emptyDashedBox}>
+                <LayoutGrid size={32} color="#94A3B8" strokeWidth={1.5} />
+                <div style={styles.emptyDashedTitle}>Lütfen soldan Alt Konu seçin.</div>
+                <p style={styles.emptyDashedSub}>Seçtiğiniz kazanımın altındaki soru bankalarını yönetebilirsiniz.</p>
+              </div>
+            ) : (
+              <>
+                {/* Hızlı Soru Bankası Ekleme */}
+                <div style={styles.quickAddBox}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={styles.quickAddLabel}>YENİ SORU BANKASI EKLE</label>
+                    <button
+                      type="button"
+                      onClick={openNewBankModal}
+                      style={{ background: 'none', border: 'none', color: '#4F46E5', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    >
+                      + Detaylı Ekle
+                    </button>
+                  </div>
+                  <div style={styles.quickAddInputRow}>
+                    <input
+                      type="text"
+                      placeholder="Soru bankası adı giriniz..."
+                      value={quickBankInput}
+                      onChange={(e) => setQuickBankInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleQuickAddBank()}
+                      style={styles.quickAddInput}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleQuickAddBank}
+                      style={styles.quickAddBtn}
+                      title="Soru Bankasını Ekle"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
 
-                      {/* 20 Soru Yayınlanma Kuralı Rozeti & İlerleme Çubuğu */}
-                      <div
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          backgroundColor: isPublished ? '#F0FDF4' : '#FEF2F2',
-                          border: `1px solid ${isPublished ? '#BBF7D0' : '#FECACA'}`,
-                        }}
+                <div style={styles.itemsList}>
+                  {isLoadingBanks ? (
+                    <div style={styles.emptyNotice}>Soru bankaları yükleniyor...</div>
+                  ) : topicBanks.length === 0 ? (
+                    <div style={{ ...styles.emptyNotice, padding: '24px 12px' }}>
+                      <Database size={28} color="#94A3B8" style={{ marginBottom: '8px' }} />
+                      <div>Bu alt konuya ait henüz bir soru bankası oluşturulmadı.</div>
+                      <button
+                        onClick={openNewBankModal}
+                        style={{ ...styles.btnPrimary, marginTop: '12px', fontSize: '12px' }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                          <span style={{ fontSize: '10.5px', fontWeight: 700, color: isPublished ? '#15803D' : '#B91C1C' }}>
-                            {isPublished ? '🟢 Yayında (Aktif)' : '🔴 Yayınlanamaz (Hazırlıkta)'}
-                          </span>
-                          <span style={{ fontSize: '10.5px', fontWeight: 700, color: isPublished ? '#15803D' : '#B91C1C' }}>
-                            {qCount} / 20 Soru
-                          </span>
-                        </div>
+                        <Plus size={14} style={{ marginRight: '4px' }} />
+                        + Yeni Soru Bankası Oluştur
+                      </button>
+                    </div>
+                  ) : (
+                    topicBanks.map((bank, idx) => {
+                      const qCount = bank.questionCount || 0;
+                      const isPublished = qCount >= 20;
 
-                        {/* Mini İlerleme Çubuğu */}
-                        <div style={{ height: '4px', backgroundColor: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}>
+                      return (
+                        <div
+                          key={bank.id}
+                          style={{
+                            padding: '12px 14px',
+                            borderRadius: '10px',
+                            border: '1.5px solid #E2E8F0',
+                            backgroundColor: '#FFFFFF',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                          }}
+                        >
+                          {/* Üst Satır: İsim, Tür, Rozetler & Sıralama/Aksiyon */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={styles.orderPill}>#{bank.orderNumber || idx + 1}</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {bank.title}
+                                </span>
+                                {bank.isLocked && (
+                                  <span title="Kilitli Soru Bankası">
+                                    <Lock size={12} color="#D97706" />
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                Tür: <b>{bank.bankType || 'Standart Konu Testi'}</b>
+                              </div>
+                            </div>
+
+                            {/* Sıralama & Düzenleme Butonları */}
+                            <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleMoveBank(idx, 'UP')}
+                                disabled={idx === 0}
+                                style={{ ...styles.microBtn, opacity: idx === 0 ? 0.3 : 1 }}
+                                title="Yukarı Taşı"
+                              >
+                                <ChevronUp size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleMoveBank(idx, 'DOWN')}
+                                disabled={idx === topicBanks.length - 1}
+                                style={{ ...styles.microBtn, opacity: idx === topicBanks.length - 1 ? 0.3 : 1 }}
+                                title="Aşağı Taşı"
+                              >
+                                <ChevronDown size={13} />
+                              </button>
+                              <button
+                                onClick={() => openEditBankModal(bank)}
+                                style={styles.microBtn}
+                                title="Soru Bankasını Düzenle"
+                              >
+                                <Edit3 size={12} color="#4F46E5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBank(bank.id, bank.title)}
+                                style={{ ...styles.microBtn, color: '#EF4444' }}
+                                title="Soru Bankasını Sil"
+                              >
+                                <Trash2 size={12} color="#EF4444" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {bank.description && (
+                            <div style={{ fontSize: '11px', color: '#64748B', fontStyle: 'italic', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: '6px' }}>
+                              "{bank.description}"
+                            </div>
+                          )}
+
+                          {/* 20 Soru Yayınlanma Kuralı Rozeti & İlerleme Çubuğu */}
                           <div
                             style={{
-                              height: '100%',
-                              width: `${Math.min(100, Math.round((qCount / 20) * 100))}%`,
-                              backgroundColor: isPublished ? '#22C55E' : '#EF4444',
-                              borderRadius: '2px',
-                              transition: 'width 0.3s ease',
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Alt Aksiyon Butonları */}
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-                        <button
-                          onClick={() => openManageBankQuestions(bank)}
-                          style={{
-                            flex: 1,
-                            backgroundColor: '#EEF2FF',
-                            color: '#4F46E5',
-                            border: '1px solid #C7D2FE',
-                            borderRadius: '6px',
-                            padding: '6px 10px',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '5px',
-                          }}
-                        >
-                          <HelpCircle size={13} />
-                          Soruları Yönet ({qCount})
-                        </button>
-
-                        {!isPublished && (
-                          <button
-                            onClick={() => handleLoadSample20ForBank(bank)}
-                            style={{
-                              backgroundColor: '#4F46E5',
-                              color: '#FFFFFF',
-                              border: 'none',
+                              padding: '6px 10px',
                               borderRadius: '6px',
-                              padding: '6px 8px',
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
+                              backgroundColor: isPublished ? '#F0FDF4' : '#FEF2F2',
+                              border: `1px solid ${isPublished ? '#BBF7D0' : '#FECACA'}`,
                             }}
-                            title="Tek tıkla bu soru bankasına 20 soru doldur"
                           >
-                            <PackagePlus size={13} /> 20 Soru Ekle
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: isPublished ? '#15803D' : '#B91C1C' }}>
+                                {isPublished ? '🟢 Yayında (Aktif)' : '🔴 Yayınlanamaz (Hazırlıkta)'}
+                              </span>
+                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: isPublished ? '#15803D' : '#B91C1C' }}>
+                                {qCount} / 20 Soru
+                              </span>
+                            </div>
+
+                            {/* Mini İlerleme Çubuğu */}
+                            <div style={{ height: '4px', backgroundColor: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  height: '100%',
+                                  width: `${Math.min(100, Math.round((qCount / 20) * 100))}%`,
+                                  backgroundColor: isPublished ? '#22C55E' : '#EF4444',
+                                  borderRadius: '2px',
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Alt Aksiyon Butonları */}
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                            <button
+                              onClick={() => openManageBankQuestions(bank)}
+                              style={{
+                                flex: 1,
+                                backgroundColor: '#EEF2FF',
+                                color: '#4F46E5',
+                                border: '1px solid #C7D2FE',
+                                borderRadius: '6px',
+                                padding: '6px 10px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '5px',
+                              }}
+                            >
+                              <HelpCircle size={13} />
+                              Soruları Yönet ({qCount})
+                            </button>
+
+                            {!isPublished && (
+                              <button
+                                onClick={() => handleLoadSample20ForBank(bank)}
+                                style={{
+                                  backgroundColor: '#4F46E5',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '6px 8px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Tek tıkla bu soru bankasına 20 soru doldur"
+                              >
+                                <PackagePlus size={13} /> 20 Soru Ekle
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -2352,6 +2553,91 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     color: '#64748B',
     margin: '2px 0 0',
+  },
+  columnBadge: {
+    fontSize: '11px',
+    fontWeight: 700,
+    padding: '3px 8px',
+    borderRadius: '6px',
+    backgroundColor: '#ECFDF5',
+    color: '#059669',
+    border: '1px solid #A7F3D0',
+    whiteSpace: 'nowrap',
+    letterSpacing: '0.4px',
+  },
+  quickAddBox: {
+    marginBottom: '12px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #F1F5F9',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  quickAddLabel: {
+    fontSize: '10.5px',
+    fontWeight: 700,
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  quickAddInputRow: {
+    display: 'flex',
+    gap: '6px',
+    alignItems: 'center',
+  },
+  quickAddInput: {
+    flex: 1,
+    minWidth: 0,
+    padding: '8px 10px',
+    fontSize: '12.5px',
+    borderRadius: '8px',
+    border: '1.5px solid #E2E8F0',
+    outline: 'none',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s ease',
+  },
+  quickAddBtn: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    backgroundColor: '#10B981',
+    color: '#FFFFFF',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
+    transition: 'background-color 0.15s ease',
+  },
+  emptyDashedBox: {
+    border: '2px dashed #CBD5E1',
+    borderRadius: '12px',
+    padding: '32px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    minHeight: '220px',
+    backgroundColor: '#F8FAFC',
+    margin: 'auto 0',
+  },
+  emptyDashedTitle: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#334155',
+    marginTop: '12px',
+    marginBottom: '4px',
+  },
+  emptyDashedSub: {
+    fontSize: '11.5px',
+    color: '#94A3B8',
+    lineHeight: '1.4',
+    maxWidth: '200px',
+    margin: 0,
   },
   colAddBtn: {
     width: '30px',

@@ -92,6 +92,29 @@ export const studentProgressService = {
   },
 
   /**
+   * Konu veya ders adı güncellendiğinde öğrenci kayıtlarını yeni anahtara senkronize eder.
+   */
+  renameTopicKey(oldKey: string, newKey: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      const progress = this.getStoredProgress();
+      const oldK = oldKey.toLowerCase().trim();
+      const newK = newKey.toLowerCase().trim();
+      if (progress[oldK]) {
+        progress[newK] = {
+          solved: (progress[newK]?.solved || 0) + progress[oldK].solved,
+          correct: (progress[newK]?.correct || 0) + progress[oldK].correct,
+          wrong: (progress[newK]?.wrong || 0) + progress[oldK].wrong,
+        };
+        delete progress[oldK];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+      }
+    } catch (e) {
+      console.warn('renameTopicKey error:', e);
+    }
+  },
+
+  /**
    * Tüm konular için detaylı analiz verilerini döner.
    */
   getTopicAnalysisList(filterSubject?: string): TopicRecord[] {
