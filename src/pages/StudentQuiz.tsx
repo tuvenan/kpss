@@ -970,6 +970,48 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           .welcome-heading {
             font-size: 22px !important;
           }
+          .deneme-theme-banner {
+            padding: 10px 12px !important;
+            margin-bottom: 12px !important;
+            border-radius: 14px !important;
+          }
+          .deneme-desc-text {
+            display: none !important;
+          }
+          .deneme-btn-desktop-text {
+            display: none !important;
+          }
+          .deneme-btn-mobile-text {
+            display: inline !important;
+          }
+          .deneme-action-btn {
+            padding: 7px 12px !important;
+            font-size: 12px !important;
+          }
+        }
+
+        .deneme-theme-banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background-color: #FFFFFF;
+          border: 1px solid #EFEFF2;
+          border-radius: 16px;
+          padding: 14px 18px;
+          margin-bottom: 16px;
+          gap: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .deneme-theme-banner:hover {
+          border-color: #D1D5DB;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+        .deneme-btn-desktop-text {
+          display: inline;
+        }
+        .deneme-btn-mobile-text {
+          display: none;
         }
 
         @media (min-width: 901px) {
@@ -1003,8 +1045,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               onClick={handleOpenDenemeSetup}
               style={styles.sidebarNavItem}
             >
-              <Timer size={18} color="#D97706" style={{ marginRight: '12px' }} />
-              <span style={{ fontWeight: 600, color: '#D97706' }}>Deneme Sınavı ⏱️</span>
+              <Timer size={18} style={{ marginRight: '12px' }} />
+              <span>Deneme Sınavı</span>
             </button>
 
             <button
@@ -1181,30 +1223,31 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
                 </div>
 
-                {/* KPSS DENEME MODU HERO BANNER */}
-                <div style={styles.denemeHeroBanner}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={styles.denemeHeroBadge}>
-                      <Flame size={13} />
-                      <span>DENEME MODU • YENİ</span>
+                {/* KPSS DENEME MODU KARTI (Mevcut Görsel Temaya Tam Uyumlu & Mobilde Kompakt) */}
+                <div className="deneme-theme-banner" style={styles.denemeThemeCard}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                    <div style={styles.denemeThemeIconBox}>
+                      <Timer size={20} color="#111" />
                     </div>
-                    <div style={styles.denemeHeroTitle}>Rastgele 20 Soruluk Deneme Sınavı</div>
-                    <div style={styles.denemeHeroDesc}>
-                      Farklı konulardan dengeli 20 soru, canlı süre takibi, tempo analizi ve detaylı ders raporu.
-                    </div>
-                    <div style={styles.denemeHeroPillsRow}>
-                      <span style={styles.denemeHeroPill}>🎯 20 Soru</span>
-                      <span style={styles.denemeHeroPill}>⏱️ Canlı Süre</span>
-                      <span style={styles.denemeHeroPill}>⚡ Hız Temposu</span>
-                      <span style={styles.denemeHeroPill}>📊 Konu Analizi</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={styles.denemeThemeTitle}>KPSS Deneme Modu</span>
+                        <span style={styles.denemeThemeBadge}>20 Soru • Süreli</span>
+                      </div>
+                      <div className="deneme-desc-text" style={styles.denemeThemeDesc}>
+                        Farklı konulardan dengeli 20 soru, canlı süre takibi ve tempo analizi
+                      </div>
                     </div>
                   </div>
+
                   <button
                     onClick={handleOpenDenemeSetup}
-                    style={styles.denemeHeroButton}
+                    className="deneme-action-btn"
+                    style={styles.denemeThemeBtn}
                   >
-                    <Play size={16} fill="#0F172A" />
-                    <span>Denemeye Başla</span>
+                    <Play size={13} fill="#FFFFFF" />
+                    <span className="deneme-btn-desktop-text">Denemeyi Başlat</span>
+                    <span className="deneme-btn-mobile-text">Başlat</span>
                   </button>
                 </div>
 
@@ -1382,17 +1425,13 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 <div className="quick-access-row" style={styles.quickAccessRow}>
                   <div
                     onClick={handleOpenDenemeSetup}
-                    style={{
-                      ...styles.quickAccessCard,
-                      border: '1px solid #FDE68A',
-                      backgroundColor: '#FFFBEB',
-                    }}
+                    style={styles.quickAccessCard}
                   >
-                    <div style={{ ...styles.quickAccessIconBox, backgroundColor: '#FEF3C7' }}>
-                      <Timer size={16} color="#D97706" />
+                    <div style={styles.quickAccessIconBox}>
+                      <Timer size={16} color="#111" />
                     </div>
                     <div>
-                      <div style={{ ...styles.quickAccessTitleText, color: '#92400E' }}>Deneme Modu</div>
+                      <div style={styles.quickAccessTitleText}>Deneme Sınavı</div>
                       <div style={styles.quickAccessSubText}>20 Soru • Süreli</div>
                     </div>
                   </div>
@@ -1637,19 +1676,19 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '9px 16px',
-                    backgroundColor: '#D97706',
+                    padding: '8px 16px',
+                    backgroundColor: '#111111',
                     color: '#FFFFFF',
                     borderRadius: '10px',
                     border: 'none',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     fontSize: '13px',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.2)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                   }}
                 >
-                  <Timer size={16} />
-                  <span>20 Soruluk Deneme Başlat</span>
+                  <Timer size={15} />
+                  <span>Deneme Sınavı (20 Soru)</span>
                 </button>
               </div>
               <div style={styles.categoryTitle}>KPSS Genel Yetenek</div>
@@ -2771,20 +2810,20 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             {/* Başlık & İkon */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
               <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                backgroundColor: '#FEF3C7',
-                color: '#D97706',
+                width: '42px',
+                height: '42px',
+                borderRadius: '10px',
+                backgroundColor: '#F2F2F5',
+                color: '#111',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}>
-                <Timer size={24} />
+                <Timer size={22} />
               </div>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '10.5px', fontWeight: 700 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '6px', backgroundColor: '#F2F2F5', color: '#333', fontSize: '10.5px', fontWeight: 600 }}>
                   <Zap size={11} />
                   <span>KPSS SİMÜLASYONU</span>
                 </div>
@@ -2818,16 +2857,16 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       style={{
                         padding: '10px 12px',
                         borderRadius: '10px',
-                        border: isSelected ? '2px solid #D97706' : '1px solid #E2E8F0',
-                        backgroundColor: isSelected ? '#FFFBEB' : '#F8FAFC',
+                        border: isSelected ? '2px solid #111' : '1px solid #E2E8F0',
+                        backgroundColor: isSelected ? '#F8FAFC' : '#FFFFFF',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? '#92400E' : '#1E293B' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? '#111' : '#1E293B' }}>
                         {opt.label}
                       </div>
-                      <div style={{ fontSize: '11px', color: isSelected ? '#B45309' : '#64748B', marginTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: isSelected ? '#444' : '#64748B', marginTop: '2px' }}>
                         {opt.sub}
                       </div>
                     </div>
@@ -2857,7 +2896,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               </div>
               <div style={{ fontSize: '11.5px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Check size={14} color="#16A34A" />
-                <span>Yanlış çözülen sorular otomatik Hata Havuzu'na kaydedilir.</span>
+                <span>Yanlış çözülen sorular otomatik 'Yanlışlarım' soru bankasına kaydedilir.</span>
               </div>
             </div>
 
@@ -2888,7 +2927,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   padding: '12px',
                   borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: '#D97706',
+                  backgroundColor: '#111111',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   fontSize: '14px',
@@ -2897,10 +2936,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 4px 12px rgba(217, 119, 6, 0.35)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.18)',
                 }}
               >
-                <Play size={16} fill="#FFFFFF" />
+                <Play size={15} fill="#FFFFFF" />
                 <span>Denemeyi Başlat</span>
               </button>
             </div>
@@ -4781,74 +4820,66 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '3px 8px',
     borderRadius: '6px',
   },
-  denemeHeroBanner: {
-    background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%)',
+  denemeThemeCard: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #EFEFF2',
     borderRadius: '16px',
-    padding: '20px 24px',
-    color: '#FFFFFF',
+    padding: '14px 18px',
+    marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '16px',
-    marginBottom: '20px',
-    boxShadow: '0 10px 25px -5px rgba(67, 56, 202, 0.3)',
-    flexWrap: 'wrap',
+    gap: '12px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
   },
-  denemeHeroBadge: {
+  denemeThemeIconBox: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '10px',
+    backgroundColor: '#F2F2F5',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  denemeThemeTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#111',
+    letterSpacing: '-0.2px',
+  },
+  denemeThemeBadge: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '5px',
-    backgroundColor: '#F59E0B',
-    color: '#78350F',
-    padding: '3px 9px',
-    borderRadius: '12px',
-    fontSize: '11px',
-    fontWeight: 800,
-    letterSpacing: '0.3px',
-    marginBottom: '8px',
-  },
-  denemeHeroTitle: {
-    fontSize: '18px',
-    fontWeight: 800,
-    color: '#FFFFFF',
-    marginBottom: '4px',
-    letterSpacing: '-0.3px',
-  },
-  denemeHeroDesc: {
-    fontSize: '13px',
-    color: '#C7D2FE',
-    lineHeight: 1.4,
-    maxWidth: '480px',
-    marginBottom: '10px',
-  },
-  denemeHeroPillsRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexWrap: 'wrap',
-  },
-  denemeHeroPill: {
     fontSize: '11px',
     fontWeight: 600,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    color: '#EEF2FF',
     padding: '2px 8px',
     borderRadius: '6px',
+    backgroundColor: '#F2F2F5',
+    color: '#555',
   },
-  denemeHeroButton: {
-    backgroundColor: '#FFFFFF',
-    color: '#1E1B4B',
-    padding: '12px 22px',
-    borderRadius: '12px',
+  denemeThemeDesc: {
+    fontSize: '12.5px',
+    color: '#666',
+    marginTop: '3px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  denemeThemeBtn: {
+    backgroundColor: '#111111',
+    color: '#FFFFFF',
+    borderRadius: '10px',
+    padding: '9px 16px',
+    fontSize: '13px',
+    fontWeight: 600,
     border: 'none',
-    fontWeight: 800,
-    fontSize: '14px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
     flexShrink: 0,
-    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
   },
   mobileBottomNav: {
     display: 'none',
