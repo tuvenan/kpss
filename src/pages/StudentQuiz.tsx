@@ -509,7 +509,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
           {/* Sonuç Kartı / Başarı Halkası Alanı */}
           <div style={styles.resultCardNew}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '11px', fontWeight: 700, marginBottom: '8px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#334155', fontSize: '11px', fontWeight: 700, marginBottom: '8px' }}>
               <Award size={14} />
               <span>20 SORULUK GENEL DENEME</span>
             </div>
@@ -699,7 +699,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               onClick={() => handleStartDenemeExam(denemeDurationMinutes)}
               style={{
                 ...styles.resultPrimaryButton,
-                backgroundColor: '#D97706',
+                backgroundColor: '#111111',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1043,9 +1043,13 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
             <button
               onClick={handleOpenDenemeSetup}
-              style={styles.sidebarNavItem}
+              style={isDenemeMode && viewState === 'quiz' ? styles.sidebarNavItemActive : styles.sidebarNavItem}
             >
-              <Timer size={18} style={{ marginRight: '12px' }} />
+              <Timer
+                size={18}
+                color={isDenemeMode && viewState === 'quiz' ? '#111' : '#666'}
+                style={{ marginRight: '12px', flexShrink: 0 }}
+              />
               <span>Deneme Sınavı</span>
             </button>
 
@@ -2401,7 +2405,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <div
                     style={{
                       ...styles.cardProgressBarFill,
-                      backgroundColor: isDenemeMode ? '#D97706' : undefined,
+                      backgroundColor: '#111111',
                       width: `${((currentIndex + 1) / questions.length) * 100}%`,
                     }}
                   />
