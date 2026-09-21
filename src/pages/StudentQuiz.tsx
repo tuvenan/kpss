@@ -4,6 +4,7 @@ import { Subject, Unit, Topic, Question, OptionId, UserAnswer, UnitResult } from
 import { CompetencyRadarCard } from '../components/CompetencyRadarCard';
 import { StudentAnalyticsCards } from '../components/StudentAnalyticsCards';
 import { DetailedTopicAnalysisCard } from '../components/DetailedTopicAnalysisCard';
+import { StudyCalendarCard } from '../components/StudyCalendarCard';
 import { studentProgressService } from '../services/studentProgressService';
 import { StudentSettingsView } from '../components/StudentSettingsView';
 import { userProfileService, UserProfile } from '../services/userProfileService';
@@ -1244,7 +1245,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   weeklyData={weeklyData}
                 />
 
-                {/* 3. BLOK: DETAYLI KONU BAZLI ANALİZ */}
+                {/* 3. BLOK: ÇALIŞMA TAKVİMİ */}
+                <StudyCalendarCard />
+
+                {/* 4. BLOK: DETAYLI KONU BAZLI ANALİZ */}
                 <DetailedTopicAnalysisCard />
               </div>
             );
