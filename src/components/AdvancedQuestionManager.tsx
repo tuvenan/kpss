@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
-import { Subject, Unit, Topic, Question, OptionId } from '../types';
+import { Subject, Unit, Topic, Question, OptionId, QuestionBank } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 import {
   HelpCircle,
@@ -27,6 +27,7 @@ import {
   Tag,
   AlertTriangle,
   MoveRight,
+  Database,
 } from 'lucide-react';
 
 interface AdvancedQuestionManagerProps {
@@ -117,19 +118,78 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
   const [showMoveCopyModal, setShowMoveCopyModal] = useState(false);
   const [targetMoveUnitId, setTargetMoveUnitId] = useState('');
   const [targetMoveTopicId, setTargetMoveTopicId] = useState('');
+  const [targetMoveTopicsList, setTargetMoveTopicsList] = useState<Topic[]>([]);
+  const [targetMoveBankId, setTargetMoveBankId] = useState('');
+  const [targetMoveBanksList, setTargetMoveBanksList] = useState<QuestionBank[]>([]);
   const [moveActionType, setMoveActionType] = useState<'MOVE' | 'COPY'>('MOVE');
+
+  // 4. Seviye: Soru Bankaları Durumu
+  const [banks, setBanks] = useState<QuestionBank[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState<string>('');
+  const [isLoadingBanks, setIsLoadingBanks] = useState<boolean>(false);
+
+  // Soru Bankası Oluşturma Modalı
+  const [showNewBankModal, setShowNewBankModal] = useState<boolean>(false);
+  const [bankTitleInput, setBankTitleInput] = useState<string>('');
+  const [bankTypeInput, setBankTypeInput] = useState<string>('Standart Konu Testi');
+
+  // Modal Soru Bankası Seçimi (4. Seviye)
+  const [modalBankId, setModalBankId] = useState('');
+  const [modalBanksList, setModalBanksList] = useState<QuestionBank[]>([]);
+
+  // Konu değiştiğinde o konuya bağlı Soru Bankalarını yükle
+  useEffect(() => {
+    if (selectedTopicId) {
+      loadBanksForTopic(selectedTopicId, selectedUnitId);
+    } else {
+      setBanks([]);
+      setSelectedBankId('');
+    }
+  }, [selectedTopicId, selectedUnitId]);
+
+  const loadBanksForTopic = async (tId: string, uId?: string) => {
+    setIsLoadingBanks(true);
+    try {
+      const bankList = await api.getQuestionBanks(tId, uId);
+      setBanks(bankList);
+      if (bankList.length > 0) {
+        setSelectedBankId((prev) => {
+          if (prev && bankList.some((b) => b.id === prev)) return prev;
+          return bankList[0].id;
+        });
+      } else {
+        setSelectedBankId('');
+      }
+    } catch {
+      setBanks([]);
+      setSelectedBankId('');
+    } finally {
+      setIsLoadingBanks(false);
+    }
+  };
+
+  // Aktif Soru Bankası nesnesi
+  const selectedBank = useMemo(() => {
+    return banks.find((b) => b.id === selectedBankId) || banks[0];
+  }, [banks, selectedBankId]);
+
+  // Seçili Soru Bankasına ait sorular
+  const activeBankQuestions = useMemo(() => {
+    if (!selectedBankId) return questions;
+    return questions.filter((q) => q.bankId === selectedBankId || (!q.bankId && banks.length === 1));
+  }, [questions, selectedBankId, banks]);
 
   // ----------------------------------------------------
   // İSTATİSTİKLER & KALİTE KONTROL
   // ----------------------------------------------------
   const stats = useMemo(() => {
-    const total = questions.length;
-    const countA = questions.filter((q) => q.correctOption === 'A').length;
-    const countB = questions.filter((q) => q.correctOption === 'B').length;
-    const countC = questions.filter((q) => q.correctOption === 'C').length;
-    const countD = questions.filter((q) => q.correctOption === 'D').length;
-    const countE = questions.filter((q) => q.correctOption === 'E').length;
-    const noExpCount = questions.filter((q) => !q.explanation || q.explanation.trim() === '').length;
+    const total = activeBankQuestions.length;
+    const countA = activeBankQuestions.filter((q) => q.correctOption === 'A').length;
+    const countB = activeBankQuestions.filter((q) => q.correctOption === 'B').length;
+    const countC = activeBankQuestions.filter((q) => q.correctOption === 'C').length;
+    const countD = activeBankQuestions.filter((q) => q.correctOption === 'D').length;
+    const countE = activeBankQuestions.filter((q) => q.correctOption === 'E').length;
+    const noExpCount = activeBankQuestions.filter((q) => !q.explanation || q.explanation.trim() === '').length;
     const hasExpCount = total - noExpCount;
 
     return {
@@ -143,13 +203,13 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
       hasExpCount,
       percentExp: total > 0 ? Math.round((hasExpCount / total) * 100) : 100,
     };
-  }, [questions]);
+  }, [activeBankQuestions]);
 
   // ----------------------------------------------------
   // FİLTRELEME & SIRALAMA & SAYFALAMA
   // ----------------------------------------------------
   const filteredAndSortedQuestions = useMemo(() => {
-    let list = [...questions];
+    let list = [...activeBankQuestions];
 
     // Metin Arama
     if (searchQuery.trim()) {
@@ -275,12 +335,77 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
   };
 
   // ----------------------------------------------------
-  // TAŞIMA / KOPYALAMA İŞLEMİ
+  // TAŞIMA / KOPYALAMA İŞLEMİ (DERS -> ÜNİTE -> KONU -> BANKA)
   // ----------------------------------------------------
+  const openMoveCopyModal = async (type: 'MOVE' | 'COPY') => {
+    setMoveActionType(type);
+    setTargetMoveUnitId(selectedUnitId);
+    if (selectedUnitId) {
+      try {
+        const tList = await api.getTopics(selectedUnitId);
+        setTargetMoveTopicsList(tList);
+      } catch {
+        setTargetMoveTopicsList([]);
+      }
+    } else {
+      setTargetMoveTopicsList([]);
+    }
+    setTargetMoveTopicId(selectedTopicId);
+    if (selectedTopicId) {
+      try {
+        const bList = await api.getQuestionBanks(selectedTopicId, selectedUnitId);
+        setTargetMoveBanksList(bList);
+        setTargetMoveBankId(selectedBankId || (bList.length > 0 ? bList[0].id : ''));
+      } catch {
+        setTargetMoveBanksList([]);
+        setTargetMoveBankId('');
+      }
+    } else {
+      setTargetMoveBanksList([]);
+      setTargetMoveBankId('');
+    }
+    setShowMoveCopyModal(true);
+  };
+
+  const handleTargetMoveUnitChange = async (unitId: string) => {
+    setTargetMoveUnitId(unitId);
+    setTargetMoveTopicId('');
+    setTargetMoveBankId('');
+    setTargetMoveBanksList([]);
+    if (unitId) {
+      try {
+        const tList = await api.getTopics(unitId);
+        setTargetMoveTopicsList(tList);
+      } catch {
+        setTargetMoveTopicsList([]);
+      }
+    } else {
+      setTargetMoveTopicsList([]);
+    }
+  };
+
+  const handleTargetMoveTopicChange = async (topicId: string) => {
+    setTargetMoveTopicId(topicId);
+    setTargetMoveBankId('');
+    if (topicId) {
+      try {
+        const bList = await api.getQuestionBanks(topicId, targetMoveUnitId);
+        setTargetMoveBanksList(bList);
+        setTargetMoveBankId(bList.length > 0 ? bList[0].id : '');
+      } catch {
+        setTargetMoveBanksList([]);
+        setTargetMoveBankId('');
+      }
+    } else {
+      setTargetMoveBanksList([]);
+      setTargetMoveBankId('');
+    }
+  };
+
   const handleExecuteMoveCopy = async () => {
-    const targetId = targetMoveTopicId || targetMoveUnitId;
+    const targetId = targetMoveBankId || targetMoveTopicId || targetMoveUnitId;
     if (!targetId) {
-      alert('Lütfen hedef ünite veya konu seçiniz.');
+      alert('Lütfen hedef ünite, konu veya soru bankası seçiniz.');
       return;
     }
     const selectedQuestions = questions.filter((q) => selectedQuestionIds.includes(q.id));
@@ -292,7 +417,8 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
           ...q,
           id: moveActionType === 'COPY' ? `${targetId}-copy-${Date.now()}-${idx}` : q.id,
           unitId: targetMoveUnitId || q.unitId,
-          topicId: targetMoveTopicId || undefined,
+          topicId: targetMoveTopicId || q.topicId,
+          bankId: targetMoveBankId || q.bankId,
         };
 
         if (moveActionType === 'MOVE') {
@@ -315,7 +441,7 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
   };
 
   // ----------------------------------------------------
-  // HİYERARŞİK SORU EKLE / DÜZENLE MODALI
+  // HİYERARŞİK SORU EKLE / DÜZENLE MODALI (4 SEVİYE)
   // ----------------------------------------------------
   const handleModalSubjectChange = async (subId: string) => {
     setModalSubjectId(subId);
@@ -327,15 +453,28 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
       if (firstUnitId) {
         const tList = await api.getTopics(firstUnitId);
         setModalTopicsList(tList);
-        setModalTopicId(tList.length > 0 ? tList[0].id : '');
+        const firstTopicId = tList.length > 0 ? tList[0].id : '';
+        setModalTopicId(firstTopicId);
+        if (firstTopicId) {
+          const bList = await api.getQuestionBanks(firstTopicId, firstUnitId);
+          setModalBanksList(bList);
+          setModalBankId(bList.length > 0 ? bList[0].id : '');
+        } else {
+          setModalBanksList([]);
+          setModalBankId('');
+        }
       } else {
         setModalTopicsList([]);
         setModalTopicId('');
+        setModalBanksList([]);
+        setModalBankId('');
       }
     } catch {
       setModalUnitsList([]);
       setModalTopicsList([]);
       setModalTopicId('');
+      setModalBanksList([]);
+      setModalBankId('');
     }
   };
 
@@ -344,10 +483,33 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
     try {
       const tList = await api.getTopics(unitId);
       setModalTopicsList(tList);
-      setModalTopicId(tList.length > 0 ? tList[0].id : '');
+      const firstTopicId = tList.length > 0 ? tList[0].id : '';
+      setModalTopicId(firstTopicId);
+      if (firstTopicId) {
+        const bList = await api.getQuestionBanks(firstTopicId, unitId);
+        setModalBanksList(bList);
+        setModalBankId(bList.length > 0 ? bList[0].id : '');
+      } else {
+        setModalBanksList([]);
+        setModalBankId('');
+      }
     } catch {
       setModalTopicsList([]);
       setModalTopicId('');
+      setModalBanksList([]);
+      setModalBankId('');
+    }
+  };
+
+  const handleModalTopicChange = async (topicId: string) => {
+    setModalTopicId(topicId);
+    try {
+      const bList = await api.getQuestionBanks(topicId, modalUnitId);
+      setModalBanksList(bList);
+      setModalBankId(bList.length > 0 ? bList[0].id : '');
+    } catch {
+      setModalBanksList([]);
+      setModalBankId('');
     }
   };
 
@@ -365,14 +527,14 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
     setFormYear('');
     setEditorPreviewActive(false);
 
-    // Hiyerarşi durumunu başlat
+    // Hiyerarşi durumunu başlat (Ders -> Ünite -> Konu -> Soru Bankası)
     const initSubId = selectedSubjectId || (subjects.length > 0 ? subjects[0].id : '');
     setModalSubjectId(initSubId);
 
     if (initSubId) {
       const uList = await api.getUnits(initSubId);
       setModalUnitsList(uList);
-      const initUnitId = selectedUnitId && uList.some(u => u.id === selectedUnitId)
+      const initUnitId = selectedUnitId && uList.some((u) => u.id === selectedUnitId)
         ? selectedUnitId
         : (uList.length > 0 ? uList[0].id : '');
       setModalUnitId(initUnitId);
@@ -380,18 +542,34 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
       if (initUnitId) {
         const tList = await api.getTopics(initUnitId);
         setModalTopicsList(tList);
-        const initTopicId = selectedTopicId && tList.some(t => t.id === selectedTopicId)
+        const initTopicId = selectedTopicId && tList.some((t) => t.id === selectedTopicId)
           ? selectedTopicId
           : (tList.length > 0 ? tList[0].id : '');
         setModalTopicId(initTopicId);
+
+        if (initTopicId) {
+          const bList = await api.getQuestionBanks(initTopicId, initUnitId);
+          setModalBanksList(bList);
+          const initBankId = selectedBankId && bList.some((b) => b.id === selectedBankId)
+            ? selectedBankId
+            : (bList.length > 0 ? bList[0].id : '');
+          setModalBankId(initBankId);
+        } else {
+          setModalBanksList([]);
+          setModalBankId('');
+        }
       } else {
         setModalTopicsList([]);
         setModalTopicId('');
+        setModalBanksList([]);
+        setModalBankId('');
       }
     } else {
       setModalUnitsList([]);
       setModalTopicsList([]);
       setModalTopicId('');
+      setModalBanksList([]);
+      setModalBankId('');
     }
 
     setShowEditorModal(true);
@@ -412,15 +590,16 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
     setFormYear(q.year || '');
     setEditorPreviewActive(false);
 
-    // Sorunun hiyerarşik konumunu (Ders, Ünite, Konu) tespit et
+    // Sorunun hiyerarşik konumunu (Ders, Ünite, Konu, Banka) tespit et
     let targetSubId = selectedSubjectId || (subjects.length > 0 ? subjects[0].id : '');
     let targetUnitId = q.unitId || selectedUnitId;
     let targetTopicId = q.topicId || selectedTopicId;
+    let targetBankId = q.bankId || selectedBankId;
 
     if (targetUnitId) {
       for (const s of subjects) {
         const uList = await api.getUnits(s.id);
-        if (uList.some(u => u.id === targetUnitId)) {
+        if (uList.some((u) => u.id === targetUnitId)) {
           targetSubId = s.id;
           break;
         }
@@ -442,15 +621,31 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
     }
     setModalTopicId(targetTopicId);
 
+    if (targetTopicId) {
+      const bList = await api.getQuestionBanks(targetTopicId, targetUnitId);
+      setModalBanksList(bList);
+      if (!targetBankId || !bList.some((b) => b.id === targetBankId)) {
+        targetBankId = bList.length > 0 ? bList[0].id : '';
+      }
+    } else {
+      setModalBanksList([]);
+      targetBankId = '';
+    }
+    setModalBankId(targetBankId);
+
     setShowEditorModal(true);
   };
 
   const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Zorunlu kural: Her soru bankası mutlaka bir konuya bağlı olmalı
+    // Zorunlu kural: Her soru mutlaka bir konuya ve soru bankasına bağlı olmalı
     if (!modalTopicId) {
-      onNotify('Her soru bankası mutlaka bir alt konuya bağlı olmalıdır! Lütfen bir konu seçiniz.', 'error');
+      onNotify('Lütfen sorunun ait olduğu alt konuyu seçiniz!', 'error');
+      return;
+    }
+    if (!modalBankId) {
+      onNotify('Her soru mutlaka bir Soru Bankasına bağlı olmalıdır! Lütfen bir soru bankası seçiniz.', 'error');
       return;
     }
     if (!formText.trim()) {
@@ -463,10 +658,11 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
     }
 
     const questionData: Question = {
-      id: editingQuestion ? editingQuestion.id : `${modalTopicId}-q${Date.now()}`,
+      id: editingQuestion ? editingQuestion.id : `${modalBankId}-q${Date.now()}`,
       unitId: modalUnitId,
       topicId: modalTopicId,
-      questionNumber: editingQuestion ? editingQuestion.questionNumber : questions.length + 1,
+      bankId: modalBankId,
+      questionNumber: editingQuestion ? editingQuestion.questionNumber : activeBankQuestions.length + 1,
       questionText: formText.trim(),
       options: [
         { id: 'A', text: formA.trim() },
@@ -484,17 +680,53 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
     try {
       if (editingQuestion) {
         await api.adminUpdateQuestion(questionData);
-        const targetTopicObj = modalTopicsList.find(t => t.id === modalTopicId);
-        onNotify(`Soru "${targetTopicObj?.title || 'seçilen konu'}" soru bankasına kaydedildi.`);
+        onNotify('Soru başarıyla güncellendi.');
       } else {
         await api.adminCreateQuestion(questionData);
-        const targetTopicObj = modalTopicsList.find(t => t.id === modalTopicId);
-        onNotify(`Yeni soru "${targetTopicObj?.title || 'seçilen konu'}" soru bankasına başarıyla eklendi.`);
+        onNotify('Yeni soru başarıyla eklendi.');
+      }
+      if (selectedTopicId) {
+        await loadBanksForTopic(selectedTopicId, selectedUnitId);
       }
       setShowEditorModal(false);
       onReloadQuestions();
     } catch (e) {
       onNotify('Soru kaydedilemedi', 'error');
+    }
+  };
+
+  // Yeni Soru Bankası Oluşturma
+  const handleCreateBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTopicId) {
+      onNotify('Lütfen önce 3. adımdan bir alt konu seçiniz.', 'error');
+      return;
+    }
+    if (!bankTitleInput.trim()) {
+      alert('Lütfen soru bankası başlığı giriniz.');
+      return;
+    }
+    try {
+      const newBank: QuestionBank = {
+        id: `${selectedTopicId}-bank-${Date.now()}`,
+        topicId: selectedTopicId,
+        unitId: selectedUnitId,
+        title: bankTitleInput.trim(),
+        bankType: bankTypeInput,
+        targetQuestionCount: 20,
+        questionCount: 0,
+        orderNumber: banks.length + 1,
+        isLocked: false,
+      };
+      await api.adminCreateQuestionBank(newBank);
+      const updated = [...banks, newBank];
+      setBanks(updated);
+      setSelectedBankId(newBank.id);
+      setShowNewBankModal(false);
+      setBankTitleInput('');
+      onNotify(`"${newBank.title}" soru bankası başarıyla oluşturuldu!`, 'success');
+    } catch {
+      onNotify('Soru bankası oluşturulamadı', 'error');
     }
   };
 
@@ -505,9 +737,12 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
       return;
     }
     try {
-      const res = await api.adminLoadSamplePackage(selectedTopicId, selectedUnitId);
+      const res = await api.adminLoadSamplePackage(selectedTopicId, selectedUnitId, selectedBankId);
       if (res.success) {
-        onNotify(`Bu konu için 20 soruluk paket yüklendi ve yayına hazırlandı! (${res.count} soru)`);
+        onNotify(`Soru bankası için 20 soruluk paket yüklendi ve yayına hazırlandı! (${res.count} soru)`, 'success');
+        if (selectedTopicId) {
+          await loadBanksForTopic(selectedTopicId, selectedUnitId);
+        }
         onReloadQuestions();
       }
     } catch (e) {
@@ -711,9 +946,9 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
             </select>
           </div>
 
-          {/* Soru Bankası (Konu) Seçimi */}
+          {/* 3. Alt Konu / Kazanım Seçimi */}
           <div style={styles.selectGroup}>
-            <label style={styles.fieldLabel}>Soru Bankası (Konu):</label>
+            <label style={styles.fieldLabel}>3. Alt Konu / Kazanım:</label>
             <select
               value={selectedTopicId}
               onChange={(e) => onSelectTopicId(e.target.value)}
@@ -726,11 +961,62 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
               {topics.length === 0 ? (
                 <option value="">(Bu ünitede henüz konu yok)</option>
               ) : (
-                topics.map((t) => {
-                  const isPub = (t.questionCount ?? 0) >= 20;
+                topics.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.topicNumber}. {t.title}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {/* 4. Soru Bankası Seçimi */}
+          <div style={styles.selectGroup}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={styles.fieldLabel}>4. Soru Bankası:</label>
+              {selectedTopicId && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewBankModal(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#4F46E5',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    padding: 0,
+                    marginBottom: '2px',
+                  }}
+                  title="Bu alt konuya yeni soru bankası ekle"
+                >
+                  + Yeni Banka
+                </button>
+              )}
+            </div>
+            <select
+              value={selectedBankId}
+              onChange={(e) => setSelectedBankId(e.target.value)}
+              style={{
+                ...styles.dropdown,
+                borderColor: selectedBankId ? '#4F46E5' : '#EF4444',
+                fontWeight: 600,
+              }}
+              disabled={banks.length === 0 || isLoadingBanks}
+            >
+              {isLoadingBanks ? (
+                <option value="">Yükleniyor...</option>
+              ) : banks.length === 0 ? (
+                <option value="">(Bu konuda henüz soru bankası yok)</option>
+              ) : (
+                banks.map((b) => {
+                  const qCount = questions.filter(
+                    (q) => q.bankId === b.id || (!q.bankId && banks.length === 1)
+                  ).length;
+                  const isPub = qCount >= 20;
                   return (
-                    <option key={t.id} value={t.id}>
-                      {t.topicNumber}. {t.title} ({t.questionCount ?? 0} Soru - {isPub ? 'Yayında 🟢' : 'Hazırlıkta 🔴'})
+                    <option key={b.id} value={b.id}>
+                      {b.title} ({qCount} Soru - {isPub ? 'Yayında 🟢' : 'Hazırlıkta 🔴'})
                     </option>
                   );
                 })
@@ -793,15 +1079,15 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
             marginTop: '14px',
             padding: '14px 18px',
             borderRadius: '12px',
-            backgroundColor: questions.length >= 20 ? '#F0FDF4' : '#FEF2F2',
-            border: `1px solid ${questions.length >= 20 ? '#BBF7D0' : '#FECACA'}`,
+            backgroundColor: activeBankQuestions.length >= 20 ? '#F0FDF4' : '#FEF2F2',
+            border: `1px solid ${activeBankQuestions.length >= 20 ? '#BBF7D0' : '#FECACA'}`,
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {questions.length >= 20 ? (
+                {activeBankQuestions.length >= 20 ? (
                   <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <CheckCircle size={22} color="#16A34A" />
                   </div>
@@ -812,29 +1098,29 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                 )}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: questions.length >= 20 ? '#166534' : '#991B1B' }}>
-                      {questions.length >= 20 ? 'Soru Bankası Yayında (Öğrencilere Açık)' : 'Soru Bankası Yayınlanamaz (Hazırlık Aşamasında)'}
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: activeBankQuestions.length >= 20 ? '#166534' : '#991B1B' }}>
+                      {selectedBank ? selectedBank.title : 'Soru Bankası'}: {activeBankQuestions.length >= 20 ? 'Yayında (Öğrencilere Açık)' : 'Yayınlanamaz (Hazırlık Aşamasında)'}
                     </span>
                     <span style={{
                       fontSize: '11px',
                       fontWeight: 700,
                       padding: '2px 8px',
                       borderRadius: '6px',
-                      backgroundColor: questions.length >= 20 ? '#16A34A' : '#DC2626',
+                      backgroundColor: activeBankQuestions.length >= 20 ? '#16A34A' : '#DC2626',
                       color: '#FFFFFF'
                     }}>
-                      {questions.length >= 20 ? `YAYINDA • ${questions.length} SORU` : `YAYINLANAMAZ • ${questions.length}/20 SORU`}
+                      {activeBankQuestions.length >= 20 ? `YAYINDA • ${activeBankQuestions.length} SORU` : `YAYINLANAMAZ • ${activeBankQuestions.length}/20 SORU`}
                     </span>
                   </div>
-                  <div style={{ fontSize: '12px', color: questions.length >= 20 ? '#15803D' : '#B91C1C', marginTop: '2px' }}>
-                    {questions.length >= 20
-                      ? `Bu konu soru bankası 20 soru barajını tamamlamıştır. Öğrenciler sınav modunda bu testi çözebilir.`
-                      : `KPSS kuralı: 20 sorunun altındaki soru bankaları öğrencilere YAYINLANMAZ. (Yayına açılması için gereken: ${20 - questions.length} soru daha)`}
+                  <div style={{ fontSize: '12px', color: activeBankQuestions.length >= 20 ? '#15803D' : '#B91C1C', marginTop: '2px' }}>
+                    {activeBankQuestions.length >= 20
+                      ? `Bu soru bankası 20 soru barajını tamamlamıştır. Öğrenciler sınav modunda bu testi çözebilir.`
+                      : `KPSS kuralı: 20 sorunun altındaki soru bankaları öğrencilere YAYINLANMAZ. (Yayına açılması için gereken: ${Math.max(0, 20 - activeBankQuestions.length)} soru daha)`}
                   </div>
                 </div>
               </div>
 
-              {questions.length < 20 && (
+              {activeBankQuestions.length < 20 && (
                 <button
                   type="button"
                   onClick={handleLoadSamplePackage}
@@ -851,7 +1137,7 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                     alignItems: 'center',
                     gap: '6px',
                   }}
-                  title="Bu konunun soru bankasını 20 soruya tamamlamak için örnek paketi yükleyin"
+                  title="Bu soru bankasını 20 soruya tamamlamak için örnek paketi yükleyin"
                 >
                   <Sparkles size={14} />
                   Tek Tıkla 20 Soru Paketi Doldur
@@ -860,11 +1146,11 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
             </div>
 
             {/* 20 Soru İlerleme Çubuğu */}
-            <div style={{ width: '100%', height: '8px', backgroundColor: questions.length >= 20 ? '#DCFCE7' : '#FEE2E2', borderRadius: '999px', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '8px', backgroundColor: activeBankQuestions.length >= 20 ? '#DCFCE7' : '#FEE2E2', borderRadius: '999px', overflow: 'hidden' }}>
               <div style={{
                 height: '100%',
-                width: `${Math.min(100, Math.round((questions.length / 20) * 100))}%`,
-                backgroundColor: questions.length >= 20 ? '#16A34A' : (questions.length >= 10 ? '#F59E0B' : '#DC2626'),
+                width: `${Math.min(100, Math.round((activeBankQuestions.length / 20) * 100))}%`,
+                backgroundColor: activeBankQuestions.length >= 20 ? '#16A34A' : (activeBankQuestions.length >= 10 ? '#F59E0B' : '#DC2626'),
                 borderRadius: '999px',
                 transition: 'width 0.3s ease',
               }} />
@@ -962,21 +1248,15 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
-              onClick={() => {
-                setMoveActionType('MOVE');
-                setShowMoveCopyModal(true);
-              }}
+              onClick={() => openMoveCopyModal('MOVE')}
               style={styles.btnSecondary}
             >
               <ArrowRightLeft size={14} style={{ marginRight: '6px' }} />
-              Başka Konuya Taşı
+              Taşı
             </button>
 
             <button
-              onClick={() => {
-                setMoveActionType('COPY');
-                setShowMoveCopyModal(true);
-              }}
+              onClick={() => openMoveCopyModal('COPY')}
               style={styles.btnSecondary}
             >
               <Copy size={14} style={{ marginRight: '6px' }} />
@@ -1377,12 +1657,12 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                       </select>
                     </div>
 
-                    {/* 3. Konu / Soru Bankası */}
+                    {/* 3. Alt Konu / Kazanım */}
                     <div>
-                      <label style={styles.fieldLabel}>3. Alt Konu (Soru Bankası):</label>
+                      <label style={styles.fieldLabel}>3. Alt Konu / Kazanım:</label>
                       <select
                         value={modalTopicId}
-                        onChange={(e) => setModalTopicId(e.target.value)}
+                        onChange={(e) => handleModalTopicChange(e.target.value)}
                         style={{
                           ...styles.dropdown,
                           borderColor: !modalTopicId ? '#EF4444' : '#CBD5E1',
@@ -1395,7 +1675,33 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                         ) : (
                           modalTopicsList.map((t) => (
                             <option key={t.id} value={t.id}>
-                              {t.topicNumber}. {t.title} ({(t.questionCount || 0) >= 20 ? '🟢 Yayında' : '🔴 Hazırlıkta'})
+                              {t.topicNumber}. {t.title}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+
+                    {/* 4. Soru Bankası */}
+                    <div>
+                      <label style={styles.fieldLabel}>4. Soru Bankası:</label>
+                      <select
+                        value={modalBankId}
+                        onChange={(e) => setModalBankId(e.target.value)}
+                        style={{
+                          ...styles.dropdown,
+                          borderColor: !modalBankId ? '#EF4444' : '#CBD5E1',
+                          backgroundColor: !modalBankId ? '#FEF2F2' : '#FFFFFF',
+                          fontWeight: 600,
+                        }}
+                        disabled={modalBanksList.length === 0}
+                      >
+                        {modalBanksList.length === 0 ? (
+                          <option value="">(Bu konuda soru bankası yok)</option>
+                        ) : (
+                          modalBanksList.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.title} ({(b.questionCount || 0) >= 20 ? '🟢 Yayında' : '🔴 Hazırlıkta'})
                             </option>
                           ))
                         )}
@@ -1406,6 +1712,12 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                   {modalTopicsList.length === 0 && (
                     <div style={{ padding: '8px 12px', backgroundColor: '#FEF2F2', borderRadius: '6px', color: '#991B1B', fontSize: '12px' }}>
                       ⚠️ Bu ünitede henüz bir konu bulunmuyor! Her soru bankası mutlaka bir konuya bağlı olmalıdır. Lütfen önce Müfredat sekmesinden bir alt konu ekleyin.
+                    </div>
+                  )}
+
+                  {modalTopicsList.length > 0 && modalBanksList.length === 0 && (
+                    <div style={{ padding: '8px 12px', backgroundColor: '#FEF2F2', borderRadius: '6px', color: '#991B1B', fontSize: '12px' }}>
+                      ⚠️ Bu konuya ait bir soru bankası bulunamadı! Lütfen önce bu konuya ait bir soru bankası oluşturun.
                     </div>
                   )}
                 </div>
@@ -1760,7 +2072,7 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                 <label style={styles.fieldLabel}>Hedef Ünite:</label>
                 <select
                   value={targetMoveUnitId}
-                  onChange={(e) => setTargetMoveUnitId(e.target.value)}
+                  onChange={(e) => handleTargetMoveUnitChange(e.target.value)}
                   style={styles.dropdown}
                 >
                   <option value="">-- Ünite Seçiniz --</option>
@@ -1773,20 +2085,39 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
               </div>
 
               <div>
-                <label style={styles.fieldLabel}>Hedef Konu (Opsiyonel):</label>
+                <label style={styles.fieldLabel}>Hedef Alt Konu (Kazanım):</label>
                 <select
                   value={targetMoveTopicId}
-                  onChange={(e) => setTargetMoveTopicId(e.target.value)}
+                  onChange={(e) => handleTargetMoveTopicChange(e.target.value)}
                   style={styles.dropdown}
+                  disabled={targetMoveTopicsList.length === 0}
                 >
                   <option value="">-- Konu Seçiniz --</option>
-                  {topics.map((t) => (
+                  {targetMoveTopicsList.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.topicNumber}. {t.title}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {targetMoveTopicId && (
+                <div>
+                  <label style={styles.fieldLabel}>Hedef Soru Bankası (Opsiyonel):</label>
+                  <select
+                    value={targetMoveBankId}
+                    onChange={(e) => setTargetMoveBankId(e.target.value)}
+                    style={styles.dropdown}
+                  >
+                    <option value="">-- Soru Bankası Seçiniz --</option>
+                    {targetMoveBanksList.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.title} ({b.questionCount || 0} Soru)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div style={styles.modalActionsRow}>
@@ -1797,6 +2128,72 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                 {moveActionType === 'MOVE' ? 'Taşı ve Tamamla' : 'Kopyala ve Tamamla'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 5: YENİ SORU BANKASI OLUŞTURMA MODALI */}
+      {/* ============================================================== */}
+      {showNewBankModal && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.editorModalCard, maxWidth: '480px' }}>
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={20} color="#4F46E5" />
+                <h3 style={styles.modalTitle}>Yeni Soru Bankası Oluştur</h3>
+              </div>
+              <button onClick={() => setShowNewBankModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBank} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '12px' }}>
+              <div style={{ fontSize: '13px', color: '#64748B' }}>
+                Konu: <b>{topics.find((t) => t.id === selectedTopicId)?.title || 'Seçili Konu'}</b>
+              </div>
+
+              <div>
+                <label style={styles.fieldLabel}>Soru Bankası Başlığı / Adı:</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Örn: Konu Testi 1, Çıkmış Sorular Bankası..."
+                  value={bankTitleInput}
+                  onChange={(e) => setBankTitleInput(e.target.value)}
+                  style={styles.textInput}
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label style={styles.fieldLabel}>Banka Türü:</label>
+                <select
+                  value={bankTypeInput}
+                  onChange={(e) => setBankTypeInput(e.target.value)}
+                  style={styles.dropdown}
+                >
+                  <option value="Standart Konu Testi">Standart Konu Testi (20 Soru)</option>
+                  <option value="Pekiştirme Testi">Pekiştirme Testi</option>
+                  <option value="ÖSYM Çıkmış Sorular">ÖSYM Çıkmış Sorular</option>
+                  <option value="Hızlı Tarama Testi">Hızlı Tarama Testi</option>
+                </select>
+              </div>
+
+              <div style={{ padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', fontSize: '12px', color: '#475569' }}>
+                💡 <b>Kural:</b> Oluşturulan soru bankası öğrencilere yayına açılabilmek için en az <b>20 soru</b> barajına ulaşmalıdır.
+              </div>
+
+              <div style={styles.modalActionsRow}>
+                <button type="button" onClick={() => setShowNewBankModal(false)} style={styles.btnSecondary}>
+                  Vazgeç
+                </button>
+                <button type="submit" style={styles.btnPrimary}>
+                  <Plus size={16} style={{ marginRight: '6px' }} />
+                  Oluştur
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

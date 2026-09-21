@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Subject, Unit, Topic, Question, OptionId, UserAnswer, UnitResult } from '../types';
+import { Subject, Unit, Topic, Question, OptionId, UserAnswer, UnitResult, QuestionBank } from '../types';
 import { CompetencyRadarCard } from '../components/CompetencyRadarCard';
 import { StudentAnalyticsCards } from '../components/StudentAnalyticsCards';
 import { DetailedTopicAnalysisCard } from '../components/DetailedTopicAnalysisCard';
@@ -37,6 +37,7 @@ import {
   AlertTriangle,
   Settings,
   Lock,
+  Database,
 } from 'lucide-react';
 
 export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavigateAdmin }) => {
@@ -46,6 +47,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [topicBanks, setTopicBanks] = useState<QuestionBank[]>([]);
+  const [selectedBank, setSelectedBank] = useState<QuestionBank | null>(null);
+  const [isLoadingBanks, setIsLoadingBanks] = useState<boolean>(false);
   const [unpublishedModalInfo, setUnpublishedModalInfo] = useState<{ topicTitle: string; questionCount: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'home' | 'subjects' | 'errors' | 'profile' | 'settings'>('home');
   const [userProfile, setUserProfile] = useState<UserProfile>(() => userProfileService.getProfile());
@@ -146,17 +150,40 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   const handleSelectTopic = async (topic: Topic) => {
     if (topic.isLocked) return;
-    const qList = await api.getQuestions(topic.id);
-    if (qList.length < 20) {
-      setUnpublishedModalInfo({
-        topicTitle: topic.title,
-        questionCount: qList.length,
-      });
-      return;
-    }
     setSelectedTopic(topic);
-    setQuestions(qList);
+    setIsLoadingBanks(true);
+    try {
+      const banks = await api.getQuestionBanks(topic.id, selectedUnit?.id);
+      setTopicBanks(banks);
+      if (banks.length > 0) {
+        setSelectedBank(banks[0]);
+        const qList = await api.getQuestions(topic.id, banks[0].id);
+        setQuestions(qList);
+      } else {
+        setSelectedBank(null);
+        const qList = await api.getQuestions(topic.id);
+        setQuestions(qList);
+      }
+    } catch {
+      setTopicBanks([]);
+      setSelectedBank(null);
+      setQuestions([]);
+    } finally {
+      setIsLoadingBanks(false);
+    }
     setViewState('unit-detail');
+  };
+
+  const handleSelectBank = async (bank: QuestionBank) => {
+    setSelectedBank(bank);
+    if (selectedTopic) {
+      try {
+        const qList = await api.getQuestions(selectedTopic.id, bank.id);
+        setQuestions(qList);
+      } catch {
+        setQuestions([]);
+      }
+    }
   };
 
   const handleStartQuiz = () => {
@@ -1412,12 +1439,121 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 </span>
               </div>
               <div style={styles.heroTitle}>{selectedTopic ? selectedTopic.title : selectedUnit?.title}</div>
-              <div style={styles.heroQuestionCount}>{questions.length || 20} Soru</div>
+              <div style={{ fontSize: '13px', color: '#6366F1', fontWeight: 600, marginTop: '4px' }}>
+                {selectedBank ? selectedBank.title : 'Soru Bankası'} • {questions.length} Soru
+              </div>
             </div>
+
+            {/* Soru Bankaları Seçim Bölümü (4. Düzey Hiyerarşi) */}
+            {topicBanks.length > 0 && (
+              <div style={{ marginBottom: '18px' }}>
+                <div style={{
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#475569',
+                  marginBottom: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <Database size={15} color="#4F46E5" />
+                  <span>Bu Konuya Ait Soru Bankaları ({topicBanks.length}):</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {topicBanks.map((bank) => {
+                    const isSelected = selectedBank?.id === bank.id;
+                    const isBankUnder20 = (bank.questionCount || 0) < 20;
+                    return (
+                      <div
+                        key={bank.id}
+                        onClick={() => handleSelectBank(bank)}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          border: isSelected ? '2px solid #4F46E5' : '1px solid #E2E8F0',
+                          backgroundColor: isSelected ? '#F5F3FF' : '#FFFFFF',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.12)' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '34px',
+                            height: '34px',
+                            borderRadius: '8px',
+                            backgroundColor: isSelected ? '#4F46E5' : '#F1F5F9',
+                            color: isSelected ? '#FFFFFF' : '#64748B',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '13px'
+                          }}>
+                            {bank.orderNumber || 1}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>
+                              {bank.title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{bank.bankType || 'Standart Konu Testi'}</span>
+                              <span>•</span>
+                              <span>{bank.questionCount || 0} Soru</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          {isBankUnder20 ? (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              backgroundColor: '#FEF2F2',
+                              color: '#DC2626',
+                              border: '1px solid #FECACA',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <Lock size={12} />
+                              Hazırlıkta ({bank.questionCount || 0}/20)
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              backgroundColor: '#ECFDF5',
+                              color: '#059669',
+                              border: '1px solid #A7F3D0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <Check size={12} />
+                              Yayında (20+ Soru)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Test Kuralları / Bilgi Kutusu */}
             <div style={styles.rulesCard}>
-              <div style={styles.rulesCardTitle}>Bu testte:</div>
+              <div style={styles.rulesCardTitle}>
+                {selectedBank ? selectedBank.title : 'Bu testte'}:
+              </div>
 
               <div style={styles.ruleItem}>
                 <div style={styles.ruleDot} />
@@ -1459,14 +1595,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   gap: '8px',
                 }}>
                   <Lock size={16} color="#DC2626" />
-                  <span>Soru Bankası Hazırlık Aşamasında (Yayınlanmadı • {questions.length}/20 Soru)</span>
+                  <span>Seçili Soru Bankası Hazırlık Aşamasında (Yayınlanmadı • {questions.length}/20 Soru)</span>
                 </div>
               ) : (
                 <button
                   onClick={handleStartQuiz}
                   style={styles.startButton}
                 >
-                  Teste Başla
+                  Teste Başla ({selectedBank ? selectedBank.title : 'Sınavı Başlat'})
                 </button>
               )}
 

@@ -597,7 +597,7 @@ export const api = {
     return topicsResult;
   },
 
-  async getQuestions(id: string): Promise<Question[]> {
+  async getQuestions(id: string, bankId?: string): Promise<Question[]> {
     let cloudQuestions: Question[] = [];
 
     if (isSupabaseConfigured() && isUuid(id)) {
@@ -613,6 +613,7 @@ export const api = {
             id: row.id,
             topicId: row.topic_id || row.unit_id,
             unitId: row.unit_id,
+            bankId: row.bank_id,
             questionNumber: row.question_number,
             questionText: row.question_text,
             options: Array.isArray(row.options)
@@ -640,6 +641,9 @@ export const api = {
     }
 
     if (combined.length > 0) {
+      if (bankId) {
+        return combined.filter(q => q.bankId === bankId || (!q.bankId && bankId.endsWith('-bank-1')));
+      }
       return combined;
     }
 
@@ -1016,6 +1020,10 @@ export const api = {
   async getQuestionBanks(topicId: string, unitId?: string): Promise<QuestionBank[]> {
     const list = getLocalQuestionBanks().filter((b) => b.topicId === topicId);
     if (list.length > 0) {
+      const allQ = await this.getQuestions(topicId);
+      list.forEach((b) => {
+        b.questionCount = allQ.filter(q => q.bankId === b.id || (!q.bankId && list.length === 1)).length;
+      });
       return list.sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
     }
 
