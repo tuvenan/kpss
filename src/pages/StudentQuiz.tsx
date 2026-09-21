@@ -46,7 +46,13 @@ import {
   Flame,
   Award,
 } from 'lucide-react';
-import { generateRandomMockExam } from '../services/mockExamService';
+import {
+  generateRandomMockExam,
+  saveWrongQuestionToMistakesBank,
+  saveWrongQuestionsToMistakesBank,
+  getMistakesBankQuestions,
+  getOrCreateMistakesBank,
+} from '../services/mockExamService';
 
 export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavigateAdmin }) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -63,6 +69,22 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [userProfile, setUserProfile] = useState<UserProfile>(() => userProfileService.getProfile());
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // ----------------------------------------------------
+  // 'YANLIŞLARIM' ÖZEL SORU BANKASI SAYACI & DİNLENMESİ
+  // ----------------------------------------------------
+  const [mistakesBankCount, setMistakesBankCount] = useState<number>(() => {
+    return getMistakesBankQuestions().length;
+  });
+
+  useEffect(() => {
+    const handleMistakesUpdate = (e: any) => {
+      const count = e?.detail?.totalCount ?? getMistakesBankQuestions().length;
+      setMistakesBankCount(count);
+    };
+    window.addEventListener('kpss_mistakes_bank_updated', handleMistakesUpdate);
+    return () => window.removeEventListener('kpss_mistakes_bank_updated', handleMistakesUpdate);
+  }, []);
 
   // ----------------------------------------------------
   // DENEME MODU & CANLI SÜRE TUTMA (TIMER) DURUMLARI
@@ -292,8 +314,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       },
     }));
 
-    if (!isCorrect && selectedUnit) {
-      api.recordWrongAnswer(currentQ.id, selectedUnit.id, stagedOption, currentQ.correctOption);
+    if (!isCorrect) {
+      if (selectedUnit) {
+        api.recordWrongAnswer(currentQ.id, selectedUnit.id, stagedOption, currentQ.correctOption);
+      }
+      // Deneme Modu'nda yanlış yapılan soruları anında 'Yanlışlarım' özel soru bankasına kaydet
+      if (isDenemeMode) {
+        saveWrongQuestionToMistakesBank(currentQ);
+      }
     } else if (isCorrect) {
       api.markQuestionResolved(currentQ.id);
     }
@@ -309,6 +337,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   const handleNext = () => {
     if (currentIndex === questions.length - 1) {
+      if (isDenemeMode) {
+        const wrongOnes = questions.filter((q) => userAnswers[q.id] && !userAnswers[q.id].isCorrect);
+        if (wrongOnes.length > 0) {
+          saveWrongQuestionsToMistakesBank(wrongOnes);
+        }
+      }
       setIsCompleted(true);
     } else {
       setCurrentIndex((prev) => prev + 1);
@@ -318,6 +352,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   const handleNextFromFeedback = () => {
     if (currentIndex === questions.length - 1) {
+      if (isDenemeMode) {
+        const wrongOnes = questions.filter((q) => userAnswers[q.id] && !userAnswers[q.id].isCorrect);
+        if (wrongOnes.length > 0) {
+          saveWrongQuestionsToMistakesBank(wrongOnes);
+        }
+      }
       setIsCompleted(true);
       setViewState('quiz');
     } else {
@@ -325,6 +365,27 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       setStagedOption(null);
       setViewState('quiz');
     }
+  };
+
+  // 'Yanlışlarım' Özel Soru Bankasını Başlatma Fonksiyonu
+  const handleStartMistakesBankQuiz = () => {
+    const mistakesQuestions = getMistakesBankQuestions();
+    if (mistakesQuestions.length === 0) {
+      alert("'Yanlışlarım' soru bankasında henüz soru bulunmuyor. Deneme sınavlarında yanlış çözdüğünüz sorular otomatik olarak buraya kaydedilir.");
+      return;
+    }
+    setIsDenemeMode(false);
+    setSelectedSubject(null);
+    setSelectedUnit(null);
+    setSelectedTopic(null);
+    setSelectedBank(getOrCreateMistakesBank());
+    setQuestions(mistakesQuestions);
+    setCurrentIndex(0);
+    setUserAnswers({});
+    setIsCompleted(false);
+    setStagedOption(null);
+    setStartTime(Date.now());
+    setViewState('quiz');
   };
 
   const getResult = (): UnitResult => {
@@ -571,13 +632,64 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             </div>
           </div>
 
-          {/* Hata Havuzu Bilgisi */}
+          {/* Yanlışlarım Özel Soru Bankası Bilgisi */}
           {wrong > 0 && (
-            <div style={styles.errorBannerNew}>
-              <Info size={18} color="#666" style={{ marginRight: '8px', flexShrink: 0 }} />
-              <span style={styles.errorBannerTextNew}>
-                {wrong} soru hata havuzunuza eklendi. Çözümlerini ve açıklamalarını Hatalarım sekmesinde inceleyebilirsiniz.
-              </span>
+            <div style={{
+              backgroundColor: '#FEF2F2',
+              borderRadius: '14px',
+              border: '1px solid #FECACA',
+              padding: '14px 16px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  backgroundColor: '#FEE2E2',
+                  color: '#DC2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Database size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#991B1B' }}>
+                    'Yanlışlarım' Soru Bankasına Kaydedildi
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#B91C1C', marginTop: '2px' }}>
+                    Bu denemedeki {wrong} yanlış soru otomatik olarak <b>'Yanlışlarım'</b> özel soru bankasına eklendi.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleStartMistakesBankQuiz}
+                style={{
+                  padding: '8px 14px',
+                  backgroundColor: '#DC2626',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+                }}
+              >
+                <BookOpen size={13} />
+                <span>Yanlışlarım Bankasını Aç ({mistakesBankCount})</span>
+              </button>
             </div>
           )}
 
@@ -598,12 +710,31 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               Yeni Deneme Sınavı Başlat (20 Soru)
             </button>
 
+            {mistakesBankCount > 0 && (
+              <button
+                onClick={handleStartMistakesBankQuiz}
+                style={{
+                  ...styles.resultSecondaryButton,
+                  backgroundColor: '#FFF1F2',
+                  color: '#E11D48',
+                  border: '1px solid #FECDD3',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Database size={16} />
+                <span>'Yanlışlarım' Özel Soru Bankasını Çöz ({mistakesBankCount} Soru)</span>
+              </button>
+            )}
+
             {wrong > 0 && (
               <button
                 onClick={handleRetryWrong}
                 style={styles.resultSecondaryButton}
               >
-                Bu Denemedeki Hatalarımı Çöz ({wrong} Soru)
+                Sadece Bu Denemedeki Hataları Çöz ({wrong} Soru)
               </button>
             )}
 
@@ -1555,6 +1686,70 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 </button>
               </div>
 
+              {/* 'Yanlışlarım' Özel Soru Bankası Kartı */}
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #FECACA',
+                padding: '16px 20px',
+                marginBottom: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.06)',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: '#FEE2E2',
+                    color: '#DC2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Database size={22} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 800, fontSize: '15px', color: '#111827' }}>'Yanlışlarım' Soru Bankası</span>
+                      <span style={{ fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                        Otomatik Banka
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '3px' }}>
+                      Deneme sınavlarında yanlış çözdüğünüz sorular otomatik olarak bu soru bankasında birikir. ({mistakesBankCount} Soru)
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleStartMistakesBankQuiz}
+                  disabled={mistakesBankCount === 0}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '9px 18px',
+                    backgroundColor: mistakesBankCount > 0 ? '#DC2626' : '#E5E7EB',
+                    color: mistakesBankCount > 0 ? '#FFFFFF' : '#9CA3AF',
+                    borderRadius: '10px',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: mistakesBankCount > 0 ? 'pointer' : 'not-allowed',
+                    boxShadow: mistakesBankCount > 0 ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none',
+                  }}
+                >
+                  <Play size={15} fill={mistakesBankCount > 0 ? '#FFFFFF' : '#9CA3AF'} />
+                  <span>Yanlışlarımı Çöz ({mistakesBankCount})</span>
+                </button>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {filteredErrorQuestions.map((item) => (
                   <div key={item.id} style={styles.errorCardWeb}>
@@ -2131,6 +2326,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     <button
                       onClick={() => {
                         if (confirm('Deneme sınavını şimdi sonlandırıp sonuç raporunu görmek istiyor musunuz?')) {
+                          const wrongOnes = questions.filter((q) => userAnswers[q.id] && !userAnswers[q.id].isCorrect);
+                          if (wrongOnes.length > 0) {
+                            saveWrongQuestionsToMistakesBank(wrongOnes);
+                          }
                           setIsCompleted(true);
                         }
                       }}

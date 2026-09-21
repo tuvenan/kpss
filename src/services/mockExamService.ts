@@ -1,4 +1,4 @@
-import { Question, OptionId } from '../types';
+import { Question, OptionId, QuestionBank } from '../types';
 
 export interface SubjectQuestionCount {
   subject: string;
@@ -509,3 +509,246 @@ export function generateRandomMockExam(targetCount: number = 20): Question[] {
     topicTitle: q.topicTitle,
   }));
 }
+
+// ============================================================================
+// 'YANLIŞLARIM' ÖZEL SORU BANKASI YÖNETİMİ & OTOMATİK KAYIT FONKSİYONLARI
+// ============================================================================
+export const MISTAKES_BANK_ID = 'yanlislarim-soru-bankasi';
+export const MISTAKES_TOPIC_ID = 'yanlislarim-topic';
+export const MISTAKES_UNIT_ID = 'yanlislarim-unit';
+
+const LOCAL_QUESTIONS_KEY = 'kpss_local_custom_questions';
+const LOCAL_QUESTION_BANKS_KEY = 'kpss_local_custom_question_banks';
+
+/**
+ * 'Yanlışlarım' isimli soru bankasını getirir veya yoksa otomatik oluşturur.
+ */
+export function getOrCreateMistakesBank(): QuestionBank {
+  if (typeof window === 'undefined') {
+    return {
+      id: MISTAKES_BANK_ID,
+      topicId: MISTAKES_TOPIC_ID,
+      unitId: MISTAKES_UNIT_ID,
+      title: 'Yanlışlarım',
+      description: 'Deneme sınavlarında yanlış yapılan sorulardan otomatik oluşturulan özel soru bankası',
+      bankType: 'Özel Hata Havuzu Testi',
+      targetQuestionCount: 20,
+      questionCount: 0,
+      orderNumber: 999,
+      isLocked: false,
+    };
+  }
+
+  try {
+    const rawBanks = localStorage.getItem(LOCAL_QUESTION_BANKS_KEY);
+    const banks: QuestionBank[] = rawBanks ? JSON.parse(rawBanks) : [];
+    let bank = banks.find((b) => b.id === MISTAKES_BANK_ID || b.title === 'Yanlışlarım');
+
+    const currentQuestions = getMistakesBankQuestions();
+
+    if (!bank) {
+      bank = {
+        id: MISTAKES_BANK_ID,
+        topicId: MISTAKES_TOPIC_ID,
+        unitId: MISTAKES_UNIT_ID,
+        title: 'Yanlışlarım',
+        description: 'Deneme sınavlarında yanlış yapılan sorulardan otomatik oluşturulan özel soru bankası',
+        bankType: 'Özel Hata Havuzu Testi',
+        targetQuestionCount: 20,
+        questionCount: currentQuestions.length,
+        orderNumber: 999,
+        isLocked: false,
+        createdAt: new Date().toISOString(),
+      };
+      banks.push(bank);
+      localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(banks));
+    } else if (bank.questionCount !== currentQuestions.length) {
+      bank.questionCount = currentQuestions.length;
+      localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(banks));
+    }
+
+    return bank;
+  } catch (e) {
+    console.error('getOrCreateMistakesBank error:', e);
+    return {
+      id: MISTAKES_BANK_ID,
+      topicId: MISTAKES_TOPIC_ID,
+      unitId: MISTAKES_UNIT_ID,
+      title: 'Yanlışlarım',
+      description: 'Deneme sınavlarında yanlış yapılan sorulardan otomatik oluşturulan özel soru bankası',
+      bankType: 'Özel Hata Havuzu Testi',
+      targetQuestionCount: 20,
+      questionCount: 0,
+      orderNumber: 999,
+      isLocked: false,
+    };
+  }
+}
+
+/**
+ * 'Yanlışlarım' soru bankasındaki kayıtlı tüm soruları getirir.
+ */
+export function getMistakesBankQuestions(): Question[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const rawQ = localStorage.getItem(LOCAL_QUESTIONS_KEY);
+    if (!rawQ) return [];
+    const allQuestions: Question[] = JSON.parse(rawQ);
+    return allQuestions.filter(
+      (q) => q.bankId === MISTAKES_BANK_ID || q.topicId === MISTAKES_TOPIC_ID
+    );
+  } catch (e) {
+    console.error('getMistakesBankQuestions error:', e);
+    return [];
+  }
+}
+
+/**
+ * Deneme Modu'nda yanlış yapılan tek bir soruyu otomatik olarak
+ * 'Yanlışlarım' isimli özel soru bankasına kaydeder.
+ * (Aynı sorunun tekrar eklenmesini önlemek için metin bazlı tekillik kontrolü yapar.)
+ */
+export function saveWrongQuestionToMistakesBank(question: Question): {
+  success: boolean;
+  isNew: boolean;
+  totalCount: number;
+  bank: QuestionBank;
+} {
+  const bank = getOrCreateMistakesBank();
+  if (typeof window === 'undefined') {
+    return { success: false, isNew: false, totalCount: 0, bank };
+  }
+
+  try {
+    const rawQ = localStorage.getItem(LOCAL_QUESTIONS_KEY);
+    const allQuestions: Question[] = rawQ ? JSON.parse(rawQ) : [];
+
+    // Mevcut 'Yanlışlarım' soruları
+    const existingMistakes = allQuestions.filter(
+      (q) => q.bankId === MISTAKES_BANK_ID || q.topicId === MISTAKES_TOPIC_ID
+    );
+
+    // Aynı soru metnine sahip soru zaten var mı?
+    const normalizedNewText = question.questionText.trim().toLowerCase();
+    const alreadyExists = existingMistakes.some(
+      (q) => q.questionText.trim().toLowerCase() === normalizedNewText
+    );
+
+    let isNew = false;
+    if (!alreadyExists) {
+      const newQuestionNumber = existingMistakes.length + 1;
+      const questionToSave: Question = {
+        ...question,
+        id: `mistake-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        bankId: MISTAKES_BANK_ID,
+        topicId: MISTAKES_TOPIC_ID,
+        unitId: MISTAKES_UNIT_ID,
+        questionNumber: newQuestionNumber,
+        subjectTitle: question.subjectTitle || 'KPSS Genel Deneme',
+        topicTitle: question.topicTitle || 'Yanlış Çözülen Soru',
+        tags: ['deneme-yanlisi', ...(question.tags || [])],
+      };
+
+      allQuestions.push(questionToSave);
+      localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(allQuestions));
+      isNew = true;
+    }
+
+    // Toplam sayıyı güncelle
+    const updatedCount = allQuestions.filter(
+      (q) => q.bankId === MISTAKES_BANK_ID || q.topicId === MISTAKES_TOPIC_ID
+    ).length;
+
+    // Soru bankası bilgisini güncelle
+    const rawBanks = localStorage.getItem(LOCAL_QUESTION_BANKS_KEY);
+    if (rawBanks) {
+      const banks: QuestionBank[] = JSON.parse(rawBanks);
+      const bIdx = banks.findIndex((b) => b.id === MISTAKES_BANK_ID || b.title === 'Yanlışlarım');
+      if (bIdx >= 0) {
+        banks[bIdx].questionCount = updatedCount;
+        localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(banks));
+        bank.questionCount = updatedCount;
+      }
+    }
+
+    // Arayüz bildirim olayı tetikle
+    window.dispatchEvent(
+      new CustomEvent('kpss_mistakes_bank_updated', {
+        detail: { bankId: MISTAKES_BANK_ID, totalCount: updatedCount, isNew },
+      })
+    );
+
+    return { success: true, isNew, totalCount: updatedCount, bank };
+  } catch (e) {
+    console.error('saveWrongQuestionToMistakesBank error:', e);
+    return { success: false, isNew: false, totalCount: 0, bank };
+  }
+}
+
+/**
+ * Deneme Modu'nda yanlış yapılan birden çok soruyu topluca 'Yanlışlarım'
+ * özel soru bankasına kaydeder.
+ */
+export function saveWrongQuestionsToMistakesBank(questions: Question[]): {
+  success: boolean;
+  addedCount: number;
+  totalCount: number;
+  bank: QuestionBank;
+} {
+  let addedCount = 0;
+  let lastBank = getOrCreateMistakesBank();
+
+  for (const q of questions) {
+    const res = saveWrongQuestionToMistakesBank(q);
+    if (res.isNew) {
+      addedCount++;
+    }
+    lastBank = res.bank;
+  }
+
+  return {
+    success: true,
+    addedCount,
+    totalCount: lastBank.questionCount || getMistakesBankQuestions().length,
+    bank: lastBank,
+  };
+}
+
+/**
+ * 'Yanlışlarım' soru bankasını sıfırlar (temizler).
+ */
+export function clearMistakesBank(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const rawQ = localStorage.getItem(LOCAL_QUESTIONS_KEY);
+    if (rawQ) {
+      const allQuestions: Question[] = JSON.parse(rawQ);
+      const filtered = allQuestions.filter(
+        (q) => q.bankId !== MISTAKES_BANK_ID && q.topicId !== MISTAKES_TOPIC_ID
+      );
+      localStorage.setItem(LOCAL_QUESTIONS_KEY, JSON.stringify(filtered));
+    }
+
+    const rawBanks = localStorage.getItem(LOCAL_QUESTION_BANKS_KEY);
+    if (rawBanks) {
+      const banks: QuestionBank[] = JSON.parse(rawBanks);
+      const bIdx = banks.findIndex((b) => b.id === MISTAKES_BANK_ID || b.title === 'Yanlışlarım');
+      if (bIdx >= 0) {
+        banks[bIdx].questionCount = 0;
+        localStorage.setItem(LOCAL_QUESTION_BANKS_KEY, JSON.stringify(banks));
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('kpss_mistakes_bank_updated', {
+        detail: { bankId: MISTAKES_BANK_ID, totalCount: 0 },
+      })
+    );
+
+    return true;
+  } catch (e) {
+    console.error('clearMistakesBank error:', e);
+    return false;
+  }
+}
+

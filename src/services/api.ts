@@ -1,6 +1,12 @@
 import { supabase, isSupabaseConfigured, getAdminClient } from './supabase';
 import { Subject, Unit, Topic, Question, OptionId, QuestionBank } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
+import {
+  saveWrongQuestionToMistakesBank,
+  saveWrongQuestionsToMistakesBank,
+  getMistakesBankQuestions,
+  getOrCreateMistakesBank,
+} from './mockExamService';
 
 // ==========================================
 // YEREL KALICI DEPOLAMA (LOCAL PERSISTENCE)
@@ -631,7 +637,7 @@ export const api = {
     }
 
     // Yerel sorularla birleştir
-    const localQ = getLocalQuestions().filter(q => q.topicId === id || q.unitId === id);
+    const localQ = getLocalQuestions().filter(q => q.topicId === id || q.unitId === id || q.bankId === id);
     const combined = [...cloudQuestions];
 
     for (const lq of localQ) {
@@ -734,6 +740,25 @@ export const api = {
     } catch (e) {
       console.warn('markQuestionResolved error:', e);
     }
+  },
+
+  // ----------------------------------------------------
+  // 'YANLIŞLARIM' ÖZEL SORU BANKASI METOTLARI
+  // ----------------------------------------------------
+  saveWrongQuestionToMistakesBank(question: Question) {
+    return saveWrongQuestionToMistakesBank(question);
+  },
+
+  saveWrongQuestionsToMistakesBank(questions: Question[]) {
+    return saveWrongQuestionsToMistakesBank(questions);
+  },
+
+  getMistakesBankQuestions() {
+    return getMistakesBankQuestions();
+  },
+
+  getMistakesQuestionBank() {
+    return getOrCreateMistakesBank();
   },
 
   // ==========================================
