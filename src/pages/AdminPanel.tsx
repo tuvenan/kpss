@@ -5,6 +5,7 @@ import { Subject, Unit, Topic, Question, OptionId } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 import { userProfileService } from '../services/userProfileService';
 import { studentProgressService } from '../services/studentProgressService';
+import { AdvancedQuestionManager } from '../components/AdvancedQuestionManager';
 import {
   LayoutDashboard,
   BookOpen,
@@ -1373,191 +1374,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
           )}
 
           {/* ============================================================== */}
-          {/* 3. SEKME: SORU BANKASI & YÖNETİMİ */}
+          {/* 3. SEKME: GELİŞMİŞ SORU BANKASI & YÖNETİMİ */}
           {/* ============================================================== */}
           {activeTab === 'questions' && (
-            <div>
-              {/* Filtreleme ve Hızlı Seçim Barı */}
-              <div style={styles.filterCard}>
-                <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  {/* Ders Seçimi */}
-                  <div>
-                    <label style={styles.miniLabel}>Ders Seçiniz:</label>
-                    <select
-                      value={selectedSubjectId}
-                      onChange={(e) => setSelectedSubjectId(e.target.value)}
-                      style={styles.selectDropdown}
-                    >
-                      {subjects.map((s) => (
-                        <option key={s.id} value={s.id}>{s.title}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Ünite Seçimi */}
-                  <div>
-                    <label style={styles.miniLabel}>Ünite Seçiniz:</label>
-                    <select
-                      value={selectedUnitId}
-                      onChange={(e) => setSelectedUnitId(e.target.value)}
-                      style={styles.selectDropdown}
-                    >
-                      {units.map((u) => (
-                        <option key={u.id} value={u.id}>{u.unitNumber}. {u.title}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Konu Seçimi */}
-                  {topics.length > 0 && (
-                    <div>
-                      <label style={styles.miniLabel}>Konu Seçiniz:</label>
-                      <select
-                        value={selectedTopicId}
-                        onChange={(e) => setSelectedTopicId(e.target.value)}
-                        style={styles.selectDropdown}
-                      >
-                        {topics.map((t) => (
-                          <option key={t.id} value={t.id}>{t.topicNumber}. {t.title}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Soru Arama */}
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <label style={styles.miniLabel}>Soru Metninde Ara:</label>
-                    <div style={{ position: 'relative' }}>
-                      <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '10px' }} />
-                      <input
-                        type="text"
-                        placeholder="Anahtar kelime..."
-                        value={questionSearchQuery}
-                        onChange={(e) => setQuestionSearchQuery(e.target.value)}
-                        style={{ ...styles.inputField, paddingLeft: '32px' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Aksiyon Butonları */}
-                <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '13px', color: '#475569' }}>
-                    Toplam <b>{filteredQuestions.length}</b> soru listeleniyor.
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={openNewQuestionModal} style={styles.primaryBtn}>
-                      <Plus size={16} style={{ marginRight: '6px' }} />
-                      + Yeni Soru Ekle
-                    </button>
-
-                    <button onClick={handleUploadSample20} style={styles.secondaryBtn}>
-                      <PackagePlus size={16} style={{ marginRight: '6px' }} />
-                      20 Soruluk Paket Yükle
-                    </button>
-
-                    {questions.length > 0 && (
-                      <button onClick={handleExportQuestions} style={styles.secondaryBtn} title="JSON İndir">
-                        <Download size={16} style={{ marginRight: '6px' }} />
-                        Dışa Aktar (JSON)
-                      </button>
-                    )}
-
-                    {questions.length > 0 && (
-                      <button onClick={handleDeleteAllQuestions} style={styles.dangerBtn}>
-                        <Trash2 size={16} style={{ marginRight: '6px' }} />
-                        Tümünü Sil
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Soru Kartları Listesi */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-                {filteredQuestions.length === 0 ? (
-                  <div style={styles.emptyCard}>
-                    <HelpCircle size={40} color="#94A3B8" style={{ marginBottom: '12px' }} />
-                    <div style={{ fontSize: '16px', fontWeight: 600, color: '#334155' }}>Bu alanda henüz soru bulunmuyor</div>
-                    <p style={{ fontSize: '13px', color: '#64748B', maxWidth: '400px', margin: '6px 0 16px' }}>
-                      Yukarıdaki butonları kullanarak tekil soru ekleyebilir veya tek tıkla 20 soruluk KPSS paketini yükleyebilirsiniz.
-                    </p>
-                    <button onClick={openNewQuestionModal} style={styles.primaryBtn}>
-                      + İlk Soruyu Ekle
-                    </button>
-                  </div>
-                ) : (
-                  filteredQuestions.map((q, idx) => (
-                    <div key={q.id} style={styles.questionCard}>
-                      <div style={styles.questionCardHeader}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={styles.qNumberPill}>Soru {q.questionNumber || idx + 1}</span>
-                          <span style={styles.qCorrectPill}>Doğru Cevap: <b>{q.correctOption}</b></span>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            onClick={() => openEditQuestionModal(q)}
-                            style={styles.iconActionBtn}
-                            title="Soruyu Düzenle"
-                          >
-                            <Edit3 size={15} color="#4F46E5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteQuestion(q.id)}
-                            style={{ ...styles.iconActionBtn, color: '#EF4444' }}
-                            title="Soruyu Sil"
-                          >
-                            <Trash2 size={15} color="#EF4444" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Soru Metni */}
-                      <div style={styles.questionBodyText}>{q.questionText}</div>
-
-                      {/* Seçenekler Listesi */}
-                      <div style={styles.optionsListGrid}>
-                        {q.options.map((opt) => {
-                          const isCorrect = opt.id === q.correctOption;
-                          return (
-                            <div
-                              key={opt.id}
-                              style={{
-                                ...styles.optionPreviewItem,
-                                backgroundColor: isCorrect ? '#ECFDF5' : '#F8FAFC',
-                                borderColor: isCorrect ? '#6EE7B7' : '#E2E8F0',
-                                fontWeight: isCorrect ? 600 : 400,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  ...styles.optionPreviewBadge,
-                                  backgroundColor: isCorrect ? '#10B981' : '#E2E8F0',
-                                  color: isCorrect ? '#FFFFFF' : '#475569',
-                                }}
-                              >
-                                {opt.id}
-                              </span>
-                              <span style={{ fontSize: '13px', color: '#1E293B' }}>{opt.text}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Çözüm / Açıklama */}
-                      {q.explanation && (
-                        <div style={styles.explanationBox}>
-                          <span style={{ fontWeight: 600, color: '#4F46E5', fontSize: '12px' }}>Açıklama / Çözüm: </span>
-                          <span style={{ fontSize: '12px', color: '#334155' }}>{q.explanation}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            <AdvancedQuestionManager
+              subjects={subjects}
+              selectedSubjectId={selectedSubjectId}
+              onSelectSubjectId={setSelectedSubjectId}
+              units={units}
+              selectedUnitId={selectedUnitId}
+              onSelectUnitId={setSelectedUnitId}
+              topics={topics}
+              selectedTopicId={selectedTopicId}
+              onSelectTopicId={setSelectedTopicId}
+              questions={questions}
+              onReloadQuestions={() => {
+                const targetId = selectedTopicId || selectedUnitId;
+                if (targetId) loadQuestionsForTarget(targetId);
+              }}
+              onNotify={notify}
+            />
           )}
 
           {/* ============================================================== */}

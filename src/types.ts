@@ -42,6 +42,9 @@ export interface Question {
   options: QuestionOption[];
   correctOption: OptionId;
   explanation: string;
+  difficulty?: 'Kolay' | 'Orta' | 'Zor';
+  year?: string;
+  tags?: string[];
 }
 
 export interface UserAnswer {
