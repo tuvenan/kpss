@@ -634,8 +634,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={{ position: 'fixed', inset: 0, zIndex: 199 }}
                   />
                   <div style={{
-                    position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-                    width: '320px', backgroundColor: '#fff',
+                    position: 'fixed', top: '62px', right: '8px',
+                    width: '320px', maxWidth: 'calc(100vw - 16px)', backgroundColor: '#fff',
                     borderRadius: '14px', border: '1px solid #E5E7EB',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                     zIndex: 200, overflow: 'hidden',
