@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
-import { Subject, Unit, Topic } from '../types';
+import { Subject, Unit, Topic, Question, OptionId } from '../types';
 import {
   FolderTree,
   Plus,
@@ -26,6 +26,12 @@ import {
   Target,
   FileCheck,
   Send,
+  Database,
+  Sliders,
+  Settings,
+  HelpCircle,
+  FileText,
+  PackagePlus,
 } from 'lucide-react';
 
 interface AdvancedCurriculumManagerProps {
@@ -44,12 +50,16 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const [units, setUnits] = useState<Unit[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
 
-  // Seçili Hiyerarşi
+  // Seçili Hiyerarşi (Ders -> Ünite -> Konu -> Soru Bankası)
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
 
-  // Görünüm Modu: 3 Kolonlu veya Ağaç (Tree) Görünümü
+  // 4. Kolon: Seçili Konuya Bağlı Soru Bankası ve Soruları
+  const [topicQuestions, setTopicQuestions] = useState<Question[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState<boolean>(false);
+
+  // Görünüm Modu: 4 Kolonlu veya Ağaç (Tree) Görünümü
   const [viewMode, setViewMode] = useState<'columns' | 'tree'>('columns');
 
   // Taslak Değişiklik Sayacı & Yayınlanma Durumu
@@ -81,6 +91,28 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [topicFormTitle, setTopicFormTitle] = useState('');
   const [topicFormQuestionCount, setTopicFormQuestionCount] = useState(20);
+
+  // 4. Kolon: Soru Ekle / Düzenle Modalı
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [qFormText, setQFormText] = useState('');
+  const [qFormA, setQFormA] = useState('');
+  const [qFormB, setQFormB] = useState('');
+  const [qFormC, setQFormC] = useState('');
+  const [qFormD, setQFormD] = useState('');
+  const [qFormE, setQFormE] = useState('');
+  const [qFormCorrect, setQFormCorrect] = useState<OptionId>('A');
+  const [qFormExplanation, setQFormExplanation] = useState('');
+  const [qFormDifficulty, setQFormDifficulty] = useState<'Kolay' | 'Orta' | 'Zor'>('Orta');
+  const [qFormYear, setQFormYear] = useState('');
+
+  // 4. Kolon: Özelleştirilebilir Soru Bankası Ayarları Modalı
+  const [showBankCustomizationModal, setShowBankCustomizationModal] = useState(false);
+  const [bankFormTitle, setBankFormTitle] = useState('');
+  const [bankFormDescription, setBankFormDescription] = useState('');
+  const [bankFormTargetCount, setBankFormTargetCount] = useState(20);
+  const [bankFormType, setBankFormType] = useState('Standart Konu Testi');
+  const [bankFormLocked, setBankFormLocked] = useState(false);
 
   // ----------------------------------------------------
   // VERİLERİ İLK YÜKLEME
@@ -140,11 +172,262 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       .sort((a, b) => (a.topicNumber || 0) - (b.topicNumber || 0));
   }, [topics, selectedUnitId]);
 
+  // Seçili konuya ait soruları yükle
+  useEffect(() => {
+    if (selectedTopicId) {
+      loadTopicQuestions(selectedTopicId);
+    } else {
+      setTopicQuestions([]);
+    }
+  }, [selectedTopicId]);
+
+  const loadTopicQuestions = async (tId: string) => {
+    setIsLoadingQuestions(true);
+    try {
+      const qList = await api.getQuestions(tId);
+      setTopicQuestions(qList);
+    } catch (e) {
+      console.warn('Soru yükleme hatası:', e);
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  };
+
+  // Seçili aktif konu nesnesi
+  const currentTopic = useMemo(() => {
+    return topics.find((t) => t.id === selectedTopicId);
+  }, [topics, selectedTopicId]);
+
+  // Kademeli seçim fonksiyonları
+  const handleSelectSubject = (subId: string) => {
+    setSelectedSubjectId(subId);
+    const subUnits = units.filter((u) => u.subjectId === subId).sort((a, b) => (a.unitNumber || 0) - (b.unitNumber || 0));
+    if (subUnits.length > 0) {
+      setSelectedUnitId(subUnits[0].id);
+      const unitTopics = topics.filter((t) => t.unitId === subUnits[0].id).sort((a, b) => (a.topicNumber || 0) - (b.topicNumber || 0));
+      if (unitTopics.length > 0) {
+        setSelectedTopicId(unitTopics[0].id);
+      } else {
+        setSelectedTopicId('');
+      }
+    } else {
+      setSelectedUnitId('');
+      setSelectedTopicId('');
+    }
+  };
+
+  const handleSelectUnit = (unitId: string) => {
+    setSelectedUnitId(unitId);
+    const unitTopics = topics.filter((t) => t.unitId === unitId).sort((a, b) => (a.topicNumber || 0) - (b.topicNumber || 0));
+    if (unitTopics.length > 0) {
+      setSelectedTopicId(unitTopics[0].id);
+    } else {
+      setSelectedTopicId('');
+    }
+  };
+
+  const handleSelectTopic = (topicId: string) => {
+    setSelectedTopicId(topicId);
+  };
+
   // ----------------------------------------------------
   // DEĞİŞİKLİK SAYACI TETİKLEYİCİSİ
   // ----------------------------------------------------
   const markAsDraft = () => {
     setDraftChangesCount((prev) => prev + 1);
+  };
+
+  // ----------------------------------------------------
+  // 4. KOLON: SORU & SORU BANKASI AKSİYONLARI
+  // ----------------------------------------------------
+  const openNewQuestionModal = () => {
+    if (!selectedTopicId) {
+      onNotify('Lütfen önce 3. kolondan bir alt konu seçiniz.', 'error');
+      return;
+    }
+    setEditingQuestion(null);
+    setQFormText('');
+    setQFormA('');
+    setQFormB('');
+    setQFormC('');
+    setQFormD('');
+    setQFormE('');
+    setQFormCorrect('A');
+    setQFormExplanation('');
+    setQFormDifficulty('Orta');
+    setQFormYear('');
+    setShowQuestionModal(true);
+  };
+
+  const openEditQuestionModal = (q: Question) => {
+    setEditingQuestion(q);
+    setQFormText(q.questionText);
+    const getOpt = (id: OptionId) => q.options.find((o) => o.id === id)?.text || '';
+    setQFormA(getOpt('A'));
+    setQFormB(getOpt('B'));
+    setQFormC(getOpt('C'));
+    setQFormD(getOpt('D'));
+    setQFormE(getOpt('E'));
+    setQFormCorrect(q.correctOption);
+    setQFormExplanation(q.explanation || '');
+    setQFormDifficulty(q.difficulty || 'Orta');
+    setQFormYear(q.year || '');
+    setShowQuestionModal(true);
+  };
+
+  const handleSaveQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTopicId) {
+      onNotify('Her soru bankası mutlaka bir alt konuya bağlı olmalıdır.', 'error');
+      return;
+    }
+    if (!qFormText.trim()) {
+      alert('Lütfen soru metnini yazınız.');
+      return;
+    }
+    if (!qFormA.trim() || !qFormB.trim() || !qFormC.trim() || !qFormD.trim() || !qFormE.trim()) {
+      alert('Lütfen 5 seçeneğin (A, B, C, D, E) tamamını doldurunuz.');
+      return;
+    }
+
+    const questionData: Question = {
+      id: editingQuestion ? editingQuestion.id : `${selectedTopicId}-q${Date.now()}`,
+      topicId: selectedTopicId,
+      unitId: selectedUnitId,
+      questionNumber: editingQuestion ? editingQuestion.questionNumber : topicQuestions.length + 1,
+      questionText: qFormText.trim(),
+      options: [
+        { id: 'A', text: qFormA.trim() },
+        { id: 'B', text: qFormB.trim() },
+        { id: 'C', text: qFormC.trim() },
+        { id: 'D', text: qFormD.trim() },
+        { id: 'E', text: qFormE.trim() },
+      ],
+      correctOption: qFormCorrect,
+      explanation: qFormExplanation.trim(),
+      difficulty: qFormDifficulty,
+      year: qFormYear.trim() || undefined,
+    };
+
+    try {
+      if (editingQuestion) {
+        await api.adminUpdateQuestion(questionData);
+        setTopicQuestions((prev) =>
+          prev.map((q) => (q.id === questionData.id ? questionData : q))
+        );
+        onNotify('Soru başarıyla güncellendi.');
+      } else {
+        await api.adminCreateQuestion(questionData);
+        setTopicQuestions((prev) => [...prev, questionData]);
+        setTopics((prev) =>
+          prev.map((t) =>
+            t.id === selectedTopicId
+              ? { ...t, questionCount: (t.questionCount || 0) + 1 }
+              : t
+          )
+        );
+        onNotify('Yeni soru soru bankasına eklendi.');
+      }
+      markAsDraft();
+      setShowQuestionModal(false);
+    } catch {
+      onNotify('Soru kaydedilemedi', 'error');
+    }
+  };
+
+  const handleDeleteQuestion = async (qId: string) => {
+    if (!confirm('Bu soruyu soru bankasından silmek istediğinize emin misiniz?')) return;
+    try {
+      await api.adminDeleteQuestion(qId);
+      setTopicQuestions((prev) => prev.filter((q) => q.id !== qId));
+      setTopics((prev) =>
+        prev.map((t) =>
+          t.id === selectedTopicId
+            ? { ...t, questionCount: Math.max(0, (t.questionCount || 1) - 1) }
+            : t
+        )
+      );
+      markAsDraft();
+      onNotify('Soru silindi.');
+    } catch {
+      onNotify('Soru silinemedi', 'error');
+    }
+  };
+
+  const handleMoveQuestion = async (idx: number, direction: 'UP' | 'DOWN') => {
+    const targetIdx = direction === 'UP' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= topicQuestions.length) return;
+
+    const newQuestions = [...topicQuestions];
+    const [moved] = newQuestions.splice(idx, 1);
+    newQuestions.splice(targetIdx, 0, moved);
+
+    newQuestions.forEach((q, i) => {
+      q.questionNumber = i + 1;
+    });
+
+    setTopicQuestions(newQuestions);
+    markAsDraft();
+
+    for (const q of newQuestions) {
+      await api.adminUpdateQuestion(q);
+    }
+  };
+
+  const handleLoadSample20 = async () => {
+    if (!selectedTopicId) return;
+    try {
+      const res = await api.adminLoadSamplePackage(selectedTopicId, selectedUnitId);
+      if (res.success) {
+        const qList = await api.getQuestions(selectedTopicId);
+        setTopicQuestions(qList);
+        setTopics((prev) =>
+          prev.map((t) =>
+            t.id === selectedTopicId
+              ? { ...t, questionCount: qList.length }
+              : t
+          )
+        );
+        markAsDraft();
+        onNotify('Bu konu için 20 soruluk örnek paket yüklendi ve yayına hazırlandı!');
+      }
+    } catch {
+      onNotify('Örnek paket yüklenemedi', 'error');
+    }
+  };
+
+  // Soru Bankasını Özelleştir Modalı
+  const openBankCustomizationModal = () => {
+    if (!currentTopic) {
+      onNotify('Lütfen önce bir alt konu seçiniz.', 'error');
+      return;
+    }
+    setBankFormTitle(currentTopic.bankTitle || `${currentTopic.title} Soru Bankası`);
+    setBankFormDescription(currentTopic.bankDescription || '');
+    setBankFormTargetCount(currentTopic.questionCount || 20);
+    setBankFormType(currentTopic.bankType || 'Standart Konu Testi');
+    setBankFormLocked(Boolean(currentTopic.isLocked));
+    setShowBankCustomizationModal(true);
+  };
+
+  const handleSaveBankCustomization = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTopic) return;
+
+    const updatedTopic: Topic = {
+      ...currentTopic,
+      bankTitle: bankFormTitle.trim(),
+      bankDescription: bankFormDescription.trim(),
+      questionCount: bankFormTargetCount,
+      bankType: bankFormType,
+      isLocked: bankFormLocked,
+    };
+
+    setTopics((prev) => prev.map((t) => (t.id === currentTopic.id ? updatedTopic : t)));
+    await api.adminUpdateTopic(updatedTopic.id, updatedTopic.title, updatedTopic.topicNumber);
+    markAsDraft();
+    setShowBankCustomizationModal(false);
+    onNotify(`"${updatedTopic.bankTitle}" soru bankası ayarları başarıyla güncellendi.`);
   };
 
   // ----------------------------------------------------
@@ -454,7 +737,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
             }}
           >
             <Columns size={15} style={{ marginRight: '6px' }} />
-            3 Kolonlu Hiyerarşi Modu
+            4 Kolonlu Hiyerarşi Modu
           </button>
 
           <button
@@ -477,7 +760,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
       </div>
 
       {/* ============================================================== */}
-      {/* 3. GÖRÜNÜM 1: 3 KOLONLU HİYERARŞİ DÜZENLEYİCİ */}
+      {/* 3. GÖRÜNÜM 1: 4 KOLONLU HİYERARŞİ DÜZENLEYİCİ */}
       {/* ============================================================== */}
       {viewMode === 'columns' && (
         <div style={styles.columnsContainer}>
@@ -501,7 +784,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                 return (
                   <div
                     key={sub.id}
-                    onClick={() => setSelectedSubjectId(sub.id)}
+                    onClick={() => handleSelectSubject(sub.id)}
                     style={{
                       ...styles.itemBox,
                       borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
@@ -598,7 +881,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                   return (
                     <div
                       key={unit.id}
-                      onClick={() => setSelectedUnitId(unit.id)}
+                      onClick={() => handleSelectUnit(unit.id)}
                       style={{
                         ...styles.itemBox,
                         borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
@@ -701,7 +984,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                   return (
                     <div
                       key={topic.id}
-                      onClick={() => setSelectedTopicId(topic.id)}
+                      onClick={() => handleSelectTopic(topic.id)}
                       style={{
                         ...styles.itemBox,
                         borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
@@ -778,6 +1061,300 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                     </div>
                   );
                 })
+              )}
+            </div>
+          </div>
+
+          {/* 4. KOLON: ÖZELLEŞTİRİLEBİLİR SORU BANKASI */}
+          <div style={styles.columnCard}>
+            <div style={styles.columnHeader}>
+              <div>
+                <h3 style={styles.columnTitle}>
+                  4. Soru Bankası ({topicQuestions.length})
+                </h3>
+                <p style={styles.columnSub} title={currentTopic ? currentTopic.title : undefined}>
+                  {currentTopic ? `${currentTopic.topicNumber}. ${currentTopic.title}` : 'Alt Konu Seçiniz'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={openBankCustomizationModal}
+                  disabled={!selectedTopicId}
+                  style={{
+                    ...styles.colAddBtn,
+                    backgroundColor: '#F1F5F9',
+                    borderColor: '#CBD5E1',
+                    color: '#334155',
+                    opacity: selectedTopicId ? 1 : 0.4,
+                  }}
+                  title="Soru Bankasını Özelleştir / Ayarları"
+                >
+                  <Sliders size={15} />
+                </button>
+                <button
+                  onClick={openNewQuestionModal}
+                  disabled={!selectedTopicId}
+                  style={{ ...styles.colAddBtn, opacity: selectedTopicId ? 1 : 0.4 }}
+                  title="Yeni Soru Ekle"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.itemsList}>
+              {!selectedTopicId ? (
+                <div style={styles.emptyNotice}>
+                  Lütfen soru bankasını görüntülemek ve yönetmek için 3. kolondan bir <b>Alt Konu / Kazanım</b> seçiniz.
+                </div>
+              ) : (
+                <>
+                  {/* Soru Bankası Özelleştirme & 20 Soru Yayın Kuralı Durum Paneli */}
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: '10px',
+                      border: '1.5px solid #E2E8F0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Database size={14} color="#4F46E5" />
+                          <span>{currentTopic?.bankTitle || `${currentTopic?.title} Soru Bankası`}</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                          Tür: <b>{currentTopic?.bankType || 'Standart Konu Testi'}</b>
+                        </div>
+                      </div>
+                      <button
+                        onClick={openBankCustomizationModal}
+                        style={{
+                          background: '#EEF2FF',
+                          border: '1px solid #C7D2FE',
+                          borderRadius: '6px',
+                          color: '#4F46E5',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '3px 8px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Sliders size={11} /> Özelleştir
+                      </button>
+                    </div>
+
+                    {currentTopic?.bankDescription && (
+                      <div style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic', backgroundColor: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px solid #F1F5F9' }}>
+                        "{currentTopic.bankDescription}"
+                      </div>
+                    )}
+
+                    {/* 20 Soru Yayınlanma Kuralı & Progress */}
+                    <div
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        backgroundColor: topicQuestions.length >= 20 ? '#F0FDF4' : '#FEF2F2',
+                        border: `1px solid ${topicQuestions.length >= 20 ? '#BBF7D0' : '#FECACA'}`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: topicQuestions.length >= 20 ? '#15803D' : '#B91C1C' }}>
+                          {topicQuestions.length >= 20 ? '🟢 Yayında (Aktif)' : '🔴 Yayınlanamaz (Hazırlıkta)'}
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: topicQuestions.length >= 20 ? '#15803D' : '#B91C1C' }}>
+                          {topicQuestions.length} / 20 Soru
+                        </span>
+                      </div>
+
+                      {/* İlerleme Çubuğu */}
+                      <div style={{ height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${Math.min(100, Math.round((topicQuestions.length / 20) * 100))}%`,
+                            backgroundColor: topicQuestions.length >= 20 ? '#22C55E' : '#EF4444',
+                            borderRadius: '3px',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ fontSize: '10px', color: topicQuestions.length >= 20 ? '#166534' : '#991B1B', marginTop: '5px', lineHeight: 1.3 }}>
+                        {topicQuestions.length >= 20
+                          ? '✅ Bu soru bankası 20 soru kuralını karşıladığı için sitede yayınlanmaktadır.'
+                          : '⚠️ Soru bankasının sitede yayınlanması için en az 20 soru eklenmelidir.'}
+                      </div>
+
+                      {topicQuestions.length < 20 && (
+                        <button
+                          onClick={handleLoadSample20}
+                          style={{
+                            marginTop: '8px',
+                            width: '100%',
+                            backgroundColor: '#4F46E5',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '5px',
+                          }}
+                        >
+                          <PackagePlus size={13} />
+                          Tek Tıkla 20 Soru Paketi Doldur
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Soru Listesi Başlığı & Hızlı Ekle */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', padding: '0 2px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                      Sorular ({topicQuestions.length})
+                    </span>
+                    <button
+                      onClick={openNewQuestionModal}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#4F46E5',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: 0,
+                      }}
+                    >
+                      <Plus size={13} /> Yeni Soru
+                    </button>
+                  </div>
+
+                  {/* Soruların Kartları */}
+                  {isLoadingQuestions ? (
+                    <div style={styles.emptyNotice}>Sorular yükleniyor...</div>
+                  ) : topicQuestions.length === 0 ? (
+                    <div style={{ ...styles.emptyNotice, padding: '20px 8px' }}>
+                      <HelpCircle size={28} color="#94A3B8" style={{ marginBottom: '6px' }} />
+                      <div>Bu soru bankasında henüz soru yok.</div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                        Yukarıdaki "Tek Tıkla 20 Soru Paketi Doldur" butonuna tıklayarak anında doldurabilirsiniz.
+                      </div>
+                    </div>
+                  ) : (
+                    topicQuestions.map((q, qIdx) => (
+                      <div
+                        key={q.id}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          backgroundColor: '#FFFFFF',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={styles.orderPill}>#{q.questionNumber || qIdx + 1}</span>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                backgroundColor:
+                                  q.difficulty === 'Zor' ? '#FEE2E2' : q.difficulty === 'Kolay' ? '#DCFCE7' : '#FEF3C7',
+                                color:
+                                  q.difficulty === 'Zor' ? '#DC2626' : q.difficulty === 'Kolay' ? '#15803D' : '#D97706',
+                              }}
+                            >
+                              {q.difficulty || 'Orta'}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                backgroundColor: '#EEF2FF',
+                                color: '#4F46E5',
+                              }}
+                            >
+                              Cevap: {q.correctOption}
+                            </span>
+                          </div>
+
+                          {/* Sıralama & Düzenleme */}
+                          <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => handleMoveQuestion(qIdx, 'UP')}
+                              disabled={qIdx === 0}
+                              style={{ ...styles.microBtn, opacity: qIdx === 0 ? 0.3 : 1 }}
+                              title="Yukarı Taşı"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleMoveQuestion(qIdx, 'DOWN')}
+                              disabled={qIdx === topicQuestions.length - 1}
+                              style={{ ...styles.microBtn, opacity: qIdx === topicQuestions.length - 1 ? 0.3 : 1 }}
+                              title="Aşağı Taşı"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                            <button
+                              onClick={() => openEditQuestionModal(q)}
+                              style={styles.microBtn}
+                              title="Soruyu Düzenle"
+                            >
+                              <Edit3 size={12} color="#4F46E5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQuestion(q.id)}
+                              style={{ ...styles.microBtn, color: '#EF4444' }}
+                              title="Soruyu Sil"
+                            >
+                              <Trash2 size={12} color="#EF4444" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Soru Metni Önizleme */}
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: '#1E293B',
+                            lineHeight: 1.4,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {q.questionText}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -884,33 +1461,101 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
                             {isUnitExpanded && (
                               <div style={styles.treeTopicsContainer}>
                                 {uTopics.map((t) => (
-                                  <div key={t.id} style={styles.treeTopicItem}>
-                                    <span style={styles.orderPill}>{t.topicNumber}</span>
-                                    <span style={{ fontSize: '13px', color: '#334155', flex: 1 }}>{t.title}</span>
-                                     <span style={{
-                                       fontSize: '11px',
-                                       fontWeight: 600,
-                                       color: (t.questionCount || 0) >= 20 ? '#16A34A' : '#DC2626',
-                                       backgroundColor: (t.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
-                                       padding: '2px 6px',
-                                       borderRadius: '4px',
-                                     }}>
-                                       {t.questionCount || 0} Soru • {(t.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta 🔴'}
-                                     </span>
-                                    <button
-                                      onClick={() => openEditTopicModal(t)}
-                                      style={styles.microBtn}
-                                      title="Konuyu Düzenle"
+                                  <div key={t.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <div style={styles.treeTopicItem}>
+                                      <span style={styles.orderPill}>{t.topicNumber}</span>
+                                      <span style={{ fontSize: '13px', color: '#334155', flex: 1, fontWeight: 600 }}>{t.title}</span>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        color: (t.questionCount || 0) >= 20 ? '#16A34A' : '#DC2626',
+                                        backgroundColor: (t.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                      }}>
+                                        {t.questionCount || 0} Soru • {(t.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta 🔴'}
+                                      </span>
+                                      <button
+                                        onClick={() => openEditTopicModal(t)}
+                                        style={styles.microBtn}
+                                        title="Konuyu Düzenle"
+                                      >
+                                        <Edit3 size={12} color="#64748B" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteTopic(t.id, t.title)}
+                                        style={{ ...styles.microBtn, color: '#EF4444' }}
+                                        title="Konuyu Sil"
+                                      >
+                                        <Trash2 size={12} color="#EF4444" />
+                                      </button>
+                                    </div>
+
+                                    {/* 4. DÜZEY: SORU BANKASI GÖRÜNÜMÜ */}
+                                    <div
+                                      style={{
+                                        marginLeft: '24px',
+                                        padding: '6px 12px',
+                                        backgroundColor: '#FFFFFF',
+                                        borderRadius: '6px',
+                                        border: '1px dashed #CBD5E1',
+                                        borderLeft: '3px solid #6366F1',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: '8px',
+                                      }}
                                     >
-                                      <Edit3 size={12} color="#64748B" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTopic(t.id, t.title)}
-                                      style={{ ...styles.microBtn, color: '#EF4444' }}
-                                      title="Konuyu Sil"
-                                    >
-                                      <Trash2 size={12} color="#EF4444" />
-                                    </button>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Database size={13} color="#4F46E5" />
+                                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#1E293B' }}>
+                                          {t.bankTitle || `${t.title} Soru Bankası`}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                          ({t.bankType || 'Standart Test'})
+                                        </span>
+                                      </div>
+
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span
+                                          style={{
+                                            fontSize: '10px',
+                                            fontWeight: 700,
+                                            padding: '1px 6px',
+                                            borderRadius: '4px',
+                                            backgroundColor: (t.questionCount || 0) >= 20 ? '#DCFCE7' : '#FEE2E2',
+                                            color: (t.questionCount || 0) >= 20 ? '#166534' : '#991B1B',
+                                          }}
+                                        >
+                                          {(t.questionCount || 0) >= 20 ? 'Yayında 🟢' : 'Hazırlıkta (Yayınlanamaz) 🔴'}
+                                        </span>
+
+                                        <button
+                                          onClick={() => {
+                                            setSelectedSubjectId(sub.id);
+                                            setSelectedUnitId(u.id);
+                                            setSelectedTopicId(t.id);
+                                            openBankCustomizationModal();
+                                          }}
+                                          style={{ ...styles.microBtn, color: '#4F46E5' }}
+                                          title="Soru Bankasını Özelleştir"
+                                        >
+                                          <Sliders size={12} color="#4F46E5" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedSubjectId(sub.id);
+                                            setSelectedUnitId(u.id);
+                                            setSelectedTopicId(t.id);
+                                            openNewQuestionModal();
+                                          }}
+                                          style={{ ...styles.microBtn, color: '#059669' }}
+                                          title="Yeni Soru Ekle"
+                                        >
+                                          <Plus size={12} color="#059669" />
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -1063,6 +1708,251 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
           </div>
         </div>
       )}
+
+      {/* ============================================================== */}
+      {/* MODAL 4: SORU BANKASINI ÖZELLEŞTİR */}
+      {/* ============================================================== */}
+      {showBankCustomizationModal && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: '480px' }}>
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sliders size={18} color="#4F46E5" />
+                <h3 style={styles.modalTitle}>Soru Bankasını Özelleştir</h3>
+              </div>
+              <button onClick={() => setShowBankCustomizationModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBankCustomization} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={styles.fieldLabel}>Soru Bankası Özel Başlığı:</label>
+                <input
+                  type="text"
+                  placeholder="Örn: İslamiyet Öncesi Kültür Testi..."
+                  value={bankFormTitle}
+                  onChange={(e) => setBankFormTitle(e.target.value)}
+                  style={styles.textInput}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={styles.fieldLabel}>Test / Paket Türü:</label>
+                  <select
+                    value={bankFormType}
+                    onChange={(e) => setBankFormType(e.target.value)}
+                    style={styles.textInput}
+                  >
+                    <option value="Standart Konu Testi">Standart Konu Testi</option>
+                    <option value="Kazanım Pekiştirme">Kazanım Pekiştirme</option>
+                    <option value="ÖSYM Çıkmış Sorular">ÖSYM Çıkmış Sorular</option>
+                    <option value="Zorlaştırılmış Deneme">Zorlaştırılmış Deneme</option>
+                    <option value="Karma Hızlı Tarama">Karma Hızlı Tarama</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={styles.fieldLabel}>Hedef Soru Kapasitesi:</label>
+                  <input
+                    type="number"
+                    min={20}
+                    value={bankFormTargetCount}
+                    onChange={(e) => setBankFormTargetCount(parseInt(e.target.value) || 20)}
+                    style={styles.textInput}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={styles.fieldLabel}>Açıklama / Öğrenci Bilgi Notu:</label>
+                <textarea
+                  placeholder="Örn: Bu test ilk Türk devletlerinin devlet teşkilatı ve sanat yapısını kapsar."
+                  value={bankFormDescription}
+                  onChange={(e) => setBankFormDescription(e.target.value)}
+                  rows={3}
+                  style={{ ...styles.textInput, resize: 'vertical' }}
+                />
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                <input
+                  type="checkbox"
+                  checked={bankFormLocked}
+                  onChange={(e) => setBankFormLocked(e.target.checked)}
+                />
+                <span>Bu soru bankası öğrencilere kilitli olsun (VIP / Şartlı Erişim)</span>
+              </label>
+
+              <div style={{ padding: '8px 12px', backgroundColor: '#FEF3C7', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '12px', color: '#92400E' }}>
+                💡 <b>Bilgi:</b> Soru bankasının sitede yayınlanabilmesi için en az 20 adet soru içermesi gerekmektedir.
+              </div>
+
+              <div style={styles.modalActionsRow}>
+                <button type="button" onClick={() => setShowBankCustomizationModal(false)} style={styles.btnSecondary}>
+                  Vazgeç
+                </button>
+                <button type="submit" style={styles.btnPrimary}>
+                  Ayarları Kaydet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 5: SORU EKLE / DÜZENLE */}
+      {/* ============================================================== */}
+      {showQuestionModal && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} color="#4F46E5" />
+                <h3 style={styles.modalTitle}>{editingQuestion ? 'Soruyu Düzenle' : 'Yeni Soru Ekle'}</h3>
+              </div>
+              <button onClick={() => setShowQuestionModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={styles.fieldLabel}>Soru Metni:</label>
+                <textarea
+                  placeholder="Soru kökünü ve metnini buraya yazınız..."
+                  value={qFormText}
+                  onChange={(e) => setQFormText(e.target.value)}
+                  rows={3}
+                  style={{ ...styles.textInput, resize: 'vertical' }}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={styles.fieldLabel}>Seçenekler (Doğru cevabı radyo butonundan işaretleyiniz):</label>
+                {(['A', 'B', 'C', 'D', 'E'] as OptionId[]).map((opt) => {
+                  const val =
+                    opt === 'A' ? qFormA :
+                    opt === 'B' ? qFormB :
+                    opt === 'C' ? qFormC :
+                    opt === 'D' ? qFormD : qFormE;
+                  const setVal =
+                    opt === 'A' ? setQFormA :
+                    opt === 'B' ? setQFormB :
+                    opt === 'C' ? setQFormC :
+                    opt === 'D' ? setQFormD : setQFormE;
+
+                  const isCorrect = qFormCorrect === opt;
+
+                  return (
+                    <div
+                      key={opt}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        backgroundColor: isCorrect ? '#F0FDF4' : '#FFFFFF',
+                        border: `1.5px solid ${isCorrect ? '#22C55E' : '#E2E8F0'}`,
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="correctOption"
+                        checked={isCorrect}
+                        onChange={() => setQFormCorrect(opt)}
+                        style={{ cursor: 'pointer', accentColor: '#22C55E' }}
+                        id={`opt-radio-${opt}`}
+                      />
+                      <label
+                        htmlFor={`opt-radio-${opt}`}
+                        style={{
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: isCorrect ? '#15803D' : '#475569',
+                          width: '20px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {opt})
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={`${opt} seçeneği metni...`}
+                        value={val}
+                        onChange={(e) => setVal(e.target.value)}
+                        style={{
+                          ...styles.textInput,
+                          borderColor: isCorrect ? '#86EFAC' : '#CBD5E1',
+                          flex: 1,
+                        }}
+                        required
+                      />
+                      {isCorrect && (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803D', whiteSpace: 'nowrap' }}>
+                          ✓ Doğru
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                <label style={styles.fieldLabel}>Çözüm / Açıklama:</label>
+                <textarea
+                  placeholder="Sorunun çözümünü ve öğrencilere gösterilecek açıklamayı yazınız..."
+                  value={qFormExplanation}
+                  onChange={(e) => setQFormExplanation(e.target.value)}
+                  rows={2}
+                  style={{ ...styles.textInput, resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={styles.fieldLabel}>Zorluk Derecesi:</label>
+                  <select
+                    value={qFormDifficulty}
+                    onChange={(e) => setQFormDifficulty(e.target.value as 'Kolay' | 'Orta' | 'Zor')}
+                    style={styles.textInput}
+                  >
+                    <option value="Kolay">Kolay</option>
+                    <option value="Orta">Orta</option>
+                    <option value="Zor">Zor</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={styles.fieldLabel}>Çıkmış Soru Yılı (Opsiyonel):</label>
+                  <input
+                    type="text"
+                    placeholder="Örn: 2022 KPSS Lisans"
+                    value={qFormYear}
+                    onChange={(e) => setQFormYear(e.target.value)}
+                    style={styles.textInput}
+                  />
+                </div>
+              </div>
+
+              <div style={styles.modalActionsRow}>
+                <button type="button" onClick={() => setShowQuestionModal(false)} style={styles.btnSecondary}>
+                  Vazgeç
+                </button>
+                <button type="submit" style={styles.btnPrimary}>
+                  {editingQuestion ? 'Soruyu Güncelle' : 'Soruyu Kaydet'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1162,8 +2052,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   columnsContainer: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(4, minmax(240px, 1fr))',
+    gap: '14px',
+    overflowX: 'auto',
+    paddingBottom: '8px',
   },
   columnCard: {
     backgroundColor: '#FFFFFF',

@@ -31,6 +31,9 @@ export interface Topic {
   questionCount?: number;
   isLocked?: boolean;
   isCompleted?: boolean;
+  bankTitle?: string;
+  bankDescription?: string;
+  bankType?: string;
 }
 
 export interface Question {
