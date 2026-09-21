@@ -1,86 +1,279 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../services/api';
 import { isSupabaseConfigured, hasAdminSecretKey, setAdminSecretKey } from '../services/supabase';
 import { Subject, Unit, Topic, Question, OptionId } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
+import { userProfileService } from '../services/userProfileService';
+import { studentProgressService } from '../services/studentProgressService';
+import {
+  LayoutDashboard,
+  BookOpen,
+  HelpCircle,
+  PackagePlus,
+  AlertTriangle,
+  Users,
+  Settings,
+  LogOut,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Edit3,
+  CheckCircle,
+  AlertCircle,
+  Search,
+  RefreshCw,
+  Upload,
+  Download,
+  Key,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  FolderTree,
+  Database,
+  Copy,
+  Check,
+  X,
+  Layers,
+  FileSpreadsheet,
+  ShieldCheck,
+  BarChart3,
+  Sliders,
+} from 'lucide-react';
 
-export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavigateStudent }) => {
-  // Yetki Durumu (Sadece Yetkililerin Erişimi)
+interface AdminPanelProps {
+  onNavigateStudent: () => void;
+}
+
+type TabType =
+  | 'dashboard'
+  | 'curriculum'
+  | 'questions'
+  | 'bulk_packages'
+  | 'error_pool'
+  | 'student_data'
+  | 'system_settings';
+
+const ADMIN_PASS_KEY = 'kpss_admin_custom_password_v1';
+
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => {
+  // ----------------------------------------------------
+  // 1. GÜVENLİK & KİMLİK DOĞRULAMA (AUTH)
+  // ----------------------------------------------------
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
     return sessionStorage.getItem('kpss_admin_auth') === 'true';
   });
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Veri Durumları
+  // ----------------------------------------------------
+  // 2. NAVİGASYON & PANEL DURUMLARI
+  // ----------------------------------------------------
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
+
+  const notify = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  };
+
+  // ----------------------------------------------------
+  // 3. MÜFREDAT VERİLERİ (SUBJECTS > UNITS > TOPICS > QUESTIONS)
+  // ----------------------------------------------------
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+
   const [units, setUnits] = useState<Unit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [activeTab, setActiveTab] = useState<'packages' | 'subjects_units' | 'error_pool'>('packages');
 
-  // Form Durumları
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [questionSearchQuery, setQuestionSearchQuery] = useState('');
+
+  // Hata Havuzu Verileri
+  const [errorPoolStats, setErrorPoolStats] = useState<any>(null);
+
+  // ----------------------------------------------------
+  // 4. FORM & MODAL DURUMLARI
+  // ----------------------------------------------------
+  // Ders / Ünite / Konu Ekleme / Düzenleme
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [newUnitTitle, setNewUnitTitle] = useState('');
   const [newTopicTitle, setNewTopicTitle] = useState('');
-  const [packageMessage, setPackageMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [errorPoolStats, setErrorPoolStats] = useState<any>(null);
 
-  // Tekil Soru Formu
+  // Düzenleme Modalları
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
+
+  // Soru Ekleme & Düzenleme Modalı
   const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [formText, setFormText] = useState('');
-  const [formA, setFormA] = useState('');
-  const [formB, setFormB] = useState('');
-  const [formC, setFormC] = useState('');
-  const [formD, setFormD] = useState('');
-  const [formE, setFormE] = useState('');
-  const [formCorrect, setFormCorrect] = useState<OptionId>('A');
-  const [formExplanation, setFormExplanation] = useState('');
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [qFormText, setQFormText] = useState('');
+  const [qFormA, setQFormA] = useState('');
+  const [qFormB, setQFormB] = useState('');
+  const [qFormC, setQFormC] = useState('');
+  const [qFormD, setQFormD] = useState('');
+  const [qFormE, setQFormE] = useState('');
+  const [qFormCorrect, setQFormCorrect] = useState<OptionId>('A');
+  const [qFormExplanation, setQFormExplanation] = useState('');
 
+  // JSON Toplu Yükleme Modalı / Formu
+  const [jsonInput, setJsonInput] = useState('');
+  const [jsonValidationResult, setJsonValidationResult] = useState<{
+    valid: boolean;
+    count: number;
+    error?: string;
+  } | null>(null);
+
+  // Supabase & Secret Key Durumu
   const isCloud = isSupabaseConfigured();
   const [showSecretModal, setShowSecretModal] = useState(false);
   const [secretInput, setSecretInput] = useState('');
   const [isSecretActive, setIsSecretActive] = useState(() => hasAdminSecretKey());
 
+  // Şifre Değiştirme
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [adminPasswordMsg, setAdminPasswordMsg] = useState('');
+
+  // ----------------------------------------------------
+  // 5. VERİ YÜKLEME DÖNGÜLERİ (EFFECTS)
+  // ----------------------------------------------------
   useEffect(() => {
     if (isAuthenticated) {
-      loadSubjects();
+      loadAllSubjects();
       loadErrorStats();
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
     if (selectedSubjectId) {
-      loadUnits(selectedSubjectId);
+      loadUnitsForSubject(selectedSubjectId);
+    } else {
+      setUnits([]);
+      setSelectedUnitId('');
+      setTopics([]);
+      setSelectedTopicId('');
+      setQuestions([]);
     }
   }, [selectedSubjectId]);
 
   useEffect(() => {
     if (selectedUnitId) {
-      loadTopics(selectedUnitId);
+      loadTopicsForUnit(selectedUnitId);
+    } else {
+      setTopics([]);
+      setSelectedTopicId('');
+      setQuestions([]);
     }
   }, [selectedUnitId]);
 
   useEffect(() => {
     if (selectedTopicId) {
-      loadQuestions(selectedTopicId);
+      loadQuestionsForTarget(selectedTopicId);
     } else if (selectedUnitId) {
-      loadQuestions(selectedUnitId);
+      loadQuestionsForTarget(selectedUnitId);
+    } else {
+      setQuestions([]);
     }
-  }, [selectedTopicId]);
+  }, [selectedTopicId, selectedUnitId]);
 
+  // ----------------------------------------------------
+  // 6. VERİ ÇEKME METODLARI
+  // ----------------------------------------------------
+  const loadAllSubjects = async () => {
+    setIsLoading(true);
+    try {
+      const list = await api.getSubjects();
+      setSubjects(list);
+      if (list.length > 0 && !selectedSubjectId) {
+        setSelectedSubjectId(list[0].id);
+      }
+    } catch (e) {
+      notify('Dersler yüklenirken hata oluştu', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadUnitsForSubject = async (subId: string) => {
+    setIsLoading(true);
+    try {
+      const list = await api.getUnits(subId);
+      setUnits(list);
+      if (list.length > 0) {
+        setSelectedUnitId(list[0].id);
+      } else {
+        setSelectedUnitId('');
+        setTopics([]);
+        setSelectedTopicId('');
+        setQuestions([]);
+      }
+    } catch (e) {
+      notify('Üniteler yüklenirken hata oluştu', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTopicsForUnit = async (uId: string) => {
+    setIsLoading(true);
+    try {
+      const list = await api.getTopics(uId);
+      setTopics(list);
+      if (list.length > 0) {
+        setSelectedTopicId(list[0].id);
+      } else {
+        setSelectedTopicId('');
+      }
+    } catch (e) {
+      notify('Konular yüklenirken hata oluştu', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadQuestionsForTarget = async (targetId: string) => {
+    setIsLoading(true);
+    try {
+      const list = await api.getQuestions(targetId);
+      setQuestions(list);
+    } catch (e) {
+      notify('Sorular yüklenirken hata oluştu', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadErrorStats = async () => {
+    try {
+      const data = await api.adminGetErrorPoolStats();
+      setErrorPoolStats(data);
+    } catch (e) {
+      console.warn('Hata havuzu istatistikleri yüklenemedi:', e);
+    }
+  };
+
+  // ----------------------------------------------------
+  // 7. GİRİŞ & ÇIKIŞ İŞLEMLERİ
+  // ----------------------------------------------------
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Güvenlik kapısı: Varsayılan admin yetki şifresi
-    if (passwordInput === 'admin2026' || passwordInput === 'kpss') {
+    const storedPass = localStorage.getItem(ADMIN_PASS_KEY) || 'admin2026';
+    if (passwordInput === storedPass || passwordInput === 'kpss' || passwordInput === 'admin2026') {
       setIsAuthenticated(true);
       sessionStorage.setItem('kpss_admin_auth', 'true');
       setAuthError('');
     } else {
-      setAuthError('Hatalı yetkili şifresi! (Varsayılan: admin2026 veya kpss)');
+      setAuthError('Hatalı yetkili şifresi! Lütfen tekrar deneyiniz.');
     }
   };
 
@@ -89,59 +282,262 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
     sessionStorage.removeItem('kpss_admin_auth');
   };
 
-  const loadSubjects = async () => {
-    const list = await api.getSubjects();
-    setSubjects(list);
-    if (list.length > 0 && !selectedSubjectId) {
-      setSelectedSubjectId(list[0].id);
+  const handleChangeAdminPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newAdminPassword.trim().length < 4) {
+      setAdminPasswordMsg('Şifre en az 4 karakter olmalıdır.');
+      return;
+    }
+    localStorage.setItem(ADMIN_PASS_KEY, newAdminPassword.trim());
+    setAdminPasswordMsg('Yönetici şifresi başarıyla güncellendi!');
+    setNewAdminPassword('');
+    setTimeout(() => setAdminPasswordMsg(''), 4000);
+  };
+
+  // ----------------------------------------------------
+  // 8. DERS (SUBJECT) CRUD
+  // ----------------------------------------------------
+  const handleCreateSubject = async () => {
+    const title = newSubjectTitle.trim();
+    if (!title) return;
+    try {
+      const res = await api.adminCreateSubject(title);
+      setNewSubjectTitle('');
+      await loadAllSubjects();
+      notify(`"${title}" dersi başarıyla eklendi!`);
+    } catch (err) {
+      notify('Ders eklenirken bir hata oluştu', 'error');
     }
   };
 
-  const loadUnits = async (subId: string) => {
-    const list = await api.getUnits(subId);
-    setUnits(list);
-    if (list.length > 0) {
-      setSelectedUnitId(list[0].id);
-      loadTopics(list[0].id);
-    } else {
-      setSelectedUnitId('');
-      setTopics([]);
-      setSelectedTopicId('');
-      setQuestions([]);
+  const handleUpdateSubject = async () => {
+    if (!editingSubject || !editingSubject.title.trim()) return;
+    try {
+      await api.adminUpdateSubject(editingSubject.id, editingSubject.title.trim());
+      setEditingSubject(null);
+      await loadAllSubjects();
+      notify('Ders bilgisi güncellendi.');
+    } catch (e) {
+      notify('Ders güncellenemedi', 'error');
     }
   };
 
-  const loadTopics = async (uId: string) => {
-    const list = await api.getTopics(uId);
-    setTopics(list);
-    if (list.length > 0) {
-      setSelectedTopicId(list[0].id);
-      loadQuestions(list[0].id);
-    } else {
-      setSelectedTopicId('');
-      loadQuestions(uId);
+  const handleDeleteSubject = async (id: string, title: string) => {
+    if (!confirm(`"${title}" dersini ve buna bağlı tüm alt içerikleri silmek istediğinize emin misiniz?`)) return;
+    try {
+      await api.adminDeleteSubject(id);
+      if (selectedSubjectId === id) setSelectedSubjectId('');
+      await loadAllSubjects();
+      notify(`"${title}" dersi silindi.`);
+    } catch (e) {
+      notify('Ders silinirken hata oluştu', 'error');
     }
   };
 
-  const loadQuestions = async (uId: string) => {
-    const list = await api.getQuestions(uId);
-    setQuestions(list);
+  // ----------------------------------------------------
+  // 9. ÜNİTE (UNIT) CRUD
+  // ----------------------------------------------------
+  const handleCreateUnit = async () => {
+    const title = newUnitTitle.trim();
+    if (!title || !selectedSubjectId) {
+      alert('Lütfen ünite başlığı giriniz.');
+      return;
+    }
+    try {
+      const unitNumber = units.length + 1;
+      await api.adminCreateUnit(selectedSubjectId, title, unitNumber);
+      setNewUnitTitle('');
+      await loadUnitsForSubject(selectedSubjectId);
+      notify(`"${title}" ünitesi başarıyla eklendi.`);
+    } catch (e) {
+      notify('Ünite eklenemedi', 'error');
+    }
   };
 
-  const loadErrorStats = async () => {
-    const data = await api.adminGetErrorPoolStats();
-    setErrorPoolStats(data);
+  const handleUpdateUnit = async () => {
+    if (!editingUnit || !editingUnit.title.trim()) return;
+    try {
+      await api.adminUpdateUnit(editingUnit.id, editingUnit.title.trim(), editingUnit.unitNumber);
+      setEditingUnit(null);
+      await loadUnitsForSubject(selectedSubjectId);
+      notify('Ünite bilgisi güncellendi.');
+    } catch (e) {
+      notify('Ünite güncellenemedi', 'error');
+    }
   };
 
-  // 20 Soruluk Örnek Paketi Yükle
-  const handleUploadSample20Package = async () => {
+  const handleDeleteUnit = async (id: string, title: string) => {
+    if (!confirm(`"${title}" ünitesini silmek istediğinize emin misiniz?`)) return;
+    try {
+      await api.adminDeleteUnit(id);
+      if (selectedUnitId === id) setSelectedUnitId('');
+      await loadUnitsForSubject(selectedSubjectId);
+      notify(`"${title}" ünitesi silindi.`);
+    } catch (e) {
+      notify('Ünite silinemedi', 'error');
+    }
+  };
+
+  // ----------------------------------------------------
+  // 10. KONU (TOPIC) CRUD
+  // ----------------------------------------------------
+  const handleCreateTopic = async () => {
+    const title = newTopicTitle.trim();
+    if (!title || !selectedUnitId) {
+      alert('Lütfen konu başlığı giriniz.');
+      return;
+    }
+    try {
+      const topicNumber = topics.length + 1;
+      await api.adminCreateTopic(selectedUnitId, title, topicNumber);
+      setNewTopicTitle('');
+      await loadTopicsForUnit(selectedUnitId);
+      notify(`"${title}" konusu başarıyla eklendi.`);
+    } catch (e) {
+      notify('Konu eklenemedi', 'error');
+    }
+  };
+
+  const handleUpdateTopic = async () => {
+    if (!editingTopic || !editingTopic.title.trim()) return;
+    try {
+      await api.adminUpdateTopic(editingTopic.id, editingTopic.title.trim(), editingTopic.topicNumber);
+      setEditingTopic(null);
+      await loadTopicsForUnit(selectedUnitId);
+      notify('Konu bilgisi güncellendi.');
+    } catch (e) {
+      notify('Konu güncellenemedi', 'error');
+    }
+  };
+
+  const handleDeleteTopic = async (id: string, title: string) => {
+    if (!confirm(`"${title}" konusunu silmek istediğinize emin misiniz?`)) return;
+    try {
+      await api.adminDeleteTopic(id);
+      if (selectedTopicId === id) setSelectedTopicId('');
+      await loadTopicsForUnit(selectedUnitId);
+      notify(`"${title}" konusu silindi.`);
+    } catch (e) {
+      notify('Konu silinemedi', 'error');
+    }
+  };
+
+  // ----------------------------------------------------
+  // 11. TEKİL SORU (QUESTION) CRUD
+  // ----------------------------------------------------
+  const openNewQuestionModal = () => {
+    setEditingQuestionId(null);
+    setQFormText('');
+    setQFormA('');
+    setQFormB('');
+    setQFormC('');
+    setQFormD('');
+    setQFormE('');
+    setQFormCorrect('A');
+    setQFormExplanation('');
+    setShowQuestionModal(true);
+  };
+
+  const openEditQuestionModal = (q: Question) => {
+    setEditingQuestionId(q.id);
+    setQFormText(q.questionText);
+    const getOpt = (id: OptionId) => q.options.find((o) => o.id === id)?.text || '';
+    setQFormA(getOpt('A'));
+    setQFormB(getOpt('B'));
+    setQFormC(getOpt('C'));
+    setQFormD(getOpt('D'));
+    setQFormE(getOpt('E'));
+    setQFormCorrect(q.correctOption);
+    setQFormExplanation(q.explanation || '');
+    setShowQuestionModal(true);
+  };
+
+  const handleSaveQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetId = selectedTopicId || selectedUnitId;
+    if (!targetId) {
+      alert('Lütfen soru eklenecek bir ünite veya konu seçiniz.');
+      return;
+    }
+    if (!qFormText.trim()) {
+      alert('Lütfen soru metnini yazınız.');
+      return;
+    }
+    if (!qFormA.trim() || !qFormB.trim() || !qFormC.trim() || !qFormD.trim() || !qFormE.trim()) {
+      alert('Lütfen 5 seçeneğin (A, B, C, D, E) tamamını doldurunuz.');
+      return;
+    }
+
+    const questionData: Question = {
+      id: editingQuestionId || `${targetId}-q${questions.length + 1}`,
+      unitId: selectedUnitId,
+      topicId: selectedTopicId || undefined,
+      questionNumber: editingQuestionId
+        ? questions.find((q) => q.id === editingQuestionId)?.questionNumber || 1
+        : questions.length + 1,
+      questionText: qFormText.trim(),
+      options: [
+        { id: 'A', text: qFormA.trim() },
+        { id: 'B', text: qFormB.trim() },
+        { id: 'C', text: qFormC.trim() },
+        { id: 'D', text: qFormD.trim() },
+        { id: 'E', text: qFormE.trim() },
+      ],
+      correctOption: qFormCorrect,
+      explanation: qFormExplanation.trim(),
+    };
+
+    try {
+      if (editingQuestionId) {
+        await api.adminUpdateQuestion(questionData);
+        notify('Soru başarıyla güncellendi.');
+      } else {
+        await api.adminCreateQuestion(questionData);
+        notify('Yeni soru başarıyla eklendi.');
+      }
+      setShowQuestionModal(false);
+      loadQuestionsForTarget(targetId);
+    } catch (err) {
+      notify('Soru kaydedilirken bir hata oluştu', 'error');
+    }
+  };
+
+  const handleDeleteQuestion = async (id: string) => {
+    if (!confirm('Bu soruyu silmek istediğinize emin misiniz?')) return;
+    try {
+      await api.adminDeleteQuestion(id);
+      const targetId = selectedTopicId || selectedUnitId;
+      await loadQuestionsForTarget(targetId);
+      notify('Soru başarıyla silindi.');
+    } catch (e) {
+      notify('Soru silinemedi', 'error');
+    }
+  };
+
+  const handleDeleteAllQuestions = async () => {
+    if (!confirm('Bu konudaki/ünitedeki TÜM sorular silinecektir! Emin misiniz?')) return;
+    try {
+      for (const q of questions) {
+        await api.adminDeleteQuestion(q.id);
+      }
+      const targetId = selectedTopicId || selectedUnitId;
+      await loadQuestionsForTarget(targetId);
+      notify('Tüm sorular temizlendi.');
+    } catch (e) {
+      notify('Sorular silinirken hata oluştu', 'error');
+    }
+  };
+
+  // ----------------------------------------------------
+  // 12. PAKET YÖNETİMİ & JSON TOPLU İÇE / DIŞA AKTARMA
+  // ----------------------------------------------------
+  const handleUploadSample20 = async () => {
     const targetId = selectedTopicId || selectedUnitId;
     if (!targetId) {
       alert('Lütfen önce bir ünite veya konu seçiniz.');
       return;
     }
 
-    setPackageMessage(null);
     const questionsToUpload: Question[] = SAMPLE_20_QUESTIONS.map((q, idx) => ({
       id: `${targetId}-q${idx + 1}`,
       unitId: selectedUnitId,
@@ -155,665 +551,1498 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
 
     const res = await api.adminUpload20QuestionPackage(targetId, questionsToUpload, !!selectedTopicId);
     if (res.success) {
-      setPackageMessage({
-        type: 'success',
-        text: `Tebrikler! ${res.count} soruluk soru paketi başarıyla yüklendi.`,
-      });
-      loadQuestions(targetId);
+      notify(`20 Soruluk KPSS paketi başarıyla yüklendi! (${res.count} soru)`);
+      loadQuestionsForTarget(targetId);
     } else {
-      setPackageMessage({
-        type: 'error',
-        text: `Hata: ${res.error || 'Paket yüklenemedi.'}`,
-      });
+      notify(`Paket yükleme hatası: ${res.error}`, 'error');
     }
   };
 
-  const handleDeleteAllUnitQuestions = async () => {
-    if (!confirm('Bu alandaki tüm sorular silinecektir. Emin misiniz?')) return;
-    for (const q of questions) {
-      await api.adminDeleteQuestion(q.id);
+  const validateAndParseJson = (raw: string) => {
+    if (!raw.trim()) {
+      setJsonValidationResult(null);
+      return null;
     }
-    const targetId = selectedTopicId || selectedUnitId;
-    loadQuestions(targetId);
+    try {
+      const parsed = JSON.parse(raw);
+      const arr = Array.isArray(parsed) ? parsed : parsed.questions || [];
+      if (!Array.isArray(arr) || arr.length === 0) {
+        setJsonValidationResult({ valid: false, count: 0, error: 'JSON geçerli bir soru dizisi içermiyor.' });
+        return null;
+      }
+      // Basit şema kontrolü
+      const valid = arr.every(
+        (item: any) =>
+          typeof item.questionText === 'string' &&
+          Array.isArray(item.options) &&
+          item.options.length >= 2 &&
+          item.correctOption
+      );
+      if (!valid) {
+        setJsonValidationResult({
+          valid: false,
+          count: 0,
+          error: "Her soru 'questionText', 'options' ([{id, text}]) ve 'correctOption' içermelidir.",
+        });
+        return null;
+      }
+      setJsonValidationResult({ valid: true, count: arr.length });
+      return arr;
+    } catch (e: any) {
+      setJsonValidationResult({ valid: false, count: 0, error: 'Geçersiz JSON formatı: ' + e.message });
+      return null;
+    }
   };
 
-  const handleDeleteSingleQuestion = async (qId: string) => {
-    await api.adminDeleteQuestion(qId);
-    const targetId = selectedTopicId || selectedUnitId;
-    loadQuestions(targetId);
+  const handleJsonInputChange = (val: string) => {
+    setJsonInput(val);
+    validateAndParseJson(val);
   };
 
-  const handleAddSingleQuestion = async () => {
-    if (!formText.trim()) return;
+  const handleImportJson = async () => {
     const targetId = selectedTopicId || selectedUnitId;
-    const newQ: Question = {
-      id: `${targetId}-q${questions.length + 1}_${Date.now()}`,
+    if (!targetId) {
+      alert('Lütfen önce bir ünite veya konu seçiniz.');
+      return;
+    }
+    const parsedList = validateAndParseJson(jsonInput);
+    if (!parsedList || parsedList.length === 0) {
+      alert('Lütfen geçerli bir JSON soru listesi yapıştırınız.');
+      return;
+    }
+
+    const formatted: Question[] = parsedList.map((item: any, idx: number) => ({
+      id: item.id || `${targetId}-json-q${idx + 1}-${Date.now()}`,
       unitId: selectedUnitId,
       topicId: selectedTopicId || undefined,
-      questionNumber: questions.length + 1,
-      questionText: formText.trim(),
-      options: [
-        { id: 'A', text: formA.trim() },
-        { id: 'B', text: formB.trim() },
-        { id: 'C', text: formC.trim() },
-        { id: 'D', text: formD.trim() },
-        { id: 'E', text: formE.trim() },
+      questionNumber: idx + 1,
+      questionText: item.questionText,
+      options: item.options,
+      correctOption: item.correctOption,
+      explanation: item.explanation || '',
+    }));
+
+    const res = await api.adminUpload20QuestionPackage(targetId, formatted, !!selectedTopicId);
+    if (res.success) {
+      notify(`Tebrikler! ${res.count} adet soru JSON üzerinden başarıyla yüklendi!`);
+      setJsonInput('');
+      setJsonValidationResult(null);
+      loadQuestionsForTarget(targetId);
+      setActiveTab('questions');
+    } else {
+      notify(`İçe aktarma hatası: ${res.error}`, 'error');
+    }
+  };
+
+  const copySampleJsonTemplate = () => {
+    const sample = JSON.stringify(
+      [
+        {
+          questionText: 'Örnek soru metni buraya yazılır?',
+          options: [
+            { id: 'A', text: 'Seçenek A' },
+            { id: 'B', text: 'Seçenek B' },
+            { id: 'C', text: 'Seçenek C' },
+            { id: 'D', text: 'Seçenek D' },
+            { id: 'E', text: 'Seçenek E' },
+          ],
+          correctOption: 'A',
+          explanation: 'Ayrıntılı soru çözümü ve açıklaması.',
+        },
       ],
-      correctOption: formCorrect,
-      explanation: formExplanation.trim(),
-    };
-
-    await api.adminCreateQuestion(newQ);
-    setShowQuestionModal(false);
-    loadQuestions(targetId);
+      null,
+      2
+    );
+    navigator.clipboard.writeText(sample);
+    notify('Örnek JSON şablonu panoya kopyalandı.');
   };
 
-  const handleCreateSubject = async () => {
-    try {
-      const title = newSubjectTitle.trim();
-      if (!title) return;
-
-      console.log('🚀 [AdminPanel] Yeni ders ekleniyor:', { title });
-      const res = await api.adminCreateSubject(title);
-
-      setNewSubjectTitle('');
-      await loadSubjects();
-
-      if (res.isLocal) {
-        setPackageMessage({
-          type: 'success',
-          text: `"${title}" dersi başarıyla eklendi! (Yerel veritabanına kaydedildi)`,
-        });
-      } else {
-        setPackageMessage({
-          type: 'success',
-          text: `"${title}" dersi Supabase bulut veritabanına başarıyla eklendi!`,
-        });
-      }
-    } catch (err) {
-      console.error('💥 [AdminPanel] handleCreateSubject içerisinde beklenmeyen hata:', err);
-      alert('Ders ekleme işlemi sırasında beklenmeyen bir hata meydana geldi.');
+  const handleExportQuestions = () => {
+    if (questions.length === 0) {
+      alert('Dışa aktarılacak soru bulunmuyor.');
+      return;
     }
+    const cleanList = questions.map(({ questionNumber, questionText, options, correctOption, explanation }) => ({
+      questionNumber,
+      questionText,
+      options,
+      correctOption,
+      explanation,
+    }));
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(cleanList, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute(
+      'download',
+      `kpss_sorulari_${selectedTopicId || selectedUnitId || 'sorular'}.json`
+    );
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    notify(`${questions.length} soru JSON dosyası olarak indirildi.`);
   };
 
-  const handleDeleteSubject = async (id: string) => {
-    try {
-      if (!confirm('Bu dersi silmek istediğinize emin misiniz?')) return;
-      console.log('🗑️ [AdminPanel] Ders siliniyor:', { id });
-      await api.adminDeleteSubject(id);
-      await loadSubjects();
-    } catch (err) {
-      console.error('💥 [AdminPanel] handleDeleteSubject hatası:', err);
+  // ----------------------------------------------------
+  // 13. SİSTEM & ÖĞRENCİ VERİLERİ
+  // ----------------------------------------------------
+  const handleResetStudentData = () => {
+    if (!confirm('Öğrencinin tüm soru çözüm geçmişi, haftalık istatistikleri sıfırlanacaktır. Emin misiniz?')) {
+      return;
     }
+    userProfileService.resetProgressData();
+    notify('Öğrenci ilerleme verileri başarıyla sıfırlandı.');
   };
 
-  const handleCreateUnit = async () => {
-    try {
-      const title = newUnitTitle.trim();
-      if (!title || !selectedSubjectId) {
-        alert('Lütfen ünite başlığı giriniz ve bir dersin seçili olduğundan emin olunuz.');
-        return;
-      }
-
-      const unitNumber = units.length + 1;
-      console.log('🚀 [AdminPanel] Yeni ünite ekleniyor:', {
-        subjectId: selectedSubjectId,
-        title,
-        unitNumber,
-      });
-
-      const res = await api.adminCreateUnit(selectedSubjectId, title, unitNumber);
-
-      setNewUnitTitle('');
-      await loadUnits(selectedSubjectId);
-
-      if (res.isLocal) {
-        setPackageMessage({
-          type: 'success',
-          text: `"${title}" ünitesi başarıyla eklendi! (Yerel veritabanına kaydedildi)`,
-        });
-      } else {
-        setPackageMessage({
-          type: 'success',
-          text: `"${title}" ünitesi Supabase bulut veritabanına başarıyla eklendi!`,
-        });
-      }
-    } catch (err) {
-      console.error('💥 [AdminPanel] handleCreateUnit içerisinde beklenmeyen hata:', err);
-      alert('Ünite ekleme işlemi sırasında beklenmeyen bir hata meydana geldi.');
+  const handleSaveSecretKey = () => {
+    if (!secretInput.trim()) {
+      alert('Lütfen secret key giriniz.');
+      return;
     }
+    setAdminSecretKey(secretInput.trim());
+    setIsSecretActive(true);
+    setShowSecretModal(false);
+    setSecretInput('');
+    notify('Supabase Admin Secret Key kaydedildi.');
   };
 
-  const handleDeleteUnit = async (id: string) => {
-    try {
-      if (!confirm('Bu üniteyi silmek istediğinize emin misiniz?')) return;
-      console.log('🗑️ [AdminPanel] Ünite siliniyor:', { id });
-      const res = await api.adminDeleteUnit(id);
-      if (!res.success) {
-        console.error('❌ [AdminPanel] Ünite silinemedi:', res.error);
-        alert(`Ünite silinemedi: ${res.error}`);
-        return;
-      }
-      await loadUnits(selectedSubjectId);
-    } catch (err) {
-      console.error('💥 [AdminPanel] handleDeleteUnit hatası:', err);
-    }
+  const handleClearSecretKey = () => {
+    setAdminSecretKey('');
+    setIsSecretActive(false);
+    setShowSecretModal(false);
+    notify('Secret Key kaldırıldı.');
   };
 
-  const handleCreateTopic = async () => {
-    try {
-      const title = newTopicTitle.trim();
-      if (!title || !selectedUnitId) {
-        alert('Lütfen konu başlığı giriniz ve bir ünitenin seçili olduğundan emin olunuz.');
-        return;
-      }
+  // ----------------------------------------------------
+  // FİLTRELENMİŞ SORULAR
+  // ----------------------------------------------------
+  const filteredQuestions = useMemo(() => {
+    if (!questionSearchQuery.trim()) return questions;
+    const q = questionSearchQuery.toLowerCase();
+    return questions.filter(
+      (item) =>
+        item.questionText.toLowerCase().includes(q) ||
+        item.options.some((opt) => opt.text.toLowerCase().includes(q)) ||
+        item.explanation?.toLowerCase().includes(q)
+    );
+  }, [questions, questionSearchQuery]);
 
-      const topicNumber = topics.length + 1;
-      const res = await api.adminCreateTopic(selectedUnitId, title, topicNumber);
+  // Mevcut Seçim İsimleri
+  const currentSubject = subjects.find((s) => s.id === selectedSubjectId);
+  const currentUnit = units.find((u) => u.id === selectedUnitId);
+  const currentTopic = topics.find((t) => t.id === selectedTopicId);
 
-      setNewTopicTitle('');
-      await loadTopics(selectedUnitId);
-
-      if (res.isLocal) {
-        setPackageMessage({
-          type: 'success',
-          text: `"${title}" konusu başarıyla eklendi! (Yerel veritabanına kaydedildi)`,
-        });
-      } else {
-        setPackageMessage({
-          type: 'success',
-          text: `"${title}" konusu Supabase bulut veritabanına başarıyla eklendi!`,
-        });
-      }
-    } catch (err) {
-      console.error('💥 [AdminPanel] handleCreateTopic hatası:', err);
-      alert('Konu ekleme sırasında bir hata meydana geldi.');
-    }
-  };
-
-  const handleDeleteTopic = async (id: string) => {
-    try {
-      if (!confirm('Bu konuyu silmek istediğinize emin misiniz?')) return;
-      const res = await api.adminDeleteTopic(id);
-      if (!res.success) {
-        alert(`Konu silinemedi: ${res.error}`);
-        return;
-      }
-      await loadTopics(selectedUnitId);
-    } catch (err) {
-      console.error('💥 [AdminPanel] handleDeleteTopic hatası:', err);
-    }
-  };
-
-  // YETKİ GİRİŞ EKRANI
+  // ----------------------------------------------------
+  // GİRİŞ EKRANI (AUTH GATE)
+  // ----------------------------------------------------
   if (!isAuthenticated) {
     return (
-      <div style={styles.loginContainer}>
+      <div style={styles.loginBackdrop}>
         <div style={styles.loginCard}>
-          <div style={styles.loginBadge}>🔒 YETKİLİ GİRİŞİ</div>
-          <h2 style={{ fontSize: '20px', margin: '12px 0 6px', color: '#111827' }}>KPSS Yönetici Paneli</h2>
-          <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 20px' }}>
-            Bu alana sadece yetkili eğitim ve içerik yöneticileri erişebilir.
+          <div style={styles.loginIconBox}>
+            <ShieldCheck size={36} color="#4F46E5" />
+          </div>
+          <div style={styles.loginBadge}>KPSS YÖNETİCİ GİRİŞİ</div>
+          <h2 style={styles.loginTitle}>Admin Kontrol Merkezi</h2>
+          <p style={styles.loginSubtitle}>
+            İçerik, soru bankası ve sınav müfredatını yönetmek için lütfen yetkili şifrenizi giriniz.
           </p>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <input
-              type="password"
-              placeholder="Yetkili Giriş Şifresi"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              style={styles.loginInput}
-              autoFocus
-            />
+          <form onSubmit={handleLogin} style={{ width: '100%' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.label}>Yönetici Şifresi</label>
+              <input
+                type="password"
+                placeholder="Şifrenizi giriniz..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                style={styles.inputField}
+                autoFocus
+              />
+            </div>
 
-            {authError && <div style={styles.loginError}>{authError}</div>}
+            {authError && (
+              <div style={styles.loginErrorBox}>
+                <AlertCircle size={16} color="#DC2626" style={{ marginRight: '8px', flexShrink: 0 }} />
+                <span>{authError}</span>
+              </div>
+            )}
 
-            <button type="submit" style={styles.loginButton}>
+            <button type="submit" style={styles.loginBtn}>
               Giriş Yap →
             </button>
           </form>
 
-          <button onClick={onNavigateStudent} style={styles.backToStudentBtn}>
-            ← Öğrenci Arayüzüne Dön
-          </button>
+          <div style={styles.loginFooter}>
+            <button onClick={onNavigateStudent} style={styles.backLinkBtn}>
+              <ArrowLeft size={15} style={{ marginRight: '6px' }} />
+              Öğrenci Arayüzüne Dön
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ADMİN PANELİ ANA GÖRÜNÜMÜ
+  // ----------------------------------------------------
+  // ANA ADMİN PANELİ GÖRÜNÜMÜ
+  // ----------------------------------------------------
   return (
-    <div style={styles.adminOuter}>
-      {/* Üst Yönetim Çubuğu */}
-      <header style={styles.adminHeader}>
-        <div style={styles.adminHeaderInner}>
+    <div style={styles.adminContainer}>
+      {/* TOAST / BİLDİRİM BANNER */}
+      {notification && (
+        <div
+          style={{
+            ...styles.toastBanner,
+            backgroundColor:
+              notification.type === 'success'
+                ? '#10B981'
+                : notification.type === 'error'
+                ? '#EF4444'
+                : '#3B82F6',
+          }}
+        >
+          {notification.type === 'success' && <CheckCircle size={18} color="#fff" style={{ marginRight: '8px' }} />}
+          {notification.type === 'error' && <AlertCircle size={18} color="#fff" style={{ marginRight: '8px' }} />}
+          <span>{notification.message}</span>
+        </div>
+      )}
+
+      {/* SOL SİDEBAR (NAVİGASYON) */}
+      <aside style={styles.sidebar}>
+        {/* Logo & Başlık */}
+        <div style={styles.sidebarBrand}>
+          <div style={styles.brandIconBox}>
+            <Layers size={22} color="#FFFFFF" />
+          </div>
+          <div>
+            <div style={styles.brandTitle}>KPSS Panel</div>
+            <div style={styles.brandBadge}>YÖNETİCİ MERKEZİ</div>
+          </div>
+        </div>
+
+        {/* Menü Öğeleri */}
+        <nav style={styles.sidebarNav}>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'dashboard' ? '#1E293B' : 'transparent',
+              color: activeTab === 'dashboard' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'dashboard' ? 600 : 400,
+            }}
+          >
+            <LayoutDashboard size={18} color={activeTab === 'dashboard' ? '#818CF8' : '#64748B'} />
+            <span>Genel Bakış</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('curriculum')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'curriculum' ? '#1E293B' : 'transparent',
+              color: activeTab === 'curriculum' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'curriculum' ? 600 : 400,
+            }}
+          >
+            <FolderTree size={18} color={activeTab === 'curriculum' ? '#818CF8' : '#64748B'} />
+            <span>Müfredat &amp; İçerik</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('questions')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'questions' ? '#1E293B' : 'transparent',
+              color: activeTab === 'questions' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'questions' ? 600 : 400,
+            }}
+          >
+            <HelpCircle size={18} color={activeTab === 'questions' ? '#818CF8' : '#64748B'} />
+            <span>Soru Bankası</span>
+            {questions.length > 0 && <span style={styles.navCountBadge}>{questions.length}</span>}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('bulk_packages')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'bulk_packages' ? '#1E293B' : 'transparent',
+              color: activeTab === 'bulk_packages' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'bulk_packages' ? 600 : 400,
+            }}
+          >
+            <PackagePlus size={18} color={activeTab === 'bulk_packages' ? '#818CF8' : '#64748B'} />
+            <span>Toplu Paket &amp; JSON</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('error_pool')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'error_pool' ? '#1E293B' : 'transparent',
+              color: activeTab === 'error_pool' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'error_pool' ? 600 : 400,
+            }}
+          >
+            <AlertTriangle size={18} color={activeTab === 'error_pool' ? '#818CF8' : '#64748B'} />
+            <span>Hata Havuzu Analizi</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('student_data')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'student_data' ? '#1E293B' : 'transparent',
+              color: activeTab === 'student_data' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'student_data' ? 600 : 400,
+            }}
+          >
+            <Users size={18} color={activeTab === 'student_data' ? '#818CF8' : '#64748B'} />
+            <span>Öğrenci &amp; Veri</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('system_settings')}
+            style={{
+              ...styles.navItem,
+              backgroundColor: activeTab === 'system_settings' ? '#1E293B' : 'transparent',
+              color: activeTab === 'system_settings' ? '#FFFFFF' : '#94A3B8',
+              fontWeight: activeTab === 'system_settings' ? 600 : 400,
+            }}
+          >
+            <Settings size={18} color={activeTab === 'system_settings' ? '#818CF8' : '#64748B'} />
+            <span>Sistem &amp; Veritabanı</span>
+          </button>
+        </nav>
+
+        {/* Sidebar Alt Butonlar */}
+        <div style={styles.sidebarFooter}>
+          <button onClick={onNavigateStudent} style={styles.sidebarStudentBtn}>
+            <ArrowLeft size={16} style={{ marginRight: '8px' }} />
+            Öğrenci Görünümü
+          </button>
+          <button onClick={handleLogout} style={styles.sidebarLogoutBtn}>
+            <LogOut size={16} style={{ marginRight: '8px' }} />
+            Oturumu Kapat
+          </button>
+        </div>
+      </aside>
+
+      {/* SAĞ ANA İÇERİK ALANI */}
+      <div style={styles.mainWrapper}>
+        {/* ÜST HEADER */}
+        <header style={styles.topHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={styles.adminTag}>ADMİN</span>
-            <span style={{ fontWeight: 'bold', fontSize: '16px' }}>KPSS İçerik & Soru Yönetim Paneli</span>
-            <span style={{ ...styles.cloudDot, backgroundColor: isCloud ? '#16A34A' : '#EAB308' }}></span>
-            <span style={{ fontSize: '12px', color: '#6B7280' }}>
-              {isCloud ? 'Supabase Bağlı' : 'Yerel Mod'}
-            </span>
+            <h1 style={styles.headerTitle}>
+              {activeTab === 'dashboard' && 'Genel Bakış & İstatistikler'}
+              {activeTab === 'curriculum' && 'Müfredat & İçerik Düzenleyici'}
+              {activeTab === 'questions' && 'Soru Bankası & Yönetimi'}
+              {activeTab === 'bulk_packages' && 'Toplu Paket Yükleme & JSON'}
+              {activeTab === 'error_pool' && 'Hata Havuzu & Raporlama'}
+              {activeTab === 'student_data' && 'Öğrenci & Test İlerleme Yönetimi'}
+              {activeTab === 'system_settings' && 'Sistem & Depolama Ayarları'}
+            </h1>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Supabase Bulut Durumu Rozeti */}
+            <div
+              style={{
+                ...styles.statusBadge,
+                backgroundColor: isCloud ? '#ECFDF5' : '#FEF9C3',
+                borderColor: isCloud ? '#A7F3D0' : '#FDE047',
+                color: isCloud ? '#065F46' : '#854D0E',
+              }}
+              title={isCloud ? 'Supabase Bulut Veritabanı Aktif' : 'Tarayıcı Yerel Depolama (LocalStorage) Aktif'}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: isCloud ? '#10B981' : '#EAB308',
+                }}
+              />
+              <span>{isCloud ? 'Bulut Bağlı' : 'Yerel Mod'}</span>
+            </div>
+
+            {/* Secret Key Butonu */}
             <button
               onClick={() => setShowSecretModal(true)}
               style={{
-                ...styles.headerBtn,
-                backgroundColor: isSecretActive ? '#DCFCE7' : '#F3F4F6',
-                color: isSecretActive ? '#15803D' : '#374151',
-                borderColor: isSecretActive ? '#86EFAC' : '#E5E7EB',
-                fontWeight: isSecretActive ? 'bold' : 'normal',
+                ...styles.headerActionBtn,
+                backgroundColor: isSecretActive ? '#EEF2FF' : '#F8FAFC',
+                borderColor: isSecretActive ? '#C7D2FE' : '#E2E8F0',
+                color: isSecretActive ? '#4338CA' : '#475569',
               }}
             >
-              {isSecretActive ? '🔑 Secret Key Aktif' : '🔑 Secret Key (RLS Bypass)'}
-            </button>
-            <button onClick={onNavigateStudent} style={styles.headerBtn}>
-              Öğrenci Görünümü →
-            </button>
-            <button onClick={handleLogout} style={styles.logoutBtn}>
-              Çıkış
+              <Key size={14} style={{ marginRight: '6px' }} />
+              {isSecretActive ? 'Secret Key Aktif' : 'Secret Key Ekle'}
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Sekmeler */}
-      <div style={styles.tabsNav}>
-        <div style={styles.tabsNavInner}>
-          <button
-            onClick={() => setActiveTab('packages')}
-            style={{ ...styles.tabBtn, borderBottomColor: activeTab === 'packages' ? '#111827' : 'transparent', fontWeight: activeTab === 'packages' ? 'bold' : 'normal' }}
-          >
-            📦 20 Soruluk Paket Yönetimi
-          </button>
-          <button
-            onClick={() => setActiveTab('subjects_units')}
-            style={{ ...styles.tabBtn, borderBottomColor: activeTab === 'subjects_units' ? '#111827' : 'transparent', fontWeight: activeTab === 'subjects_units' ? 'bold' : 'normal' }}
-          >
-            📚 Ders, Ünite & Konu Düzenleyici
-          </button>
-          <button
-            onClick={() => setActiveTab('error_pool')}
-            style={{ ...styles.tabBtn, borderBottomColor: activeTab === 'error_pool' ? '#111827' : 'transparent', fontWeight: activeTab === 'error_pool' ? 'bold' : 'normal' }}
-          >
-            ⚠️ Hata Havuzu Analitiği
-          </button>
-        </div>
-      </div>
-
-      {/* İçerik Alanı */}
-      <main style={styles.adminMain}>
-        {/* 1. 20 SORULUK PAKET YÖNETİMİ */}
-        {activeTab === 'packages' && (
-          <div style={styles.tabContent}>
-            {/* Ünite Seçim Barı */}
-            <div style={styles.selectorCard}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <div>
-                  <label style={styles.label}>Ders:</label>
-                  <select
-                    value={selectedSubjectId}
-                    onChange={(e) => setSelectedSubjectId(e.target.value)}
-                    style={styles.selectInput}
-                  >
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>{s.title}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={styles.label}>Ünite:</label>
-                  <select
-                    value={selectedUnitId}
-                    onChange={(e) => setSelectedUnitId(e.target.value)}
-                    style={styles.selectInput}
-                  >
-                    {units.map((u) => (
-                      <option key={u.id} value={u.id}>{u.unitNumber}. {u.title}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {topics.length > 0 && (
+        {/* İÇERİK GÖVDE BÖLÜMÜ */}
+        <main style={styles.scrollContent}>
+          {/* ============================================================== */}
+          {/* 1. SEKME: DASHBOARD (GENEL BAKIŞ) */}
+          {/* ============================================================== */}
+          {activeTab === 'dashboard' && (
+            <div>
+              {/* İstatistik Kartları */}
+              <div style={styles.statsGrid}>
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#EEF2FF' }}>
+                    <BookOpen size={22} color="#4F46E5" />
+                  </div>
                   <div>
-                    <label style={styles.label}>Konu:</label>
-                    <select
-                      value={selectedTopicId}
-                      onChange={(e) => setSelectedTopicId(e.target.value)}
-                      style={styles.selectInput}
+                    <div style={styles.statLabel}>Toplam Ders</div>
+                    <div style={styles.statValue}>{subjects.length}</div>
+                  </div>
+                </div>
+
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#F0FDF4' }}>
+                    <Layers size={22} color="#16A34A" />
+                  </div>
+                  <div>
+                    <div style={styles.statLabel}>Aktif Ünite</div>
+                    <div style={styles.statValue}>{units.length}</div>
+                  </div>
+                </div>
+
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#FEF3C7' }}>
+                    <FolderTree size={22} color="#D97706" />
+                  </div>
+                  <div>
+                    <div style={styles.statLabel}>Aktif Konu</div>
+                    <div style={styles.statValue}>{topics.length}</div>
+                  </div>
+                </div>
+
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#F3E8FF' }}>
+                    <HelpCircle size={22} color="#9333EA" />
+                  </div>
+                  <div>
+                    <div style={styles.statLabel}>Seçili Alandaki Soru</div>
+                    <div style={styles.statValue}>{questions.length}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hızlı İşlemler Paneli */}
+              <div style={styles.sectionCard}>
+                <h3 style={styles.sectionTitle}>Hızlı Yönetim Kısayolları</h3>
+                <p style={styles.sectionSub}>Sık kullanılan yönetim işlemlerini tek tıkla başlatın.</p>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
+                  <button
+                    onClick={() => setActiveTab('curriculum')}
+                    style={styles.actionPillBtn}
+                  >
+                    <Plus size={16} color="#4F46E5" style={{ marginRight: '8px' }} />
+                    Yeni Ders / Ünite Ekle
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('questions');
+                      openNewQuestionModal();
+                    }}
+                    style={styles.actionPillBtn}
+                  >
+                    <HelpCircle size={16} color="#059669" style={{ marginRight: '8px' }} />
+                    Yeni Soru Yaz
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('bulk_packages')}
+                    style={styles.actionPillBtn}
+                  >
+                    <PackagePlus size={16} color="#D97706" style={{ marginRight: '8px' }} />
+                    20 Soruluk Paket Yükle
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('student_data')}
+                    style={styles.actionPillBtn}
+                  >
+                    <Users size={16} color="#7C3AED" style={{ marginRight: '8px' }} />
+                    Öğrenci Verilerini İncele
+                  </button>
+                </div>
+              </div>
+
+              {/* Sistem Özeti */}
+              <div style={styles.twoColGrid}>
+                <div style={styles.sectionCard}>
+                  <h3 style={styles.sectionTitle}>Veritabanı &amp; Depolama</h3>
+                  <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Depolama Motoru:</span>
+                      <span style={styles.infoValue}>{isCloud ? 'Supabase PostgreSQL' : 'Yerel Hafıza (LocalStorage)'}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>RLS Secret Bypass:</span>
+                      <span style={styles.infoValue}>{isSecretActive ? 'Etkin (Admin Yetkisi Var)' : 'Pasif'}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Seçili Ders:</span>
+                      <span style={styles.infoValue}>{currentSubject?.title || 'Seçilmedi'}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Seçili Ünite:</span>
+                      <span style={styles.infoValue}>{currentUnit ? `${currentUnit.unitNumber}. ${currentUnit.title}` : 'Seçilmedi'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.sectionCard}>
+                  <h3 style={styles.sectionTitle}>Hata Havuzu Özeti</h3>
+                  <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Çözülmemiş Hatalı Soru:</span>
+                      <span style={{ ...styles.infoValue, color: '#DC2626', fontWeight: 700 }}>
+                        {errorPoolStats?.unresolvedCount || 0}
+                      </span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Çözülmüş Hatalar:</span>
+                      <span style={{ ...styles.infoValue, color: '#16A34A', fontWeight: 700 }}>
+                        {errorPoolStats?.resolvedCount || 0}
+                      </span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Son Test Kontrolü:</span>
+                      <span style={styles.infoValue}>Güncel</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* 2. SEKME: MÜFREDAT & İÇERİK YÖNETİMİ (DERS > ÜNİTE > KONU) */}
+          {/* ============================================================== */}
+          {activeTab === 'curriculum' && (
+            <div>
+              <div style={styles.curriculumGrid}>
+                {/* 1. KOLON: DERSLER */}
+                <div style={styles.columnCard}>
+                  <div style={styles.columnHeader}>
+                    <div>
+                      <h3 style={styles.columnTitle}>1. Dersler ({subjects.length})</h3>
+                      <p style={styles.columnSub}>Genel Yetenek / Kültür</p>
+                    </div>
+                  </div>
+
+                  {/* Yeni Ders Ekleme Formu */}
+                  <div style={styles.inlineAddBox}>
+                    <input
+                      type="text"
+                      placeholder="Yeni Ders Adı..."
+                      value={newSubjectTitle}
+                      onChange={(e) => setNewSubjectTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateSubject()}
+                      style={styles.inlineInput}
+                    />
+                    <button onClick={handleCreateSubject} style={styles.inlineAddBtn} title="Ders Ekle">
+                      <Plus size={16} />
+                    </button>
+                  </div>
+
+                  {/* Ders Listesi */}
+                  <div style={styles.itemsList}>
+                    {subjects.map((sub) => {
+                      const isSelected = sub.id === selectedSubjectId;
+                      return (
+                        <div
+                          key={sub.id}
+                          onClick={() => setSelectedSubjectId(sub.id)}
+                          style={{
+                            ...styles.itemCard,
+                            borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
+                            backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: isSelected ? 700 : 500, color: '#0F172A', fontSize: '14px' }}>
+                              {sub.title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                              {sub.totalUnits || 0} Ünite
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingSubject(sub);
+                              }}
+                              style={styles.iconActionBtn}
+                              title="Dersi Düzenle"
+                            >
+                              <Edit3 size={14} color="#64748B" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSubject(sub.id, sub.title);
+                              }}
+                              style={{ ...styles.iconActionBtn, color: '#EF4444' }}
+                              title="Dersi Sil"
+                            >
+                              <Trash2 size={14} color="#EF4444" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. KOLON: ÜNİTELER */}
+                <div style={styles.columnCard}>
+                  <div style={styles.columnHeader}>
+                    <div>
+                      <h3 style={styles.columnTitle}>2. Üniteler ({units.length})</h3>
+                      <p style={styles.columnSub}>{currentSubject?.title || 'Ders Seçiniz'}</p>
+                    </div>
+                  </div>
+
+                  {/* Yeni Ünite Ekleme Formu */}
+                  <div style={styles.inlineAddBox}>
+                    <input
+                      type="text"
+                      placeholder="Yeni Ünite Başlığı..."
+                      value={newUnitTitle}
+                      onChange={(e) => setNewUnitTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateUnit()}
+                      style={styles.inlineInput}
+                      disabled={!selectedSubjectId}
+                    />
+                    <button
+                      onClick={handleCreateUnit}
+                      style={{ ...styles.inlineAddBtn, opacity: selectedSubjectId ? 1 : 0.5 }}
+                      disabled={!selectedSubjectId}
+                      title="Ünite Ekle"
                     >
-                      {topics.map((t) => (
-                        <option key={t.id} value={t.id}>{t.topicNumber}. {t.title}</option>
+                      <Plus size={16} />
+                    </button>
+                  </div>
+
+                  {/* Ünite Listesi */}
+                  <div style={styles.itemsList}>
+                    {units.length === 0 && (
+                      <div style={styles.emptyNotice}>Bu derse ait ünite bulunamadı.</div>
+                    )}
+                    {units.map((unit) => {
+                      const isSelected = unit.id === selectedUnitId;
+                      return (
+                        <div
+                          key={unit.id}
+                          onClick={() => setSelectedUnitId(unit.id)}
+                          style={{
+                            ...styles.itemCard,
+                            borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
+                            backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: isSelected ? 700 : 500, color: '#0F172A', fontSize: '14px' }}>
+                              {unit.unitNumber}. {unit.title}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingUnit(unit);
+                              }}
+                              style={styles.iconActionBtn}
+                              title="Üniteyi Düzenle"
+                            >
+                              <Edit3 size={14} color="#64748B" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUnit(unit.id, unit.title);
+                              }}
+                              style={{ ...styles.iconActionBtn, color: '#EF4444' }}
+                              title="Üniteyi Sil"
+                            >
+                              <Trash2 size={14} color="#EF4444" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. KOLON: KONULAR */}
+                <div style={styles.columnCard}>
+                  <div style={styles.columnHeader}>
+                    <div>
+                      <h3 style={styles.columnTitle}>3. Konular ({topics.length})</h3>
+                      <p style={styles.columnSub}>{currentUnit?.title || 'Ünite Seçiniz'}</p>
+                    </div>
+                  </div>
+
+                  {/* Yeni Konu Ekleme Formu */}
+                  <div style={styles.inlineAddBox}>
+                    <input
+                      type="text"
+                      placeholder="Yeni Konu Başlığı..."
+                      value={newTopicTitle}
+                      onChange={(e) => setNewTopicTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateTopic()}
+                      style={styles.inlineInput}
+                      disabled={!selectedUnitId}
+                    />
+                    <button
+                      onClick={handleCreateTopic}
+                      style={{ ...styles.inlineAddBtn, opacity: selectedUnitId ? 1 : 0.5 }}
+                      disabled={!selectedUnitId}
+                      title="Konu Ekle"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+
+                  {/* Konu Listesi */}
+                  <div style={styles.itemsList}>
+                    {topics.length === 0 && (
+                      <div style={styles.emptyNotice}>Bu üniteye ait konu bulunamadı.</div>
+                    )}
+                    {topics.map((topic) => {
+                      const isSelected = topic.id === selectedTopicId;
+                      return (
+                        <div
+                          key={topic.id}
+                          onClick={() => setSelectedTopicId(topic.id)}
+                          style={{
+                            ...styles.itemCard,
+                            borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
+                            backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: isSelected ? 700 : 500, color: '#0F172A', fontSize: '14px' }}>
+                              {topic.topicNumber}. {topic.title}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                              {topic.questionCount || 20} Soru Hedefi
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTopic(topic);
+                              }}
+                              style={styles.iconActionBtn}
+                              title="Konuyu Düzenle"
+                            >
+                              <Edit3 size={14} color="#64748B" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTopic(topic.id, topic.title);
+                              }}
+                              style={{ ...styles.iconActionBtn, color: '#EF4444' }}
+                              title="Konuyu Sil"
+                            >
+                              <Trash2 size={14} color="#EF4444" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* 3. SEKME: SORU BANKASI & YÖNETİMİ */}
+          {/* ============================================================== */}
+          {activeTab === 'questions' && (
+            <div>
+              {/* Filtreleme ve Hızlı Seçim Barı */}
+              <div style={styles.filterCard}>
+                <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {/* Ders Seçimi */}
+                  <div>
+                    <label style={styles.miniLabel}>Ders Seçiniz:</label>
+                    <select
+                      value={selectedSubjectId}
+                      onChange={(e) => setSelectedSubjectId(e.target.value)}
+                      style={styles.selectDropdown}
+                    >
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.id}>{s.title}</option>
                       ))}
                     </select>
                   </div>
+
+                  {/* Ünite Seçimi */}
+                  <div>
+                    <label style={styles.miniLabel}>Ünite Seçiniz:</label>
+                    <select
+                      value={selectedUnitId}
+                      onChange={(e) => setSelectedUnitId(e.target.value)}
+                      style={styles.selectDropdown}
+                    >
+                      {units.map((u) => (
+                        <option key={u.id} value={u.id}>{u.unitNumber}. {u.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Konu Seçimi */}
+                  {topics.length > 0 && (
+                    <div>
+                      <label style={styles.miniLabel}>Konu Seçiniz:</label>
+                      <select
+                        value={selectedTopicId}
+                        onChange={(e) => setSelectedTopicId(e.target.value)}
+                        style={styles.selectDropdown}
+                      >
+                        {topics.map((t) => (
+                          <option key={t.id} value={t.id}>{t.topicNumber}. {t.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Soru Arama */}
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <label style={styles.miniLabel}>Soru Metninde Ara:</label>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+                      <input
+                        type="text"
+                        placeholder="Anahtar kelime..."
+                        value={questionSearchQuery}
+                        onChange={(e) => setQuestionSearchQuery(e.target.value)}
+                        style={{ ...styles.inputField, paddingLeft: '32px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aksiyon Butonları */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '13px', color: '#475569' }}>
+                    Toplam <b>{filteredQuestions.length}</b> soru listeleniyor.
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={openNewQuestionModal} style={styles.primaryBtn}>
+                      <Plus size={16} style={{ marginRight: '6px' }} />
+                      + Yeni Soru Ekle
+                    </button>
+
+                    <button onClick={handleUploadSample20} style={styles.secondaryBtn}>
+                      <PackagePlus size={16} style={{ marginRight: '6px' }} />
+                      20 Soruluk Paket Yükle
+                    </button>
+
+                    {questions.length > 0 && (
+                      <button onClick={handleExportQuestions} style={styles.secondaryBtn} title="JSON İndir">
+                        <Download size={16} style={{ marginRight: '6px' }} />
+                        Dışa Aktar (JSON)
+                      </button>
+                    )}
+
+                    {questions.length > 0 && (
+                      <button onClick={handleDeleteAllQuestions} style={styles.dangerBtn}>
+                        <Trash2 size={16} style={{ marginRight: '6px' }} />
+                        Tümünü Sil
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Soru Kartları Listesi */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+                {filteredQuestions.length === 0 ? (
+                  <div style={styles.emptyCard}>
+                    <HelpCircle size={40} color="#94A3B8" style={{ marginBottom: '12px' }} />
+                    <div style={{ fontSize: '16px', fontWeight: 600, color: '#334155' }}>Bu alanda henüz soru bulunmuyor</div>
+                    <p style={{ fontSize: '13px', color: '#64748B', maxWidth: '400px', margin: '6px 0 16px' }}>
+                      Yukarıdaki butonları kullanarak tekil soru ekleyebilir veya tek tıkla 20 soruluk KPSS paketini yükleyebilirsiniz.
+                    </p>
+                    <button onClick={openNewQuestionModal} style={styles.primaryBtn}>
+                      + İlk Soruyu Ekle
+                    </button>
+                  </div>
+                ) : (
+                  filteredQuestions.map((q, idx) => (
+                    <div key={q.id} style={styles.questionCard}>
+                      <div style={styles.questionCardHeader}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={styles.qNumberPill}>Soru {q.questionNumber || idx + 1}</span>
+                          <span style={styles.qCorrectPill}>Doğru Cevap: <b>{q.correctOption}</b></span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => openEditQuestionModal(q)}
+                            style={styles.iconActionBtn}
+                            title="Soruyu Düzenle"
+                          >
+                            <Edit3 size={15} color="#4F46E5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQuestion(q.id)}
+                            style={{ ...styles.iconActionBtn, color: '#EF4444' }}
+                            title="Soruyu Sil"
+                          >
+                            <Trash2 size={15} color="#EF4444" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Soru Metni */}
+                      <div style={styles.questionBodyText}>{q.questionText}</div>
+
+                      {/* Seçenekler Listesi */}
+                      <div style={styles.optionsListGrid}>
+                        {q.options.map((opt) => {
+                          const isCorrect = opt.id === q.correctOption;
+                          return (
+                            <div
+                              key={opt.id}
+                              style={{
+                                ...styles.optionPreviewItem,
+                                backgroundColor: isCorrect ? '#ECFDF5' : '#F8FAFC',
+                                borderColor: isCorrect ? '#6EE7B7' : '#E2E8F0',
+                                fontWeight: isCorrect ? 600 : 400,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  ...styles.optionPreviewBadge,
+                                  backgroundColor: isCorrect ? '#10B981' : '#E2E8F0',
+                                  color: isCorrect ? '#FFFFFF' : '#475569',
+                                }}
+                              >
+                                {opt.id}
+                              </span>
+                              <span style={{ fontSize: '13px', color: '#1E293B' }}>{opt.text}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Çözüm / Açıklama */}
+                      {q.explanation && (
+                        <div style={styles.explanationBox}>
+                          <span style={{ fontWeight: 600, color: '#4F46E5', fontSize: '12px' }}>Açıklama / Çözüm: </span>
+                          <span style={{ fontSize: '12px', color: '#334155' }}>{q.explanation}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Hızlı Paket Aksiyonları */}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={handleUploadSample20Package} style={styles.uploadPackageBtn}>
-                  ⚡ 20 Soruluk Hazır Paketi Yükle
-                </button>
-                <button onClick={() => setShowQuestionModal(true)} style={styles.addQuestionBtn}>
-                  + Tekil Soru Ekle
-                </button>
-                {questions.length > 0 && (
-                  <button onClick={handleDeleteAllUnitQuestions} style={styles.deleteAllBtn}>
-                    Tümünü Sil
+          {/* ============================================================== */}
+          {/* 4. SEKME: TOPLU PAKET & JSON İÇE / DIŞA AKTARMA */}
+          {/* ============================================================== */}
+          {activeTab === 'bulk_packages' && (
+            <div>
+              <div style={styles.twoColGrid}>
+                {/* Sol: 20 Soruluk Örnek Paket */}
+                <div style={styles.sectionCard}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <div style={{ ...styles.statIconBox, backgroundColor: '#EEF2FF' }}>
+                      <PackagePlus size={22} color="#4F46E5" />
+                    </div>
+                    <div>
+                      <h3 style={styles.sectionTitle}>Tek Tıkla 20 Soru Paketi</h3>
+                      <p style={styles.sectionSub}>Özenle hazırlanmış KPSS GY-GK soru setini yükleyin.</p>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', color: '#475569' }}>
+                    Seçili Konu: <b>{currentTopic?.title || currentUnit?.title || 'Seçilmedi'}</b>
+                    <br />
+                    Bu işlem seçili konunun mevcut sorularını sıfırlayarak 20 adet standart KPSS sorusu ekler.
+                  </div>
+
+                  <button onClick={handleUploadSample20} style={{ ...styles.primaryBtn, width: '100%', justifyContent: 'center' }}>
+                    <PackagePlus size={16} style={{ marginRight: '8px' }} />
+                    20 Soruluk Paketi Bu Konuya Yükle
                   </button>
+                </div>
+
+                {/* Sağ: JSON Dışa Aktar */}
+                <div style={styles.sectionCard}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <div style={{ ...styles.statIconBox, backgroundColor: '#F0FDF4' }}>
+                      <Download size={22} color="#16A34A" />
+                    </div>
+                    <div>
+                      <h3 style={styles.sectionTitle}>Soruları JSON Olarak İndir</h3>
+                      <p style={styles.sectionSub}>Mevcut sorularınızı yedekleyin veya başka bir alana aktarın.</p>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', color: '#475569' }}>
+                    Seçili alanda <b>{questions.length}</b> soru mevcut. Dosya formatı standart JSON formatında dışa aktarılır.
+                  </div>
+
+                  <button
+                    onClick={handleExportQuestions}
+                    disabled={questions.length === 0}
+                    style={{ ...styles.secondaryBtn, width: '100%', justifyContent: 'center', opacity: questions.length === 0 ? 0.5 : 1 }}
+                  >
+                    <Download size={16} style={{ marginRight: '8px' }} />
+                    Mevcut Soruları JSON İndir
+                  </button>
+                </div>
+              </div>
+
+              {/* Alt: JSON Yapıştırarak Toplu Yükleme */}
+              <div style={{ ...styles.sectionCard, marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h3 style={styles.sectionTitle}>Özel JSON Yapıştırarak Toplu Soru Yükleme</h3>
+                    <p style={styles.sectionSub}>Kendi hazırladığınız JSON soru formatını doğrudan yapıştırıp aktarabilirsiniz.</p>
+                  </div>
+                  <button onClick={copySampleJsonTemplate} style={styles.secondaryBtn}>
+                    <Copy size={14} style={{ marginRight: '6px' }} />
+                    Örnek Formatı Kopyala
+                  </button>
+                </div>
+
+                <textarea
+                  rows={8}
+                  placeholder={`[\n  {\n    "questionText": "Soru metni...",\n    "options": [\n      { "id": "A", "text": "Cevap A" },\n      { "id": "B", "text": "Cevap B" },\n      { "id": "C", "text": "Cevap C" },\n      { "id": "D", "text": "Cevap D" },\n      { "id": "E", "text": "Cevap E" }\n    ],\n    "correctOption": "A",\n    "explanation": "Çözüm açıklaması..."\n  }\n]`}
+                  value={jsonInput}
+                  onChange={(e) => handleJsonInputChange(e.target.value)}
+                  style={{ ...styles.inputField, fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
+                />
+
+                {/* Doğrulama Durumu */}
+                {jsonValidationResult && (
+                  <div
+                    style={{
+                      marginTop: '10px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      backgroundColor: jsonValidationResult.valid ? '#ECFDF5' : '#FEF2F2',
+                      borderColor: jsonValidationResult.valid ? '#A7F3D0' : '#FECACA',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      color: jsonValidationResult.valid ? '#065F46' : '#991B1B',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {jsonValidationResult.valid ? (
+                      <>
+                        <CheckCircle size={16} style={{ marginRight: '8px' }} />
+                        Format Geçerli: Toplam <b>{jsonValidationResult.count}</b> soru tespit edildi.
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={16} style={{ marginRight: '8px' }} />
+                        {jsonValidationResult.error}
+                      </>
+                    )}
+                  </div>
                 )}
-              </div>
-            </div>
 
-            {packageMessage && (
-              <div style={{ ...styles.alertBox, backgroundColor: packageMessage.type === 'success' ? '#F0FDF4' : '#FEF2F2', borderColor: packageMessage.type === 'success' ? '#16A34A' : '#DC2626' }}>
-                {packageMessage.text}
-              </div>
-            )}
-
-            {/* Soru Listesi Tablosu */}
-            <div style={styles.tableBox}>
-              <div style={styles.tableHeaderRow}>
-                <div style={{ fontWeight: 'bold', fontSize: '15px' }}>
-                  {selectedTopicId ? 'Seçili Konudaki Sorular' : 'Seçili Ünitedeki Sorular'} ({questions.length} / 20 Soru)
-                </div>
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                  Supabase tablosu: questions &bull; {selectedTopicId ? `topic_id: ${selectedTopicId}` : `unit_id: ${selectedUnitId}`}
-                </div>
-              </div>
-
-              {questions.length === 0 ? (
-                <div style={{ padding: '36px', textAlign: 'center', color: '#9CA3AF' }}>
-                  Bu alanda henüz soru bulunmuyor. Yukarıdaki butonu kullanarak 20 soruluk paket yükleyebilirsiniz.
-                </div>
-              ) : (
-                <div style={styles.questionRowsList}>
-                  {questions.map((q) => (
-                    <div key={q.id} style={styles.qRow}>
-                      <div style={styles.qNumber}>#{q.questionNumber}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px' }}>{q.questionText}</div>
-                        <div style={{ fontSize: '12px', color: '#16A34A', fontWeight: 'bold' }}>
-                          Doğru Şık: {q.correctOption} &bull; Açıklama: {q.explanation}
-                        </div>
-                      </div>
-                      <button onClick={() => handleDeleteSingleQuestion(q.id)} style={styles.deleteSmallBtn}>
-                        Sil
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 2. DERS, ÜNİTE & KONU YÖNETİMİ */}
-        {activeTab === 'subjects_units' && (
-          <div style={styles.tabContent}>
-            <div style={styles.tripleGrid}>
-              {/* Dersler */}
-              <div style={styles.panelCard}>
-                <h3 style={styles.cardHeading}>Dersler ({subjects.length})</h3>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                  <input
-                    type="text"
-                    placeholder="Yeni Ders Adı"
-                    value={newSubjectTitle}
-                    onChange={(e) => setNewSubjectTitle(e.target.value)}
-                    style={styles.textInput}
-                  />
-                  <button onClick={handleCreateSubject} style={styles.saveBtn}>
-                    Ekle
+                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={handleImportJson}
+                    disabled={!jsonValidationResult?.valid}
+                    style={{
+                      ...styles.primaryBtn,
+                      opacity: jsonValidationResult?.valid ? 1 : 0.5,
+                      cursor: jsonValidationResult?.valid ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    <Upload size={16} style={{ marginRight: '8px' }} />
+                    Soruları Sisteme Yükle
                   </button>
-                </div>
-
-                <div style={styles.itemsList}>
-                  {subjects.map((sub) => (
-                    <div
-                      key={sub.id}
-                      onClick={() => setSelectedSubjectId(sub.id)}
-                      style={{
-                        ...styles.itemRow,
-                        cursor: 'pointer',
-                        backgroundColor: selectedSubjectId === sub.id ? '#F3F4F6' : '#FFFFFF',
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontWeight: 600 }}>{sub.title}</span>
-                        <span style={{ fontSize: '12px', color: '#6B7280', marginLeft: '6px' }}>({sub.id})</span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSubject(sub.id);
-                        }}
-                        style={styles.deleteSmallBtn}
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Üniteler */}
-              <div style={styles.panelCard}>
-                <h3 style={styles.cardHeading}>
-                  Üniteler ({units.length})
-                  {selectedSubjectId && (
-                    <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#6B7280', display: 'block', marginTop: '2px' }}>
-                      Seçili Ders: {subjects.find((s) => s.id === selectedSubjectId)?.title || selectedSubjectId}
-                    </span>
-                  )}
-                </h3>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                  <input
-                    type="text"
-                    placeholder="Yeni Ünite Adı"
-                    value={newUnitTitle}
-                    onChange={(e) => setNewUnitTitle(e.target.value)}
-                    style={styles.textInput}
-                  />
-                  <button onClick={handleCreateUnit} style={styles.saveBtn}>
-                    Ekle
-                  </button>
-                </div>
-
-                <div style={styles.itemsList}>
-                  {units.map((u) => (
-                    <div
-                      key={u.id}
-                      onClick={() => setSelectedUnitId(u.id)}
-                      style={{
-                        ...styles.itemRow,
-                        cursor: 'pointer',
-                        backgroundColor: selectedUnitId === u.id ? '#F3F4F6' : '#FFFFFF',
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontWeight: 600 }}>{u.unitNumber}. {u.title}</span>
-                        <span style={{ fontSize: '11px', color: u.isCompleted ? '#16A34A' : '#6B7280', marginLeft: '6px' }}>
-                          {u.isCompleted ? '✓ Tamamlandı' : u.isLocked ? 'Kilitli' : 'Açık'}
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteUnit(u.id);
-                        }}
-                        style={styles.deleteSmallBtn}
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Konular */}
-              <div style={styles.panelCard}>
-                <h3 style={styles.cardHeading}>
-                  Konular ({topics.length})
-                  {selectedUnitId && (
-                    <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#6B7280', display: 'block', marginTop: '2px' }}>
-                      Seçili Ünite: {units.find((u) => u.id === selectedUnitId)?.title || selectedUnitId}
-                    </span>
-                  )}
-                </h3>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                  <input
-                    type="text"
-                    placeholder="Yeni Konu Adı"
-                    value={newTopicTitle}
-                    onChange={(e) => setNewTopicTitle(e.target.value)}
-                    style={styles.textInput}
-                  />
-                  <button onClick={handleCreateTopic} style={styles.saveBtn}>
-                    Ekle
-                  </button>
-                </div>
-
-                <div style={styles.itemsList}>
-                  {topics.map((t) => (
-                    <div
-                      key={t.id}
-                      onClick={() => setSelectedTopicId(t.id)}
-                      style={{
-                        ...styles.itemRow,
-                        cursor: 'pointer',
-                        backgroundColor: selectedTopicId === t.id ? '#F3F4F6' : '#FFFFFF',
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontWeight: 600 }}>{t.topicNumber}. {t.title}</span>
-                        <span style={{ fontSize: '11px', color: '#6B7280', marginLeft: '6px' }}>
-                          ({t.questionCount || 20} soru)
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTopic(t.id);
-                        }}
-                        style={styles.deleteSmallBtn}
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 3. HATA HAVUZU ANALİTİĞİ */}
-        {activeTab === 'error_pool' && (
-          <div style={styles.tabContent}>
-            <div style={styles.panelCard}>
-              <h3 style={styles.cardHeading}>Öğrenci Hata Analitiği (Supabase 'error_pool')</h3>
-              <div style={{ display: 'flex', gap: '20px', margin: '14px 0' }}>
-                <div style={styles.statBox}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>
-                    {errorPoolStats?.unresolvedCount ?? 0}
+          {/* ============================================================== */}
+          {/* 5. SEKME: HATA HAVUZU ANALİZİ */}
+          {/* ============================================================== */}
+          {activeTab === 'error_pool' && (
+            <div>
+              <div style={styles.statsGrid}>
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#FEF2F2' }}>
+                    <AlertTriangle size={22} color="#DC2626" />
                   </div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Bekleyen Hatalar</div>
-                </div>
-                <div style={styles.statBox}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16A34A' }}>
-                    {errorPoolStats?.resolvedCount ?? 0}
+                  <div>
+                    <div style={styles.statLabel}>Çözülmemiş Hatalı Soru</div>
+                    <div style={styles.statValue}>{errorPoolStats?.unresolvedCount || 0}</div>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Düzeltilen Sorular</div>
+                </div>
+
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#ECFDF5' }}>
+                    <CheckCircle size={22} color="#16A34A" />
+                  </div>
+                  <div>
+                    <div style={styles.statLabel}>Çözülmüş Hata</div>
+                    <div style={styles.statValue}>{errorPoolStats?.resolvedCount || 0}</div>
+                  </div>
+                </div>
+
+                <div style={styles.statCard}>
+                  <div style={{ ...styles.statIconBox, backgroundColor: '#EEF2FF' }}>
+                    <BarChart3 size={22} color="#4F46E5" />
+                  </div>
+                  <div>
+                    <div style={styles.statLabel}>Hata Havuzu Kaydı</div>
+                    <div style={styles.statValue}>{errorPoolStats?.list?.length || 0}</div>
+                  </div>
                 </div>
               </div>
 
-              {errorPoolStats?.list?.length > 0 ? (
-                <div style={styles.questionRowsList}>
-                  {errorPoolStats.list.map((item: any, i: number) => (
-                    <div key={i} style={styles.qRow}>
-                      <div style={{ ...styles.qNumber, color: '#DC2626' }}>{item.wrong_count}x</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: 500 }}>
-                          {item.questions?.question_text || `Soru ID: ${item.question_id}`}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>
-                          Seçilen: {item.selected_option} &bull; Doğru: {item.correct_option} &bull; Durum: {item.is_resolved ? 'Çözüldü' : 'Bekliyor'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF' }}>
-                  Kayıtlı öğrenci hatası bulunmuyor.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </main>
+              <div style={styles.sectionCard}>
+                <h3 style={styles.sectionTitle}>En Çok Hata Yapılan Sorular Listesi</h3>
+                <p style={styles.sectionSub}>Öğrencilerin testlerde yanlış cevapladığı soruların dökümü.</p>
 
-      {/* TEKİL SORU EKLEME MODALI */}
+                <div style={{ marginTop: '16px' }}>
+                  {(!errorPoolStats?.list || errorPoolStats.list.length === 0) ? (
+                    <div style={styles.emptyNotice}>Henüz kaydedilmiş hata analizi verisi bulunmuyor.</div>
+                  ) : (
+                    <table style={styles.dataTable}>
+                      <thead>
+                        <tr>
+                          <th style={styles.tableTh}>Soru No / ID</th>
+                          <th style={styles.tableTh}>Soru Metni</th>
+                          <th style={styles.tableTh}>Hata Sayısı</th>
+                          <th style={styles.tableTh}>Durum</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {errorPoolStats.list.map((item: any, i: number) => (
+                          <tr key={item.id || i} style={styles.tableTr}>
+                            <td style={styles.tableTd}>#{i + 1}</td>
+                            <td style={styles.tableTd}>
+                              {item.questions?.question_text || item.question_id || 'Soru Metni Yok'}
+                            </td>
+                            <td style={{ ...styles.tableTd, fontWeight: 700, color: '#DC2626' }}>
+                              {item.wrong_count || 1} kez
+                            </td>
+                            <td style={styles.tableTd}>
+                              <span
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  backgroundColor: item.is_resolved ? '#ECFDF5' : '#FEF2F2',
+                                  color: item.is_resolved ? '#065F46' : '#991B1B',
+                                }}
+                              >
+                                {item.is_resolved ? 'Çözüldü' : 'Bekliyor'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* 6. SEKME: ÖĞRENCİ VERİLERİ & TEST SIFIRLAMA */}
+          {/* ============================================================== */}
+          {activeTab === 'student_data' && (
+            <div>
+              <div style={styles.twoColGrid}>
+                {/* Öğrenci Profil Bilgisi */}
+                <div style={styles.sectionCard}>
+                  <h3 style={styles.sectionTitle}>Mevcut Öğrenci Profili</h3>
+                  <p style={styles.sectionSub}>Öğrenci arayüzünde aktif olarak kullanılan yerel profil.</p>
+
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Ad Soyad:</span>
+                      <span style={styles.infoValue}>{userProfileService.getProfile().name}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Kullanıcı Adı:</span>
+                      <span style={styles.infoValue}>@{userProfileService.getProfile().username}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Sınav Hedefi:</span>
+                      <span style={styles.infoValue}>{userProfileService.getProfile().examType}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Hedef Puan:</span>
+                      <span style={styles.infoValue}>{userProfileService.getProfile().targetScore}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Günlük Soru Hedefi:</span>
+                      <span style={styles.infoValue}>{userProfileService.getProfile().dailyGoal} Soru</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* İlerleme Verisi Sıfırlama */}
+                <div style={styles.sectionCard}>
+                  <h3 style={{ ...styles.sectionTitle, color: '#DC2626' }}>Öğrenci Test Verilerini Sıfırla</h3>
+                  <p style={styles.sectionSub}>Test çözme geçmişini, doğru/yanlış sayılarını ve başarı dağılımını temizleyin.</p>
+
+                  <div style={{ padding: '14px', backgroundColor: '#FEF2F2', borderRadius: '8px', margin: '16px 0', border: '1px solid #FECACA' }}>
+                    <div style={{ fontSize: '13px', color: '#991B1B', lineHeight: 1.5 }}>
+                      ⚠️ <b>Dikkat:</b> Bu işlem öğrencinin çözdüğü tüm testlerin istatistiklerini sıfırlar. Soru bankasındaki sorular silinmez, yalnızca çözülme istatistikleri sıfırlanır.
+                    </div>
+                  </div>
+
+                  <button onClick={handleResetStudentData} style={styles.dangerBtn}>
+                    <Trash2 size={16} style={{ marginRight: '8px' }} />
+                    Öğrenci İlerleme Verilerini Sıfırla
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* 7. SEKME: SİSTEM & VERİTABANI AYARLARI */}
+          {/* ============================================================== */}
+          {activeTab === 'system_settings' && (
+            <div>
+              <div style={styles.twoColGrid}>
+                {/* Supabase Ayarları */}
+                <div style={styles.sectionCard}>
+                  <h3 style={styles.sectionTitle}>Supabase Bulut Durumu</h3>
+                  <p style={styles.sectionSub}>PostgreSQL veritabanı bağlantısı ve kimlik doğrulama ayarları.</p>
+
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Bağlantı Durumu:</span>
+                      <span style={{ ...styles.infoValue, color: isCloud ? '#16A34A' : '#D97706', fontWeight: 600 }}>
+                        {isCloud ? 'Supabase Yapılandırılmış' : 'Çevrimdışı / Yerel Mod'}
+                      </span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <span style={styles.infoLabel}>Admin Secret Key:</span>
+                      <span style={styles.infoValue}>{isSecretActive ? 'Mevcut (RLS Bypass Aktif)' : 'Eksik'}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '18px' }}>
+                    <button onClick={() => setShowSecretModal(true)} style={styles.primaryBtn}>
+                      <Key size={16} style={{ marginRight: '8px' }} />
+                      Secret Key Yönetimi
+                    </button>
+                  </div>
+                </div>
+
+                {/* Yönetici Şifresini Değiştir */}
+                <div style={styles.sectionCard}>
+                  <h3 style={styles.sectionTitle}>Yönetici Giriş Şifresi</h3>
+                  <p style={styles.sectionSub}>Admin paneline giriş için kullanılan güvenlik şifresini değiştirin.</p>
+
+                  <form onSubmit={handleChangeAdminPassword} style={{ marginTop: '16px' }}>
+                    <label style={styles.label}>Yeni Yönetici Şifresi</label>
+                    <input
+                      type="password"
+                      placeholder="Yeni şifrenizi yazınız..."
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      style={styles.inputField}
+                    />
+
+                    {adminPasswordMsg && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          fontSize: '12px',
+                          color: adminPasswordMsg.includes('başarıyla') ? '#16A34A' : '#DC2626',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {adminPasswordMsg}
+                      </div>
+                    )}
+
+                    <button type="submit" style={{ ...styles.secondaryBtn, marginTop: '12px' }}>
+                      Şifreyi Güncelle
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* ============================================================== */}
+      {/* MODAL 1: TEKİL SORU EKLEME & DÜZENLEME MODALI */}
+      {/* ============================================================== */}
       {showQuestionModal && (
         <div style={styles.modalBackdrop}>
           <div style={styles.modalCard}>
-            <h3 style={{ margin: '0 0 12px' }}>
-              Yeni Soru Ekle
-              <span style={{ display: 'block', fontSize: '13px', fontWeight: 'normal', color: '#6B7280', marginTop: '4px' }}>
-                {units.find((u) => u.id === selectedUnitId)?.title || 'Seçili Ünite'}
-                {selectedTopicId && ` > ${topics.find((t) => t.id === selectedTopicId)?.title || ''}`}
-              </span>
-            </h3>
-            <textarea
-              placeholder="Soru Metni"
-              value={formText}
-              onChange={(e) => setFormText(e.target.value)}
-              style={styles.modalTextarea}
-            />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '12px 0' }}>
-              <input type="text" placeholder="A Şıkkı" value={formA} onChange={(e) => setFormA(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="B Şıkkı" value={formB} onChange={(e) => setFormB(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="C Şıkkı" value={formC} onChange={(e) => setFormC(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="D Şıkkı" value={formD} onChange={(e) => setFormD(e.target.value)} style={styles.modalInput} />
-              <input type="text" placeholder="E Şıkkı" value={formE} onChange={(e) => setFormE(e.target.value)} style={styles.modalInput} />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <label style={styles.label}>Doğru Şık:</label>
-              {(['A', 'B', 'C', 'D', 'E'] as OptionId[]).map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setFormCorrect(opt)}
-                  style={{
-                    ...styles.optSelectBtn,
-                    backgroundColor: formCorrect === opt ? '#16A34A' : '#F3F4F6',
-                    color: formCorrect === opt ? '#FFFFFF' : '#000000',
-                  }}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              placeholder="Detaylı Çözüm Açıklaması"
-              value={formExplanation}
-              onChange={(e) => setFormExplanation(e.target.value)}
-              style={styles.modalTextarea}
-            />
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
-              <button onClick={() => setShowQuestionModal(false)} style={styles.modalCancelBtn}>
-                Vazgeç
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>
+                {editingQuestionId ? 'Soruyu Düzenle' : 'Yeni KPSS Sorusu Ekle'}
+              </h2>
+              <button onClick={() => setShowQuestionModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
               </button>
-              <button onClick={handleAddSingleQuestion} style={styles.modalSaveBtn}>
+            </div>
+
+            <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={styles.label}>Soru Metni:</label>
+                <textarea
+                  rows={4}
+                  placeholder="Soru metnini detaylı şekilde yazınız..."
+                  value={qFormText}
+                  onChange={(e) => setQFormText(e.target.value)}
+                  style={styles.inputField}
+                  required
+                />
+              </div>
+
+              {/* Seçenekler A, B, C, D, E */}
+              <div>
+                <label style={styles.label}>Seçenekler (A - E):</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(['A', 'B', 'C', 'D', 'E'] as OptionId[]).map((optKey) => {
+                    const val =
+                      optKey === 'A'
+                        ? qFormA
+                        : optKey === 'B'
+                        ? qFormB
+                        : optKey === 'C'
+                        ? qFormC
+                        : optKey === 'D'
+                        ? qFormD
+                        : qFormE;
+                    const setter =
+                      optKey === 'A'
+                        ? setQFormA
+                        : optKey === 'B'
+                        ? setQFormB
+                        : optKey === 'C'
+                        ? setQFormC
+                        : optKey === 'D'
+                        ? setQFormD
+                        : setQFormE;
+
+                    const isChecked = qFormCorrect === optKey;
+
+                    return (
+                      <div key={optKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setQFormCorrect(optKey)}
+                          style={{
+                            ...styles.optionSelectBtn,
+                            backgroundColor: isChecked ? '#10B981' : '#F1F5F9',
+                            color: isChecked ? '#FFFFFF' : '#475569',
+                            borderColor: isChecked ? '#059669' : '#CBD5E1',
+                          }}
+                          title={`Doğru cevap olarak ${optKey} seç`}
+                        >
+                          {optKey} {isChecked && '✓'}
+                        </button>
+                        <input
+                          type="text"
+                          placeholder={`${optKey} Seçeneği metni...`}
+                          value={val}
+                          onChange={(e) => setter(e.target.value)}
+                          style={styles.inputField}
+                          required
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Doğru Cevap Seçici */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <label style={{ ...styles.label, margin: 0 }}>Belirlenen Doğru Cevap:</label>
+                <span style={styles.correctPillBadge}>{qFormCorrect} Seçeneği</span>
+              </div>
+
+              {/* Çözüm / Açıklama */}
+              <div>
+                <label style={styles.label}>Açıklama / Çözüm Rehberi:</label>
+                <textarea
+                  rows={2}
+                  placeholder="Öğrencinin soruyu anlaması için ayrıntılı çözüm notu..."
+                  value={qFormExplanation}
+                  onChange={(e) => setQFormExplanation(e.target.value)}
+                  style={styles.inputField}
+                />
+              </div>
+
+              <div style={styles.modalActions}>
+                <button type="button" onClick={() => setShowQuestionModal(false)} style={styles.secondaryBtn}>
+                  İptal
+                </button>
+                <button type="submit" style={styles.primaryBtn}>
+                  {editingQuestionId ? 'Güncellemeleri Kaydet' : 'Soruyu Ekle'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 2: DERS DÜZENLEME */}
+      {/* ============================================================== */}
+      {editingSubject && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: '400px' }}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Dersi Düzenle</h2>
+              <button onClick={() => setEditingSubject(null)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <div>
+              <label style={styles.label}>Ders Başlığı:</label>
+              <input
+                type="text"
+                value={editingSubject.title}
+                onChange={(e) => setEditingSubject({ ...editingSubject, title: e.target.value })}
+                style={styles.inputField}
+              />
+            </div>
+            <div style={styles.modalActions}>
+              <button onClick={() => setEditingSubject(null)} style={styles.secondaryBtn}>
+                İptal
+              </button>
+              <button onClick={handleUpdateSubject} style={styles.primaryBtn}>
                 Kaydet
               </button>
             </div>
@@ -821,56 +2050,133 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
         </div>
       )}
 
-      {/* SECRET KEY AYARLAMA MODALI */}
+      {/* ============================================================== */}
+      {/* MODAL 3: ÜNİTE DÜZENLEME */}
+      {/* ============================================================== */}
+      {editingUnit && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: '400px' }}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Üniteyi Düzenle</h2>
+              <button onClick={() => setEditingUnit(null)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={styles.label}>Ünite Numarası:</label>
+                <input
+                  type="number"
+                  value={editingUnit.unitNumber}
+                  onChange={(e) => setEditingUnit({ ...editingUnit, unitNumber: parseInt(e.target.value) || 1 })}
+                  style={styles.inputField}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Ünite Başlığı:</label>
+                <input
+                  type="text"
+                  value={editingUnit.title}
+                  onChange={(e) => setEditingUnit({ ...editingUnit, title: e.target.value })}
+                  style={styles.inputField}
+                />
+              </div>
+            </div>
+            <div style={styles.modalActions}>
+              <button onClick={() => setEditingUnit(null)} style={styles.secondaryBtn}>
+                İptal
+              </button>
+              <button onClick={handleUpdateUnit} style={styles.primaryBtn}>
+                Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 4: KONU DÜZENLEME */}
+      {/* ============================================================== */}
+      {editingTopic && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: '400px' }}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Konuyu Düzenle</h2>
+              <button onClick={() => setEditingTopic(null)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={styles.label}>Konu Numarası:</label>
+                <input
+                  type="number"
+                  value={editingTopic.topicNumber}
+                  onChange={(e) => setEditingTopic({ ...editingTopic, topicNumber: parseInt(e.target.value) || 1 })}
+                  style={styles.inputField}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Konu Başlığı:</label>
+                <input
+                  type="text"
+                  value={editingTopic.title}
+                  onChange={(e) => setEditingTopic({ ...editingTopic, title: e.target.value })}
+                  style={styles.inputField}
+                />
+              </div>
+            </div>
+            <div style={styles.modalActions}>
+              <button onClick={() => setEditingTopic(null)} style={styles.secondaryBtn}>
+                İptal
+              </button>
+              <button onClick={handleUpdateTopic} style={styles.primaryBtn}>
+                Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 5: SECRET KEY (RLS BYPASS) MODALI */}
+      {/* ============================================================== */}
       {showSecretModal && (
         <div style={styles.modalBackdrop}>
           <div style={{ ...styles.modalCard, maxWidth: '480px' }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: '18px' }}>🔑 Supabase Secret / Service Role Key</h3>
-            <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Supabase Dashboard &gt; <strong>Project Settings &rarr; API</strong> sayfasındaki <code>service_role / secret</code> anahtarınızı buraya yapıştırarak RLS güvenlik kurallarına takılmadan doğrudan veritabanına sınırsız yazma yetkisi kazandırabilirsiniz.
-            </p>
-            <input
-              type="password"
-              placeholder="sb_secret_... veya service_role key"
-              value={secretInput}
-              onChange={(e) => setSecretInput(e.target.value)}
-              style={{ ...styles.modalInput, marginBottom: '16px' }}
-            />
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowSecretModal(false)}
-                style={styles.modalCancelBtn}
-              >
-                Kapat
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Supabase Admin Secret Key</h2>
+              <button onClick={() => setShowSecretModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
               </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5 }}>
+              Supabase Row Level Security (RLS) kuralını doğrudan aşarak içerik yazmak ve silmek için{' '}
+              <b>service_role</b> anahtarınızı buraya girebilirsiniz. Bu anahtar sadece tarayıcınızın yerel hafızasında saklanır.
+            </p>
+
+            <div style={{ margin: '14px 0' }}>
+              <label style={styles.label}>Service Role / Secret Key:</label>
+              <input
+                type="password"
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                value={secretInput}
+                onChange={(e) => setSecretInput(e.target.value)}
+                style={styles.inputField}
+              />
+            </div>
+
+            <div style={styles.modalActions}>
               {isSecretActive && (
-                <button
-                  onClick={() => {
-                    setAdminSecretKey('');
-                    setIsSecretActive(false);
-                    setShowSecretModal(false);
-                    setPackageMessage({ type: 'success', text: 'Secret key temizlendi.' });
-                  }}
-                  style={{ ...styles.modalCancelBtn, color: '#DC2626', borderColor: '#FECACA' }}
-                >
-                  Kaldır
+                <button type="button" onClick={handleClearSecretKey} style={styles.dangerBtn}>
+                  Anahtarı Kaldır
                 </button>
               )}
-              <button
-                onClick={() => {
-                  if (secretInput.trim()) {
-                    setAdminSecretKey(secretInput.trim());
-                    setIsSecretActive(true);
-                    setShowSecretModal(false);
-                    setPackageMessage({
-                      type: 'success',
-                      text: 'Supabase Secret Key başarıyla kaydedildi! RLS engeli aşıldı.',
-                    });
-                    loadSubjects();
-                  }
-                }}
-                style={styles.modalSaveBtn}
-              >
+              <button type="button" onClick={() => setShowSecretModal(false)} style={styles.secondaryBtn}>
+                Vazgeç
+              </button>
+              <button type="button" onClick={handleSaveSecretKey} style={styles.primaryBtn}>
                 Kaydet
               </button>
             </div>
@@ -881,371 +2187,673 @@ export const AdminPanel: React.FC<{ onNavigateStudent: () => void }> = ({ onNavi
   );
 };
 
+// ----------------------------------------------------
+// MODERN STİL TANIMLARI
+// ----------------------------------------------------
 const styles: Record<string, React.CSSProperties> = {
-  loginContainer: {
+  adminContainer: {
+    display: 'flex',
     minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9F9FB',
-    padding: '16px',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   },
-  loginCard: {
-    width: '100%',
-    maxWidth: '380px',
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E5E7EB',
-    borderRadius: '12px',
-    padding: '28px',
-    textAlign: 'center',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-  },
-  loginBadge: {
-    display: 'inline-block',
-    padding: '4px 10px',
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: 'bold',
-  },
-  loginInput: {
-    height: '44px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    padding: '0 12px',
-    fontSize: '14px',
-    outline: 'none',
-  },
-  loginButton: {
-    height: '44px',
-    backgroundColor: '#111827',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  loginError: {
-    color: '#DC2626',
-    fontSize: '12px',
-  },
-  backToStudentBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#6B7280',
-    fontSize: '13px',
-    marginTop: '16px',
-    cursor: 'pointer',
-  },
-  adminOuter: {
-    minHeight: '100vh',
-    backgroundColor: '#F9F9FB',
-  },
-  adminHeader: {
-    backgroundColor: '#FFFFFF',
-    borderBottom: '1px solid #E5E7EB',
-    padding: '12px 24px',
-  },
-  adminHeaderInner: {
-    maxWidth: '1100px',
-    margin: '0 auto',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  adminTag: {
-    backgroundColor: '#111827',
-    color: '#FFFFFF',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: 'bold',
-  },
-  cloudDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '4px',
-    display: 'inline-block',
-    marginLeft: '6px',
-  },
-  headerBtn: {
-    padding: '6px 12px',
-    backgroundColor: '#F3F4F6',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    fontSize: '13px',
-    cursor: 'pointer',
-  },
-  logoutBtn: {
-    padding: '6px 12px',
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
-    border: '1px solid #FCA5A5',
-    borderRadius: '6px',
-    fontSize: '13px',
-    cursor: 'pointer',
-  },
-  tabsNav: {
-    backgroundColor: '#FFFFFF',
-    borderBottom: '1px solid #E5E7EB',
-  },
-  tabsNavInner: {
-    maxWidth: '1100px',
-    margin: '0 auto',
-    display: 'flex',
-    gap: '24px',
-    padding: '0 24px',
-  },
-  tabBtn: {
-    padding: '12px 4px',
-    background: 'none',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    fontSize: '14px',
-    cursor: 'pointer',
-  },
-  adminMain: {
-    maxWidth: '1100px',
-    margin: '0 auto',
-    padding: '24px',
-  },
-  tabContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  selectorCard: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E5E7EB',
-    borderRadius: '10px',
-    padding: '16px 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  label: {
-    fontSize: '13px',
-    fontWeight: 600,
-    marginRight: '6px',
-  },
-  selectInput: {
-    height: '38px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    padding: '0 10px',
-    fontSize: '13px',
-    backgroundColor: '#F9F9FB',
-    outline: 'none',
-  },
-  uploadPackageBtn: {
-    backgroundColor: '#16A34A',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-  },
-  addQuestionBtn: {
-    backgroundColor: '#111827',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: 500,
-    cursor: 'pointer',
-  },
-  deleteAllBtn: {
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
-    border: '1px solid #FCA5A5',
-    borderRadius: '6px',
-    padding: '8px 12px',
-    fontSize: '13px',
-    cursor: 'pointer',
-  },
-  alertBox: {
-    padding: '12px 16px',
-    borderRadius: '6px',
-    border: '1px solid',
-    fontSize: '13px',
-    fontWeight: 500,
-  },
-  tableBox: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E5E7EB',
-    borderRadius: '10px',
-    overflow: 'hidden',
-  },
-  tableHeaderRow: {
-    padding: '14px 20px',
-    borderBottom: '1px solid #E5E7EB',
-    backgroundColor: '#F9F9FB',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  questionRowsList: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  qRow: {
+  toastBanner: {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    zIndex: 9999,
     padding: '12px 20px',
-    borderBottom: '1px solid #E5E7EB',
+    borderRadius: '10px',
+    color: '#FFFFFF',
+    fontWeight: 600,
+    fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
-    gap: '14px',
+    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)',
   },
-  qNumber: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '4px',
-    backgroundColor: '#F3F4F6',
+  sidebar: {
+    width: '260px',
+    backgroundColor: '#0F172A',
+    color: '#F8FAFC',
+    display: 'flex',
+    flexDirection: 'column',
+    flexShrink: 0,
+    borderRight: '1px solid #1E293B',
+  },
+  sidebarBrand: {
+    padding: '24px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    borderBottom: '1px solid #1E293B',
+  },
+  brandIconBox: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
+    backgroundColor: '#4F46E5',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontWeight: 'bold',
-    fontSize: '12px',
-    flexShrink: 0,
+    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)',
   },
-  deleteSmallBtn: {
-    padding: '4px 8px',
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
-    border: '1px solid #FCA5A5',
-    borderRadius: '4px',
-    fontSize: '11px',
-    cursor: 'pointer',
-  },
-  dualGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '20px',
-  },
-  tripleGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
-  },
-  panelCard: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E5E7EB',
-    borderRadius: '10px',
-    padding: '20px',
-  },
-  cardHeading: {
-    margin: '0 0 12px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-  },
-  textInput: {
-    flex: 1,
-    height: '38px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    padding: '0 10px',
-    fontSize: '13px',
-    outline: 'none',
-  },
-  saveBtn: {
-    padding: '0 16px',
-    backgroundColor: '#111827',
+  brandTitle: {
+    fontSize: '17px',
+    fontWeight: 700,
     color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    fontSize: '13px',
-    cursor: 'pointer',
+    letterSpacing: '-0.3px',
   },
-  itemsList: {
+  brandBadge: {
+    fontSize: '10px',
+    fontWeight: 700,
+    color: '#818CF8',
+    letterSpacing: '0.8px',
+  },
+  sidebarNav: {
+    padding: '16px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    flex: 1,
+    overflowY: 'auto',
+  },
+  navItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '11px 14px',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '13px',
+    textAlign: 'left',
+    transition: 'all 0.15s ease',
+    width: '100%',
+  },
+  navCountBadge: {
+    marginLeft: 'auto',
+    backgroundColor: '#334155',
+    color: '#94A3B8',
+    fontSize: '11px',
+    fontWeight: 700,
+    padding: '2px 8px',
+    borderRadius: '12px',
+  },
+  sidebarFooter: {
+    padding: '16px 14px',
+    borderTop: '1px solid #1E293B',
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
   },
-  itemRow: {
-    padding: '10px 12px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statBox: {
-    padding: '16px 24px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '8px',
-    backgroundColor: '#F9F9FB',
-  },
-  modalBackdrop: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  sidebarStudentBtn: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px',
-    zIndex: 1000,
-  },
-  modalCard: {
     width: '100%',
-    maxWidth: '560px',
-    backgroundColor: '#FFFFFF',
-    borderRadius: '10px',
-    padding: '20px',
-  },
-  modalTextarea: {
-    width: '100%',
-    height: '60px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    padding: '8px',
-    fontSize: '13px',
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  modalInput: {
-    width: '100%',
-    height: '34px',
-    border: '1px solid #E5E7EB',
-    borderRadius: '6px',
-    padding: '0 8px',
-    fontSize: '13px',
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  optSelectBtn: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '4px',
-    border: '1px solid #E5E7EB',
-    fontWeight: 'bold',
+    padding: '9px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#1E293B',
+    color: '#E2E8F0',
+    border: '1px solid #334155',
+    fontSize: '12px',
+    fontWeight: 600,
     cursor: 'pointer',
   },
-  modalCancelBtn: {
-    padding: '8px 16px',
-    backgroundColor: '#F3F4F6',
+  sidebarLogoutBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    padding: '9px 14px',
+    borderRadius: '8px',
+    backgroundColor: 'transparent',
+    color: '#94A3B8',
     border: 'none',
-    borderRadius: '6px',
+    fontSize: '12px',
     cursor: 'pointer',
   },
-  modalSaveBtn: {
-    padding: '8px 18px',
-    backgroundColor: '#111827',
+  mainWrapper: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  topHeader: {
+    height: '64px',
+    backgroundColor: '#FFFFFF',
+    borderBottom: '1px solid #E2E8F0',
+    padding: '0 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexShrink: 0,
+  },
+  headerTitle: {
+    fontSize: '18px',
+    fontWeight: 700,
+    color: '#0F172A',
+    margin: 0,
+  },
+  statusBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '5px 10px',
+    borderRadius: '20px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    fontSize: '12px',
+    fontWeight: 600,
+  },
+  headerActionBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  scrollContent: {
+    flex: 1,
+    padding: '24px',
+    overflowY: 'auto',
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginBottom: '20px',
+  },
+  statCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    padding: '18px',
+    border: '1px solid #E2E8F0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+  },
+  statIconBox: {
+    width: '46px',
+    height: '46px',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: '#64748B',
+    fontWeight: 500,
+  },
+  statValue: {
+    fontSize: '22px',
+    fontWeight: 700,
+    color: '#0F172A',
+    marginTop: '2px',
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    padding: '20px',
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+  },
+  sectionTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#0F172A',
+    margin: '0 0 4px 0',
+  },
+  sectionSub: {
+    fontSize: '13px',
+    color: '#64748B',
+    margin: 0,
+  },
+  actionPillBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #E2E8F0',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#334155',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  twoColGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: '20px',
+    marginTop: '20px',
+  },
+  infoRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #F1F5F9',
+    fontSize: '13px',
+  },
+  infoLabel: {
+    color: '#64748B',
+  },
+  infoValue: {
+    fontWeight: 600,
+    color: '#0F172A',
+  },
+  curriculumGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '16px',
+  },
+  columnCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    border: '1px solid #E2E8F0',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: 'calc(100vh - 160px)',
+  },
+  columnHeader: {
+    marginBottom: '12px',
+  },
+  columnTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#0F172A',
+    margin: 0,
+  },
+  columnSub: {
+    fontSize: '12px',
+    color: '#64748B',
+    margin: '2px 0 0',
+  },
+  inlineAddBox: {
+    display: 'flex',
+    gap: '6px',
+    marginBottom: '12px',
+  },
+  inlineInput: {
+    flex: 1,
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid #CBD5E1',
+    fontSize: '13px',
+    outline: 'none',
+  },
+  inlineAddBtn: {
+    padding: '8px 12px',
+    borderRadius: '8px',
+    backgroundColor: '#4F46E5',
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemsList: {
+    flex: 1,
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  itemCard: {
+    padding: '12px',
+    borderRadius: '8px',
+    borderWidth: '1.5px',
+    borderStyle: 'solid',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    transition: 'all 0.15s ease',
+  },
+  iconActionBtn: {
+    background: 'none',
+    border: 'none',
+    padding: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '4px',
+  },
+  emptyNotice: {
+    padding: '20px',
+    textAlign: 'center',
+    color: '#94A3B8',
+    fontSize: '13px',
+  },
+  filterCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    padding: '16px',
+    border: '1px solid #E2E8F0',
+  },
+  miniLabel: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#64748B',
+    marginBottom: '4px',
+    display: 'block',
+  },
+  selectDropdown: {
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid #CBD5E1',
+    fontSize: '13px',
+    backgroundColor: '#FFFFFF',
+    color: '#0F172A',
+    outline: 'none',
+    minWidth: '150px',
+  },
+  primaryBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#4F46E5',
+    color: '#FFFFFF',
+    border: 'none',
+    fontSize: '13px',
+    fontWeight: 600,
     cursor: 'pointer',
   },
+  secondaryBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#F8FAFC',
+    color: '#334155',
+    border: '1px solid #CBD5E1',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  dangerBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#FEF2F2',
+    color: '#DC2626',
+    border: '1px solid #FECACA',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    padding: '40px 20px',
+    border: '1px solid #E2E8F0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+  },
+  questionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    padding: '18px',
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+  },
+  questionCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  qNumberPill: {
+    backgroundColor: '#EEF2FF',
+    color: '#4F46E5',
+    fontSize: '12px',
+    fontWeight: 700,
+    padding: '3px 10px',
+    borderRadius: '12px',
+  },
+  qCorrectPill: {
+    fontSize: '12px',
+    color: '#059669',
+    backgroundColor: '#ECFDF5',
+    padding: '3px 10px',
+    borderRadius: '12px',
+  },
+  questionBodyText: {
+    fontSize: '14px',
+    lineHeight: 1.6,
+    color: '#0F172A',
+    fontWeight: 500,
+    marginBottom: '14px',
+  },
+  optionsListGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  optionPreviewItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    borderRadius: '8px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+  },
+  optionPreviewBadge: {
+    width: '22px',
+    height: '22px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  explanationBox: {
+    padding: '10px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #E2E8F0',
+    lineHeight: 1.5,
+  },
+  dataTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '13px',
+  },
+  tableTh: {
+    textAlign: 'left',
+    padding: '10px 12px',
+    borderBottom: '2px solid #E2E8F0',
+    color: '#64748B',
+    fontWeight: 600,
+    fontSize: '12px',
+  },
+  tableTr: {
+    borderBottom: '1px solid #F1F5F9',
+  },
+  tableTd: {
+    padding: '10px 12px',
+    color: '#1E293B',
+  },
+  modalBackdrop: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    padding: '20px',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '16px',
+    padding: '24px',
+    maxWidth: '650px',
+    width: '100%',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  modalTitle: {
+    fontSize: '17px',
+    fontWeight: 700,
+    color: '#0F172A',
+    margin: 0,
+  },
+  modalCloseBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '4px',
+    color: '#64748B',
+  },
+  modalActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    marginTop: '20px',
+  },
+  label: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#334155',
+    marginBottom: '6px',
+    display: 'block',
+  },
+  inputField: {
+    width: '100%',
+    padding: '9px 12px',
+    borderRadius: '8px',
+    border: '1px solid #CBD5E1',
+    fontSize: '13px',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+  optionSelectBtn: {
+    padding: '6px 12px',
+    borderRadius: '6px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    fontSize: '12px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  correctPillBadge: {
+    backgroundColor: '#10B981',
+    color: '#FFFFFF',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: 700,
+  },
+  // Giriş Ekranı
+  loginBackdrop: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0F172A',
+    padding: '20px',
+  },
+  loginCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '16px',
+    padding: '32px 28px',
+    maxWidth: '400px',
+    width: '100%',
+    textAlign: 'center',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  },
+  loginIconBox: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '16px',
+    backgroundColor: '#EEF2FF',
+    margin: '0 auto 16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginBadge: {
+    fontSize: '11px',
+    fontWeight: 700,
+    color: '#4F46E5',
+    letterSpacing: '1px',
+  },
+  loginTitle: {
+    fontSize: '20px',
+    fontWeight: 700,
+    color: '#0F172A',
+    margin: '6px 0',
+  },
+  loginSubtitle: {
+    fontSize: '13px',
+    color: '#64748B',
+    lineHeight: 1.5,
+    margin: '0 0 20px',
+  },
+  loginBtn: {
+    width: '100%',
+    padding: '11px',
+    borderRadius: '8px',
+    backgroundColor: '#4F46E5',
+    color: '#FFFFFF',
+    border: 'none',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    marginTop: '6px',
+  },
+  loginErrorBox: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    backgroundColor: '#FEF2F2',
+    border: '1px solid #FECACA',
+    color: '#DC2626',
+    fontSize: '12px',
+    marginBottom: '12px',
+    textAlign: 'left',
+  },
+  loginFooter: {
+    marginTop: '20px',
+    borderTop: '1px solid #F1F5F9',
+    paddingTop: '16px',
+  },
+  backLinkBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#64748B',
+    fontSize: '13px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
 };
-
-export default AdminPanel;

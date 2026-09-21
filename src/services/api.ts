@@ -879,6 +879,118 @@ export const api = {
     };
   },
 
+  async adminUpdateQuestion(question: Question): Promise<{ success: boolean; isLocal?: boolean; error?: string }> {
+    saveLocalQuestion(question);
+    let cloudError: string | undefined;
+    let cloudUpdated = false;
+
+    if (isSupabaseConfigured() && isUuid(question.id)) {
+      try {
+        const client = getAdminClient();
+        const payload: Record<string, any> = {
+          question_text: question.questionText,
+          options: question.options,
+          correct_option: question.correctOption,
+          explanation: question.explanation,
+        };
+        const { error } = await client.from('questions').update(payload).eq('id', question.id);
+        if (!error) {
+          cloudUpdated = true;
+        } else {
+          cloudError = error.message;
+        }
+      } catch (err: any) {
+        cloudError = err?.message;
+      }
+    }
+
+    return { success: true, isLocal: !cloudUpdated, error: cloudError };
+  },
+
+  async adminUpdateTopic(id: string, title: string, topicNumber?: number): Promise<{ success: boolean; isLocal?: boolean; error?: string }> {
+    const list = getLocalTopics();
+    const existing = list.find(t => t.id === id);
+    if (existing) {
+      existing.title = title.trim();
+      if (topicNumber !== undefined) existing.topicNumber = topicNumber;
+      saveLocalTopic(existing);
+    }
+
+    let cloudUpdated = false;
+    let cloudError: string | undefined;
+
+    if (isSupabaseConfigured() && isUuid(id)) {
+      try {
+        const client = getAdminClient();
+        const payload: Record<string, any> = { title: title.trim() };
+        if (topicNumber !== undefined) payload.topic_number = topicNumber;
+        const { error } = await client.from('topics').update(payload).eq('id', id);
+        if (!error) cloudUpdated = true;
+        else cloudError = error.message;
+      } catch (err: any) {
+        cloudError = err?.message;
+      }
+    }
+
+    return { success: true, isLocal: !cloudUpdated, error: cloudError };
+  },
+
+  async adminUpdateUnit(id: string, title: string, unitNumber?: number): Promise<{ success: boolean; isLocal?: boolean; error?: string }> {
+    const list = getLocalUnits();
+    const existing = list.find(u => u.id === id);
+    if (existing) {
+      existing.title = title.trim();
+      if (unitNumber !== undefined) existing.unitNumber = unitNumber;
+      saveLocalUnit(existing);
+    }
+
+    let cloudUpdated = false;
+    let cloudError: string | undefined;
+
+    if (isSupabaseConfigured() && isUuid(id)) {
+      try {
+        const client = getAdminClient();
+        const payload: Record<string, any> = { title: title.trim() };
+        if (unitNumber !== undefined) payload.unit_number = unitNumber;
+        const { error } = await client.from('units').update(payload).eq('id', id);
+        if (!error) cloudUpdated = true;
+        else cloudError = error.message;
+      } catch (err: any) {
+        cloudError = err?.message;
+      }
+    }
+
+    return { success: true, isLocal: !cloudUpdated, error: cloudError };
+  },
+
+  async adminUpdateSubject(id: string, title: string, iconName?: string): Promise<{ success: boolean; isLocal?: boolean; error?: string }> {
+    const list = getLocalSubjects();
+    const existing = list.find(s => s.id === id);
+    if (existing) {
+      existing.title = title.trim();
+      if (iconName) existing.iconName = iconName;
+      saveLocalSubject(existing);
+    }
+
+    let cloudUpdated = false;
+    let cloudError: string | undefined;
+
+    if (isSupabaseConfigured() && isUuid(id)) {
+      try {
+        const client = getAdminClient();
+        const payload: Record<string, any> = { title: title.trim() };
+        if (iconName) payload.icon_name = iconName;
+        const { error } = await client.from('subjects').update(payload).eq('id', id);
+        if (!error) cloudUpdated = true;
+        else cloudError = error.message;
+      } catch (err: any) {
+        cloudError = err?.message;
+      }
+    }
+
+    return { success: true, isLocal: !cloudUpdated, error: cloudError };
+  },
+
   async adminDeleteQuestion(id: string): Promise<{ success: boolean; error?: string }> {
     removeLocalQuestion(id);
 
