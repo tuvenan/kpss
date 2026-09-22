@@ -420,14 +420,61 @@ export const KPSS_MOCK_QUESTIONS_POOL: (Omit<Question, 'id' | 'questionNumber'> 
   },
 ];
 
+export type MockExamType = 'quick_20' | 'gy_gk_full_120' | 'gy_branch_60' | 'gk_branch_60';
+
+export interface MockExamConfig {
+  type: MockExamType;
+  title: string;
+  questionCount: number;
+  durationMinutes: number;
+  description: string;
+  badge: string;
+}
+
+export const MOCK_EXAM_CONFIGS: Record<MockExamType, MockExamConfig> = {
+  quick_20: {
+    type: 'quick_20',
+    title: 'Hızlı Mini Deneme',
+    questionCount: 20,
+    durationMinutes: 25,
+    description: 'Tüm derslerden 20 karma soru ile hızlı pratik',
+    badge: '20 Soru • 25 Dk',
+  },
+  gy_branch_60: {
+    type: 'gy_branch_60',
+    title: 'Genel Yetenek Branş Denemesi',
+    questionCount: 60,
+    durationMinutes: 65,
+    description: '30 Türkçe + 30 Matematik branş denemesi',
+    badge: '60 Soru • 65 Dk',
+  },
+  gk_branch_60: {
+    type: 'gk_branch_60',
+    title: 'Genel Kültür Branş Denemesi',
+    questionCount: 60,
+    durationMinutes: 65,
+    description: 'Tarih, Coğrafya, Vatandaşlık ve Güncel Bilgiler',
+    badge: '60 Soru • 65 Dk',
+  },
+  gy_gk_full_120: {
+    type: 'gy_gk_full_120',
+    title: 'Tam Kapsamlı KPSS GY-GK Denemesi',
+    questionCount: 120,
+    durationMinutes: 130,
+    description: 'Resmi ÖSYM formatında 120 soru ve 130 dakika tam sınav simülasyonu',
+    badge: '120 Soru • 130 Dk (ÖSYM)',
+  },
+};
+
 /**
- * 20 soruluk karma deneme sınavı üretir.
- * Farklı derslerden ve konulardan dengeli dağıtımla sorular seçer.
- * Yerel hafızada adminin eklediği sorular varsa onları da dahil eder.
+ * Belirtilen türe ve soru adedine göre çok branşlı veya karma deneme sınavı üretir.
  */
-export function generateRandomMockExam(targetCount: number = 20): Question[] {
+export function generateRandomMockExam(
+  targetCount: number = 20,
+  examType: MockExamType = 'quick_20'
+): Question[] {
   // 1. Havuzdaki soruları kopyala
-  const pool = [...KPSS_MOCK_QUESTIONS_POOL];
+  let pool = [...KPSS_MOCK_QUESTIONS_POOL];
 
   // 2. Varsa yerel hafızadaki soruları da havuza ekle
   if (typeof window !== 'undefined') {
@@ -442,14 +489,23 @@ export function generateRandomMockExam(targetCount: number = 20): Question[] {
             correctOption: lq.correctOption,
             explanation: lq.explanation,
             difficulty: lq.difficulty || 'Orta',
-            subjectTitle: 'Özel Alan',
-            topicTitle: 'Müfredat Sorusu',
+            subjectTitle: lq.subjectTitle || 'Özel Alan',
+            topicTitle: lq.topicTitle || 'Müfredat Sorusu',
           });
         }
       }
     } catch (e) {
       console.warn('Local questions merge error:', e);
     }
+  }
+
+  // Branş filtrelemesi
+  if (examType === 'gy_branch_60') {
+    pool = pool.filter((p) => ['Türkçe', 'Matematik'].includes(p.subjectTitle));
+  } else if (examType === 'gk_branch_60') {
+    pool = pool.filter((p) =>
+      ['Tarih', 'Coğrafya', 'Vatandaşlık', 'Güncel Bilgiler'].includes(p.subjectTitle)
+    );
   }
 
   // 3. Konulara / Derslere göre grupla
@@ -465,40 +521,37 @@ export function generateRandomMockExam(targetCount: number = 20): Question[] {
     groupedBySubject[sub].sort(() => Math.random() - 0.5);
   });
 
-  // 5. Dengeli dağıtımla soruları çek (Örn: 4 Türkçe, 4 Matematik, 4 Tarih, 4 Coğrafya, 4 Vatandaşlık/Güncel)
+  // 5. Dengeli dağıtımla soruları çek
   const selected: (typeof pool[0])[] = [];
   const subjects = Object.keys(groupedBySubject);
 
   let loopSafety = 0;
-  while (selected.length < targetCount && loopSafety < 100) {
+  while (selected.length < targetCount && loopSafety < 300) {
     loopSafety++;
     for (const sub of subjects) {
       if (selected.length >= targetCount) break;
       const subList = groupedBySubject[sub];
       if (subList && subList.length > 0) {
         const nextQ = subList.shift();
-        if (nextQ && !selected.some((s) => s.questionText === nextQ.questionText)) {
+        if (nextQ) {
           selected.push(nextQ);
         }
       }
     }
-    // Eğer tüm gruplar tükendiyse ama henüz targetCount dolmadıysa kalan havuzdan rastgele tamamla
-    const allRemaining = Object.values(groupedBySubject).flat();
-    if (allRemaining.length === 0) break;
   }
 
-  // Eğer hala dolmadıysa havuzdan rastgele tamamla
-  if (selected.length < targetCount) {
-    const remainingInPool = pool.filter((p) => !selected.some((s) => s.questionText === p.questionText));
-    remainingInPool.sort(() => Math.random() - 0.5);
-    while (selected.length < targetCount && remainingInPool.length > 0) {
-      selected.push(remainingInPool.pop()!);
+  // Eğer hala hedef adede ulaşılmadıysa mevcut havuzdan tekrar karıştırıp tamamla
+  if (selected.length < targetCount && pool.length > 0) {
+    let poolIndex = 0;
+    while (selected.length < targetCount) {
+      selected.push(pool[poolIndex % pool.length]);
+      poolIndex++;
     }
   }
 
-  // 6. Soruları formatlayıp 1..20 olarak numaralandır
+  // 6. Soruları formatlayıp numaralandır
   return selected.slice(0, targetCount).map((q, idx) => ({
-    id: `deneme-q-${Date.now()}-${idx + 1}`,
+    id: `deneme-${examType}-q-${Date.now()}-${idx + 1}`,
     questionNumber: idx + 1,
     questionText: q.questionText,
     options: q.options,

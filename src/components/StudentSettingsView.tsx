@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { userProfileService, UserProfile, ALL_BADGES } from '../services/userProfileService';
 import { themeService, PRESET_THEMES, ThemeConfig } from '../services/themeService';
+import { authService, AuthUser } from '../services/authService';
 import {
   User,
   Mail,
@@ -12,6 +13,8 @@ import {
   Check,
   Save,
   Palette,
+  LogOut,
+  Shield,
 } from 'lucide-react';
 
 export const StudentSettingsView: React.FC = () => {
@@ -28,6 +31,20 @@ export const StudentSettingsView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser>(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const handleAuth = (e: any) => {
+      setCurrentUser(e?.detail || authService.getCurrentUser());
+    };
+    window.addEventListener('kpss_auth_changed', handleAuth);
+    return () => window.removeEventListener('kpss_auth_changed', handleAuth);
+  }, []);
+
+  const handleLogout = async () => {
+    await authService.logout();
+    alert('Oturumunuz başarıyla kapatıldı.');
+  };
 
   useEffect(() => {
     const p = userProfileService.getProfile();
@@ -653,6 +670,35 @@ export const StudentSettingsView: React.FC = () => {
         </form>
 
         <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '20px 0' }} />
+
+        {/* Oturum & Hesap Durumu */}
+        <div style={{ ...styles.dangerRow, marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #F1F5F9' }}>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
+              Oturum Durumu: {currentUser.isLoggedIn ? (currentUser.email || currentUser.name) : 'Misafir / Giriş Yapılmadı'}
+            </div>
+            <div style={styles.dangerDesc}>
+              {currentUser.isLoggedIn
+                ? 'Hesabınızdan güvenli şekilde çıkış yapabilir, başka bir cihazdan veya hesapla tekrar giriş yapabilirsiniz.'
+                : 'Test ve sınav sonuçlarınızın kaybolmaması için bir hesapla giriş yapmanız önerilir.'}
+            </div>
+          </div>
+          {currentUser.isLoggedIn && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                ...styles.dangerBtn,
+                backgroundColor: '#FEF2F2',
+                color: '#DC2626',
+                borderColor: '#FECACA',
+              }}
+            >
+              <LogOut size={15} style={{ marginRight: '6px' }} />
+              Çıkış Yap
+            </button>
+          )}
+        </div>
 
         {/* İstatistikleri Sıfırlama */}
         <div style={styles.dangerRow}>

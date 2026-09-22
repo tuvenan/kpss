@@ -46,8 +46,22 @@ import {
   Zap,
   Flame,
   Award,
+  Sun,
+  Moon,
+  Crown,
+  WifiOff,
+  LogOut,
 } from 'lucide-react';
+import { AuthModal } from '../components/AuthModal';
+import { PricingPaywallModal } from '../components/PricingPaywallModal';
+import { authService, AuthUser } from '../services/authService';
+import { subscriptionService, SubscriptionState } from '../services/subscriptionService';
+import { spacedRepetitionService } from '../services/spacedRepetitionService';
+import { themeService, PRESET_THEMES } from '../services/themeService';
+import { useOnlineStatus } from '../services/networkService';
 import {
+  MockExamType,
+  MOCK_EXAM_CONFIGS,
   generateRandomMockExam,
   saveWrongQuestionToMistakesBank,
   saveWrongQuestionsToMistakesBank,
@@ -167,6 +181,67 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [timeRemainingSeconds, setTimeRemainingSeconds] = useState<number>(25 * 60);
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
   const [denemeTotalElapsedSeconds, setDenemeTotalElapsedSeconds] = useState<number>(0);
+
+  // ----------------------------------------------------
+  // AUTH, ABONELİK (PAYWALL), ÇEVRİMDIŞI & TEMALAR
+  // ----------------------------------------------------
+  const [authUser, setAuthUser] = useState<AuthUser>(() => authService.getCurrentUser());
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [subscription, setSubscription] = useState<SubscriptionState>(() => subscriptionService.getSubscription());
+  const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
+
+  const isOnline = useOnlineStatus();
+  const [selectedExamType, setSelectedExamType] = useState<MockExamType>('quick_20');
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.getActiveTheme().isDark);
+  const [leitnerStats, setLeitnerStats] = useState(() => spacedRepetitionService.getSummaryStats());
+  const [leitnerFilter, setLeitnerFilter] = useState<'all' | 'due'>('all');
+
+  useEffect(() => {
+    const handleAuthChange = (e: any) => {
+      setAuthUser(e?.detail?.user ?? authService.getCurrentUser());
+    };
+    const handleSubChange = (e: any) => {
+      setSubscription(e?.detail?.subscription ?? subscriptionService.getSubscription());
+    };
+    const handleThemeChange = () => {
+      setIsDarkMode(themeService.getActiveTheme().isDark);
+    };
+    const handleSrChange = () => {
+      setLeitnerStats(spacedRepetitionService.getSummaryStats());
+    };
+
+    // İlk yüklemede aktif temayı uygula
+    themeService.applyTheme(themeService.getActiveTheme());
+
+    window.addEventListener('kpss_auth_changed', handleAuthChange);
+    window.addEventListener('kpss_subscription_changed', handleSubChange);
+    window.addEventListener('kpss_theme_changed', handleThemeChange);
+    window.addEventListener('kpss_spaced_repetition_updated', handleSrChange);
+
+    return () => {
+      window.removeEventListener('kpss_auth_changed', handleAuthChange);
+      window.removeEventListener('kpss_subscription_changed', handleSubChange);
+      window.removeEventListener('kpss_theme_changed', handleThemeChange);
+      window.removeEventListener('kpss_spaced_repetition_updated', handleSrChange);
+    };
+  }, []);
+
+  const handleToggleDarkMode = () => {
+    const current = themeService.getActiveTheme();
+    if (current.isDark) {
+      const light = PRESET_THEMES.find((t) => !t.isDark) || PRESET_THEMES[0];
+      themeService.setActiveTheme(light);
+      setIsDarkMode(false);
+    } else {
+      const dark = PRESET_THEMES.find((t) => t.isDark) || PRESET_THEMES[1];
+      themeService.setActiveTheme(dark);
+      setIsDarkMode(true);
+    }
+  };
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -515,8 +590,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     setShowDenemeSetupModal(true);
   };
 
-  const handleStartDenemeExam = (durationMinutes: number = denemeDurationMinutes) => {
-    const mockQuestions = generateRandomMockExam(20);
+  const handleStartDenemeExam = (durationMinutes: number = denemeDurationMinutes, examType: MockExamType = selectedExamType) => {
+    const config = MOCK_EXAM_CONFIGS[examType] || MOCK_EXAM_CONFIGS.quick_20;
+    const targetCount = config.questionCount || 20;
+    const mockQuestions = generateRandomMockExam(targetCount, examType);
     setQuestions(mockQuestions);
     setCurrentIndex(0);
     setUserAnswers({});
@@ -583,6 +660,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
         removeQuestionFromMistakesBank(currentQ.id);
       }
     }
+
+    // Aralıklı tekrar (Spaced Repetition / Leitner 5-Kutu) kaydı
+    spacedRepetitionService.recordReviewResult(currentQ.id, isCorrect);
+    setLeitnerStats(spacedRepetitionService.getSummaryStats());
 
     // Gerçek öğrenci analitiğine kaydet
     const topicKey = currentQ?.subjectTitle
@@ -1761,22 +1842,251 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               )}
             </div>
 
-            <div
-              onClick={() => { setActiveTab('profile'); setViewState('subjects'); }}
-              style={{ ...styles.headerUserBadge, cursor: 'pointer' }}
-              title="Profil & Ayarlar"
+            {/* Koyu / Açık Tema Hızlı Değiştirme */}
+            <button
+              type="button"
+              onClick={handleToggleDarkMode}
+              style={{
+                ...styles.headerIconBtn,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+              title={isDarkMode ? "Açık Temaya Geç" : "Karanlık Temaya Geç"}
+              aria-label="Karanlık Mod Değiştir"
             >
-              <div style={styles.headerUserAvatar}>
-                <User size={14} color="#333" />
+              {isDarkMode ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#475569" />}
+            </button>
+
+            {/* PRO / Abonelik Butonu */}
+            <button
+              type="button"
+              onClick={() => setShowPricingModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '9999px',
+                border: 'none',
+                background: subscription.tier !== 'free'
+                  ? 'linear-gradient(135deg, #10B981, #059669)'
+                  : 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
+              }}
+              title="Abonelik Paketleri & PRO Avantajlar"
+            >
+              <Crown size={14} color="#FFFFFF" />
+              <span>{subscription.tier !== 'free' ? 'PRO VIP' : 'PRO Paketler'}</span>
+            </button>
+
+            {/* Giriş / Profil Alanı */}
+            {!authService.isUserLoggedIn() ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalMode('login');
+                  setShowAuthModal(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <User size={14} color="#FFFFFF" />
+                <span>Giriş Yap</span>
+              </button>
+            ) : (
+              <div style={{ position: 'relative' }} ref={userDropdownRef}>
+                <div
+                  onClick={() => setShowUserDropdown((prev) => !prev)}
+                  style={{ ...styles.headerUserBadge, cursor: 'pointer' }}
+                  title="Hesap ve Ayarlar"
+                >
+                  <div style={styles.headerUserAvatar}>
+                    <User size={14} color="#333" />
+                  </div>
+                  <span style={styles.headerUserName}>{authUser?.name?.split(' ')[0] || userProfile.name.split(' ')[0] || 'Hesabım'}</span>
+                  <ChevronDown size={14} color="#666" style={{ marginLeft: '4px' }} />
+                </div>
+
+                {showUserDropdown && (
+                  <>
+                    <div
+                      onClick={() => setShowUserDropdown(false)}
+                      style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      width: '210px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+                      border: '1px solid #E2E8F0',
+                      padding: '8px 0',
+                      zIndex: 200,
+                    }}>
+                      <div style={{ padding: '8px 16px', borderBottom: '1px solid #F1F5F9' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{authUser?.name}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis' }}>{authUser?.email}</div>
+                        <div style={{ marginTop: '4px' }}>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: subscription.tier !== 'free' ? '#059669' : '#64748B',
+                            backgroundColor: subscription.tier !== 'free' ? '#ECFDF5' : '#F1F5F9',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                          }}>
+                            {subscription.tier !== 'free' ? 'PRO Üye' : 'Ücretsiz Plan'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          setActiveTab('profile');
+                          setViewState('subjects');
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <User size={15} color="#64748B" />
+                        <span>Profilim</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          setShowPricingModal(true);
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Crown size={15} color="#EAB308" />
+                        <span>PRO Paketler</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          setActiveTab('settings');
+                          setViewState('subjects');
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Settings size={15} color="#64748B" />
+                        <span>Ayarlar</span>
+                      </button>
+
+                      <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setShowUserDropdown(false);
+                          await authService.logout();
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: '#DC2626',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <LogOut size={15} color="#DC2626" />
+                        <span>Çıkış Yap</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-              <span style={styles.headerUserName}>{userProfile.name.split(' ')[0] || 'Ali'}</span>
-              <ChevronDown size={14} color="#666" style={{ marginLeft: '4px' }} />
-            </div>
+            )}
           </div>
         </header>
 
         {/* Ana İçerik Scroll Alanı */}
         <main className="web-main-scroll" style={styles.webMainScroll}>
+          {/* Çevrimdışı Bildirim Çubuğu */}
+          {!isOnline && (
+            <div style={{
+              backgroundColor: '#FEF2F2',
+              borderBottom: '1px solid #FECACA',
+              color: '#991B1B',
+              padding: '10px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}>
+              <WifiOff size={18} color="#DC2626" />
+              <span>İnternet bağlantısı kesildi. Çevrimdışı moddasınız; indirilmiş soruları ve yerel verilerinizi kesintisiz kullanabilirsiniz.</span>
+            </div>
+          )}
           {viewState === 'subjects' && activeTab === 'home' && (
             <div className="dashboard-container" style={styles.dashboardContainer}>
               {/* SOL KOLON (ANA AKIŞ) */}
@@ -2312,6 +2622,97 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <span>{errorFilter}</span>
                   <ChevronDown size={14} color="#333" style={{ marginLeft: '6px' }} />
                 </button>
+              </div>
+
+              {/* ARALIKLI TEKRAR (SPACED REPETITION / LEITNER 5-KUTU SİSTEMİ) KARTI */}
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E0E7FF',
+                padding: '20px',
+                marginBottom: '18px',
+                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.06)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      backgroundColor: '#EEF2FF',
+                      color: '#4F46E5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>
+                          Aralıklı Tekrar & Kalıcı Hafıza (Leitner)
+                        </span>
+                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: '#EEF2FF', color: '#4F46E5' }}>
+                          5-Kutu Algoritması
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                        Öğrendiğiniz ve hata yaptığınız sorular unutma eğrisine göre periyodik olarak önünüze gelir.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: leitnerStats.dueTodayCount > 0 ? '#FEF3C7' : '#F0FDF4',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                  }}>
+                    <Zap size={14} color={leitnerStats.dueTodayCount > 0 ? '#D97706' : '#16A34A'} />
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: leitnerStats.dueTodayCount > 0 ? '#B45309' : '#15803D' }}>
+                      {leitnerStats.dueTodayCount > 0
+                        ? `Bugün ${leitnerStats.dueTodayCount} soru tekrar bekliyor`
+                        : 'Bugün için tüm tekrarlar tamamlandı!'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5 Kutu İlerleme Izgarası */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                  {[
+                    { box: 1, name: '1. Kutu', interval: '1 Gün', count: leitnerStats.boxes[0]?.count || 0, color: '#EF4444', bg: '#FEE2E2' },
+                    { box: 2, name: '2. Kutu', interval: '3 Gün', count: leitnerStats.boxes[1]?.count || 0, color: '#F97316', bg: '#FFEDD5' },
+                    { box: 3, name: '3. Kutu', interval: '7 Gün', count: leitnerStats.boxes[2]?.count || 0, color: '#F59E0B', bg: '#FEF3C7' },
+                    { box: 4, name: '4. Kutu', interval: '14 Gün', count: leitnerStats.boxes[3]?.count || 0, color: '#3B82F6', bg: '#DBEAFE' },
+                    { box: 5, name: '5. Kutu (Kalıcı)', interval: '30 Gün', count: leitnerStats.boxes[4]?.count || 0, color: '#10B981', bg: '#D1FAE5' },
+                  ].map((b) => (
+                    <div
+                      key={b.box}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: '12px',
+                        padding: '12px 10px',
+                        border: '1px solid #F1F5F9',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>{b.name}</span>
+                        <span style={{ fontSize: '9px', fontWeight: 600, color: b.color, backgroundColor: b.bg, padding: '1px 5px', borderRadius: '4px' }}>
+                          {b.interval}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
+                        {b.count}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                        soru hafızada
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* 'Yanlışlarım' Özel Soru Bankası Kartı */}
@@ -3469,26 +3870,104 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <span>KPSS SİMÜLASYONU</span>
                 </div>
                 <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: '2px 0 0 0' }}>
-                  20 Soruluk Deneme Sınavı
+                  KPSS Deneme Sınavı Modülü
                 </h3>
               </div>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5, marginBottom: '18px' }}>
-              Tüm konulardan (Türkçe, Matematik, Tarih, Coğrafya, Vatandaşlık, Güncel Bilgiler) dengeli olarak seçilen <b>20 soru</b> ile kendinizi sınav temposunda test edin.
-            </p>
+            {/* Deneme Türü Seçimi (Çok Branşlı / Tam Format) */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                📚 Sınav Formatı / Branş Seçin:
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                {[
+                  {
+                    type: 'quick_20' as MockExamType,
+                    title: '20 Soru Mini',
+                    sub: 'Hızlı karma deneme',
+                    badge: '25 dk',
+                    defaultMin: 25,
+                  },
+                  {
+                    type: 'gy_gk_full_120' as MockExamType,
+                    title: '120 Soru Tam',
+                    sub: 'Tam ÖSYM GY-GK',
+                    badge: '130 dk',
+                    defaultMin: 130,
+                  },
+                  {
+                    type: 'gy_branch_60' as MockExamType,
+                    title: '60 Soru GY',
+                    sub: 'Türkçe + Matematik',
+                    badge: '65 dk',
+                    defaultMin: 65,
+                  },
+                  {
+                    type: 'gk_branch_60' as MockExamType,
+                    title: '60 Soru GK',
+                    sub: 'Tarih, Coğ, Vat, Güncel',
+                    badge: '65 dk',
+                    defaultMin: 65,
+                  },
+                ].map((item) => {
+                  const isSelected = selectedExamType === item.type;
+                  return (
+                    <div
+                      key={item.type}
+                      onClick={() => {
+                        setSelectedExamType(item.type);
+                        setDenemeDurationMinutes(item.defaultMin);
+                      }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid #4F46E5' : '1px solid #E2E8F0',
+                        backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? '#4F46E5' : '#0F172A' }}>
+                          {item.title}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          backgroundColor: isSelected ? '#4F46E5' : '#F1F5F9',
+                          color: isSelected ? '#FFFFFF' : '#64748B',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                        }}>
+                          {item.badge}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: isSelected ? '#4338CA' : '#64748B', marginTop: '3px' }}>
+                        {item.sub}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Süre Seçimi */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
-                ⏱️ Süre Modu Seçin:
+                ⏱️ Süre / Kronometre Seçeneği:
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                 {[
-                  { value: 20, label: '20 Dakika', sub: 'Hızlı tempo (1 dk/soru)' },
-                  { value: 25, label: '25 Dakika ⭐', sub: 'Önerilen KPSS temposu' },
-                  { value: 30, label: '30 Dakika', sub: 'Rahat tempo (1.5 dk/soru)' },
-                  { value: 0, label: 'Süresiz', sub: 'Kronometre ile serbest' },
+                  {
+                    value: selectedExamType === 'gy_gk_full_120' ? 130 : selectedExamType === 'quick_20' ? 25 : 65,
+                    label: selectedExamType === 'gy_gk_full_120' ? '130 Dk (ÖSYM)' : selectedExamType === 'quick_20' ? '25 Dk (Standart)' : '65 Dk (Standart)',
+                  },
+                  {
+                    value: selectedExamType === 'gy_gk_full_120' ? 100 : selectedExamType === 'quick_20' ? 20 : 50,
+                    label: selectedExamType === 'gy_gk_full_120' ? '100 Dk (Hızlı)' : selectedExamType === 'quick_20' ? '20 Dk (Hızlı)' : '50 Dk (Hızlı)',
+                  },
+                  { value: 0, label: 'Süresiz (Kronometre)' },
                 ].map((opt) => {
                   const isSelected = denemeDurationMinutes === opt.value;
                   return (
@@ -3496,19 +3975,16 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       key={opt.value}
                       onClick={() => setDenemeDurationMinutes(opt.value)}
                       style={{
-                        padding: '10px 12px',
-                        borderRadius: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
                         border: isSelected ? '2px solid #111' : '1px solid #E2E8F0',
                         backgroundColor: isSelected ? '#F8FAFC' : '#FFFFFF',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        textAlign: 'center',
                       }}
                     >
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? '#111' : '#1E293B' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: isSelected ? '#111' : '#1E293B' }}>
                         {opt.label}
-                      </div>
-                      <div style={{ fontSize: '11px', color: isSelected ? '#444' : '#64748B', marginTop: '2px' }}>
-                        {opt.sub}
                       </div>
                     </div>
                   );
@@ -3562,7 +4038,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               </button>
               <button
                 type="button"
-                onClick={() => handleStartDenemeExam(denemeDurationMinutes)}
+                onClick={() => handleStartDenemeExam(denemeDurationMinutes, selectedExamType)}
                 style={{
                   flex: 2,
                   padding: '12px',
@@ -3587,6 +4063,27 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           </div>
         </div>
       )}
+
+      {/* AUTH (GİRİŞ / KAYIT / ŞİFRE SIFIRLAMA) MODALI */}
+      <AuthModal
+        isOpen={showAuthModal}
+        initialMode={authModalMode}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false);
+          setAuthUser(authService.getCurrentUser());
+        }}
+      />
+
+      {/* ABONELİK & FİYATLANDIRMA (PAYWALL) MODALI */}
+      <PricingPaywallModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        onSuccess={() => {
+          setShowPricingModal(false);
+          setSubscription(subscriptionService.getSubscription());
+        }}
+      />
     </div>
   );
 };
