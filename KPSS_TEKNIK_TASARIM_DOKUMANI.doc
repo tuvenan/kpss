@@ -1,0 +1,69 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+  <meta charset="utf-8">
+  <title>KPSS Web Platformu - Teknik Tasarım Dokümanı</title>
+  <style>
+    body { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #111; }
+    h1 { font-size: 20pt; color: #1E3A8A; border-bottom: 2pt solid #1E3A8A; padding-bottom: 4pt; }
+    h2 { font-size: 14pt; color: #2563EB; margin-top: 18pt; border-bottom: 1pt solid #E2E8F0; padding-bottom: 2pt; }
+    h3 { font-size: 12pt; color: #1F2937; margin-top: 12pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8pt; margin-bottom: 12pt; }
+    th, td { border: 1pt solid #CBD5E1; padding: 6pt 8pt; text-align: left; }
+    th { background-color: #F1F5F9; font-weight: bold; }
+    code, pre { font-family: 'Consolas', 'Courier New', monospace; background-color: #F8FAFC; font-size: 10pt; }
+    pre { padding: 8pt; border: 1pt solid #E2E8F0; }
+    ul { margin-top: 4pt; margin-bottom: 8pt; }
+  </style>
+</head>
+<body>
+  <h1>KPSS WEB PLATFORMU — TEKNİK VE ALGORİTMİK TASARIM DOKÜMANI (TDD)</h1>
+  <p><strong>Geliştirme Ortamı:</strong> Google Antigravity IDE | <strong>Dağıtım:</strong> Vercel SPA | <strong>Hedef:</strong> LLM Ajanları ve Geliştiriciler</p>
+  
+  <h2>1. GENEL MİMARİ VE TEKNOLOJİ YIĞINI</h2>
+  <p>Proje, <strong>Offline-First (Önce Çevrimdışı) Hibrit Mimari</strong> prensibine sahiptir. Bulutta <strong>Supabase (PostgreSQL 15 + RLS + Auth)</strong> kullanılırken, yerelde <strong>LocalStorage + Statik Tohum Veri</strong> ile tam dayanıklılık sağlanır.</p>
+  <ul>
+    <li><strong>Arayüz:</strong> React 19.0.0, React DOM 19.0.0</li>
+    <li><strong>Derleme:</strong> Vite 6.0.7, TypeScript 5.7.2</li>
+    <li><strong>Veritabanı İstemcisi:</strong> @supabase/supabase-js 2.49.1</li>
+    <li><strong>İkonlar:</strong> Lucide React 1.16.0</li>
+    <li><strong>Stil:</strong> Dinamik CSS Custom Properties (:root)</li>
+  </ul>
+
+  <h2>2. VERİTABANI VE VERİ MODELLERİ</h2>
+  <table>
+    <tr><th>Tablo Adı</th><th>Birincil / Yabancı Anahtar</th><th>İçerik</th></tr>
+    <tr><td><strong>subjects</strong></td><td>id (UUID PK)</td><td>KPSS Dersleri (Türkçe, Matematik vb.)</td></tr>
+    <tr><td><strong>units</strong></td><td>id (UUID PK), subject_id (FK)</td><td>Ders alt üniteleri</td></tr>
+    <tr><td><strong>topics</strong></td><td>id (UUID PK), unit_id (FK)</td><td>Kazanım ve alt konular</td></tr>
+    <tr><td><strong>question_banks</strong></td><td>id (UUID PK), topic_id (FK)</td><td>Soru bankası ve test paketleri</td></tr>
+    <tr><td><strong>questions</strong></td><td>id (UUID PK), bank_id (FK)</td><td>5 şıklı sorular ve çözümleri</td></tr>
+    <tr><td><strong>error_pool</strong></td><td>id (UUID PK), question_id (FK)</td><td>Hata havuzu ve yanlış sorular</td></tr>
+  </table>
+
+  <h2>3. ÇEKİRDEK ALGORİTMALAR</h2>
+  <h3>3.1. Leitner 5-Kutu Aralıklı Tekrar Sistemi</h3>
+  <ul>
+    <li><strong>1. Kutu:</strong> 1 Günlük periyot (Yeni veya hatalı sorular)</li>
+    <li><strong>2. Kutu:</strong> 3 Günlük periyot</li>
+    <li><strong>3. Kutu:</strong> 7 Günlük periyot</li>
+    <li><strong>4. Kutu:</strong> 14 Günlük periyot</li>
+    <li><strong>5. Kutu:</strong> 30 Günlük periyot (Kalıcı bellek)</li>
+  </ul>
+  <p>Doğru cevap bir üst kutuya terfi ettirir; yanlış cevap kutuyu anında 1'e düşürür.</p>
+
+  <h3>3.2. Çok Branşlı Deneme Sınavı Modülleri</h3>
+  <ul>
+    <li><strong>20 Soru Mini Deneme:</strong> 25 dakika (Hızlı tempo)</li>
+    <li><strong>120 Soru Tam GY-GK:</strong> 130 dakika (ÖSYM standart sınavı)</li>
+    <li><strong>60 Soru Genel Yetenek:</strong> 65 dakika (Türkçe + Matematik)</li>
+    <li><strong>60 Soru Genel Kültür:</strong> 65 dakika (Tarih, Coğrafya, Vatandaşlık, Güncel)</li>
+  </ul>
+
+  <h2>4. KULLANICI AKIŞI VE DURUM YÖNETİMİ</h2>
+  <p>StudentQuiz.tsx durum makinesi:</p>
+  <ul>
+    <li><strong>activeTab:</strong> home (Pano), subjects (Müfredat), errors (Hata Havuzu), profile (Karne), settings (Ayarlar).</li>
+    <li><strong>viewState:</strong> subjects (Navigasyon), quiz (Soru Çözme), feedback (Çözüm Kartı), summary (Sonuç Ekranı).</li>
+  </ul>
+</body>
+</html>

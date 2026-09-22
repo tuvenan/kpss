@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>KPSS Web Platformu — Teknik Tasarım Dokümanı (TDD)</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 40px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 48px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .header-banner {
+      border-bottom: 3px solid #4f46e5;
+      padding-bottom: 20px;
+      margin-bottom: 32px;
+    }
+    h1 {
+      color: #0f172a;
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+    .meta-info {
+      font-size: 13px;
+      color: #64748b;
+    }
+    h2 {
+      color: #4f46e5;
+      font-size: 18px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-top: 32px;
+    }
+    h3 {
+      color: #1e293b;
+      font-size: 15px;
+      margin-top: 20px;
+    }
+    pre, code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      background-color: #f1f5f9;
+      border-radius: 6px;
+    }
+    pre {
+      padding: 14px;
+      overflow-x: auto;
+      font-size: 12px;
+      border: 1px solid #e2e8f0;
+      line-height: 1.45;
+    }
+    code {
+      padding: 2px 5px;
+      color: #0f172a;
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 4px;
+      background-color: #e0e7ff;
+      color: #4338ca;
+    }
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #4f46e5;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .container {
+        box-shadow: none;
+        padding: 0;
+      }
+      .print-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="print-btn" onclick="window.print()">🖨️ PDF Olarak Kaydet / Yazdır</button>
+
+  <div class="container">
+    <div class="header-banner">
+      <h1>KPSS Web Platformu — Teknik Tasarım Dokümanı (TDD)</h1>
+      <div class="meta-info">
+        <strong>Geliştirme:</strong> Google Antigravity IDE &nbsp;|&nbsp;
+        <strong>Dağıtım:</strong> Vercel SPA &nbsp;|&nbsp;
+        <strong>Hedef:</strong> Claude, ChatGPT vb. LLM Tabanlı Ajanlar İçin Kod Tabanı Özeti
+      </div>
+    </div>
+
+    <h2>1. GENEL MİMARİ VE TEKNOLOJİ YIĞINI</h2>
+    <p>
+      Proje, <strong>Offline-First (Önce Çevrimdışı) Hibrit Mimari</strong> ile inşa edilmiştir. Bulut veri sağlayıcısı olarak <strong>Supabase (PostgreSQL + Auth + Storage)</strong> kullanılırken, ağ kesintilerinde veya veritabanı boş olduğunda uygulama hiçbir şekilde çökmez; <strong>LocalStorage + Statik Tohum Paket Verisi</strong> katmanına zarif bir şekilde geri çekilir (Graceful Fallback).
+    </p>
+
+    <h3>1.1. Bağımlılıklar (package.json)</h3>
+    <ul>
+      <li><strong>React 19.0.0 & React DOM 19.0.0:</strong> Modern reaktif arayüz çekirdeği.</li>
+      <li><strong>Vite 6.0.7 & TypeScript 5.7.2:</strong> Ultra hızlı derleme ve katı tip güvenliği.</li>
+      <li><strong>@supabase/supabase-js 2.49.1:</strong> Bulut veritabanı ve kimlik doğrulama istemcisi.</li>
+      <li><strong>Lucide React 1.16.0:</strong> Hafif ve modern vektörel arayüz ikonları.</li>
+      <li><strong>Tema Motoru:</strong> Çalışma anında <code>:root</code> seviyesinde dinamik enjekte edilen CSS Custom Properties.</li>
+    </ul>
+
+    <h2>2. VERİTABANI VE VERİ MODELLERİ</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Tablo / Model</th>
+          <th>Anahtarlar & İlişkiler</th>
+          <th>Açıklama</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>subjects</strong></td>
+          <td><code>id (UUID PK)</code>, <code>title</code>, <code>total_units</code></td>
+          <td>KPSS Dersleri (Türkçe, Matematik, Tarih, Coğrafya vb.)</td>
+        </tr>
+        <tr>
+          <td><strong>units</strong></td>
+          <td><code>id (UUID PK)</code>, <code>subject_id (FK)</code>, <code>title</code></td>
+          <td>Ders altındaki ana üniteler</td>
+        </tr>
+        <tr>
+          <td><strong>topics</strong></td>
+          <td><code>id (UUID PK)</code>, <code>unit_id (FK)</code>, <code>title</code></td>
+          <td>Ünite altındaki alt konu ve kazanımlar</td>
+        </tr>
+        <tr>
+          <td><strong>question_banks</strong></td>
+          <td><code>id (UUID PK)</code>, <code>topic_id (FK)</code>, <code>title</code></td>
+          <td>Konuya bağlı kazanım ve deneme testleri</td>
+        </tr>
+        <tr>
+          <td><strong>questions</strong></td>
+          <td><code>id (UUID PK)</code>, <code>bank_id (FK)</code>, <code>options (JSONB)</code></td>
+          <td>5 seçenekli ÖSYM standart soru ve çözümleri</td>
+        </tr>
+        <tr>
+          <td><strong>error_pool</strong></td>
+          <td><code>id (UUID PK)</code>, <code>question_id (FK)</code></td>
+          <td>Kullanıcının yanlış çözdüğü soru havuzu</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. ÇEKİRDEK ALGORİTMALAR VE İŞ MANTIĞI</h2>
+    <h3>3.1. Leitner 5-Kutu Aralıklı Tekrar (Spaced Repetition) Algoritması</h3>
+    <p>
+      Ebbinghaus unutma eğrisine karşı geliştirilmiştir. Soru çözüldükçe hafıza durumu güncellenir:
+    </p>
+    <ul>
+      <li><strong>1. Kutu:</strong> 1 Günlük aralık (Yeni öğrenilen veya hatalı sorular)</li>
+      <li><strong>2. Kutu:</strong> 3 Günlük aralık (Pekiştirme)</li>
+      <li><strong>3. Kutu:</strong> 7 Günlük aralık (Orta bellek)</li>
+      <li><strong>4. Kutu:</strong> 14 Günlük aralık (Güçlü bellek)</li>
+      <li><strong>5. Kutu:</strong> 30 Günlük aralık (Kalıcı hafıza)</li>
+    </ul>
+    <p><em>Kural: Doğru cevap soruyu bir üst kutuya terfi ettirir; tek bir yanlış cevap soruyu doğrudan 1. kutuya sıfırlar.</em></p>
+
+    <h3>3.2. Çok Branşlı Deneme Sınavı Dağılımı</h3>
+    <ul>
+      <li><strong>quick_20:</strong> 20 Soru / 25 Dk (Hızlı karma deneme).</li>
+      <li><strong>gy_gk_full_120:</strong> 120 Soru / 130 Dk (Tam ÖSYM GY-GK formatı).</li>
+      <li><strong>gy_branch_60:</strong> 60 Soru / 65 Dk (Genel Yetenek: Türkçe + Matematik).</li>
+      <li><strong>gk_branch_60:</strong> 60 Soru / 65 Dk (Genel Kültür: Tarih, Coğrafya, Vatandaşlık, Güncel).</li>
+    </ul>
+
+    <h2>4. KULLANICI AKIŞI VE SAYFA DURUM MAKİNESİ</h2>
+    <p>
+      Ana orkestratör olan <code>StudentQuiz.tsx</code>, iki ana durum ekseninde çalışır:
+    </p>
+    <ul>
+      <li><strong>activeTab:</strong> <code>'home'</code> (Pano), <code>'subjects'</code> (Müfredat), <code>'errors'</code> (Hata Havuzu & Leitner), <code>'profile'</code> (Karne & Takvim), <code>'settings'</code> (Ayarlar).</li>
+      <li><strong>viewState:</strong> <code>'subjects'</code> (Liste), <code>'quiz'</code> (Soru Çözme), <code>'feedback'</code> (Çözüm İnceleme), <code>'summary'</code> (Sonuç Karnesi).</li>
+    </ul>
+  </div>
+</body>
+</html>

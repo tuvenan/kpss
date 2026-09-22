@@ -1,0 +1,126 @@
+================================================================================
+KPSS WEB PLATFORMU - EKSİKSİZ TEKNİK VE ALGORİTMİK TASARIM DOKÜMANI (TDD)
+================================================================================
+Geliştirme Platformu : Google Antigravity IDE
+Canlı Dağıtım (Deploy): Vercel SPA (Single Page Application)
+Amaç                 : Claude, ChatGPT vb. Yapay Zekalar İçin %100 Kod Tabanı Özeti
+================================================================================
+
+1. GENEL MİMARİ VE TEKNOLOJİ YIĞINI
+--------------------------------------------------------------------------------
+1.1. Mimari Yaklaşım:
+- Mimari Türü: Offline-First Hibrit Mimari (Bulut + Yerel Önbellek)
+- Bulut Katmanı: Supabase (PostgreSQL 15, Supabase Auth, Row Level Security)
+- Yerel Katman: LocalStorage + Statik Tohum Paket (samplePackage.ts)
+- Prensip: Ağ kopsa veya Supabase boş olsa dahi uygulama asla çökmez; 
+  yerel depolama ve tohum verilerle kesintisiz çalışır (Graceful Fallback).
+
+1.2. Bağımlılıklar (package.json):
+- React 19.0.0 & React DOM 19.0.0
+- Vite 6.0.7 & TypeScript 5.7.2
+- @supabase/supabase-js 2.49.1
+- Lucide React 1.16.0 (İkonlar)
+- Tipografi: Plus Jakarta Sans, Merriweather, Poppins
+- Stil Motoru: CSS Custom Properties (:root seviyesinde dinamik değişkenler)
+
+1.3. Dizin Hiyerarşisi:
+d:/kpss/
+├── public/                     # Statik kaynaklar
+├── src/
+│   ├── components/             # Yeniden kullanılabilir arayüz bileşenleri
+│   │   ├── AuthModal.tsx             # Giriş / Kayıt / Şifre Sıfırlama Modalı
+│   │   ├── PricingPaywallModal.tsx   # PRO VIP Üyelik & Ödeme Simülasyonu Modalı
+│   │   ├── CompetencyRadarCard.tsx   # SVG Ders Yetkinlik Radarı
+│   │   ├── DetailedTopicAnalysisCard.tsx # Konu Bazlı Başarı/Zayıflık Analizi
+│   │   ├── SkeletonLoader.tsx        # Shimmer Yükleme İskeleti
+│   │   ├── StudentAnalyticsCards.tsx # Hız, Hedef ve Başarı Metrik Kartları
+│   │   ├── StudentSettingsView.tsx   # Ayarlar, Tema ve Hesap Yönetimi
+│   │   └── StudyCalendarCard.tsx     # Çalışma Takvimi ve Isı Haritası
+│   ├── data/
+│   │   └── samplePackage.ts          # 20 Soruluk KPSS Tohum Paketi
+│   ├── pages/
+│   │   ├── AdminPanel.tsx            # Müfredat ve Soru Bankası Yönetimi
+│   │   └── StudentQuiz.tsx           # Ana Öğrenci Uygulaması (~6000 satır)
+│   ├── services/                     # Servis ve İş Mantık Katmanı
+│   │   ├── api.ts                    # Supabase + LocalStorage Hibrit Adaptör
+│   │   ├── authService.ts            # Kimlik Doğrulama ve Oturum Servisi
+│   │   ├── curriculumSearchService.ts# Hiyerarşik Arama Motoru
+│   │   ├── mockExamService.ts        # Çok Branşlı Deneme Sınavı & Yanlışlarım
+│   │   ├── networkService.ts         # useOnlineStatus Ağ Dinleyicisi
+│   │   ├── spacedRepetitionService.ts# Leitner 5-Kutu Aralıklı Tekrar Servisi
+│   │   ├── studentProgressService.ts # Günlük İlerleme & Radar Puanlama
+│   │   ├── subscriptionService.ts    # PRO Abonelik Durum Yöneticisi
+│   │   ├── supabase.ts               # Supabase JS Client & Env Denetimi
+│   │   ├── themeService.ts           # CSS Değişkenleri ve Tema Motoru
+│   │   └── userProfileService.ts     # Profil ve Kullanıcı Tercihleri
+│   ├── types.ts                      # TypeScript Model ve Tipleri
+│   ├── App.tsx                       # Ana Yönlendirici (Admin / Öğrenci)
+│   └── main.tsx                      # Vite React 19 Giriş Noktası
+├── index.html
+├── package.json
+└── vite.config.ts
+
+
+2. VERİTABANI VE VERİ MODELLERİ (DATA SCHEMAS)
+--------------------------------------------------------------------------------
+2.1. Temel Veri Modelleri (TypeScript):
+- Subject (Ders): id, title, iconName, totalUnits
+- Unit (Ünite): id, subjectId (FK), title, unitNumber, isLocked, isCompleted
+- Topic (Konu): id, unitId (FK), subjectId (FK), title, topicNumber, isLocked
+- QuestionBank (Soru Bankası): id, topicId (FK), title, targetQuestionCount, questionCount
+- Question (Soru): id, bankId (FK), questionNumber, questionText, options[], correctOption, explanation
+- UserAnswer: questionId, selectedOption, isCorrect, timeSpentSeconds
+
+2.2. Supabase / PostgreSQL Tabloları:
+- subjects       : id (UUID PK), title, icon_name, total_units
+- units          : id (UUID PK), subject_id (UUID FK), title, unit_number
+- topics         : id (UUID PK), unit_id (UUID FK), title, topic_number
+- question_banks : id (UUID PK), topic_id (UUID FK), title, target_question_count
+- questions      : id (UUID PK), bank_id (UUID FK), question_text, options (JSONB), correct_option (CHAR(1)), explanation
+- error_pool     : id (UUID PK), question_id (UUID FK), wrong_option, correct_option, resolved (BOOLEAN)
+
+
+3. ÇEKİRDEK ALGORİTMALAR VE İŞ MANTIĞI
+--------------------------------------------------------------------------------
+3.1. Leitner 5-Kutu Aralıklı Tekrar (Spaced Repetition) Algoritması:
+- Amaç: Ebbinghaus Unutma Eğrisine karşı kalıcı bellek oluşturma.
+- Kutu 1: 1 Gün (Yeni veya hatalı çözülen sorular)
+- Kutu 2: 3 Gün (Pekiştirme adımı)
+- Kutu 3: 7 Gün (Orta bellek adımı)
+- Kutu 4: 14 Gün (Güçlü bellek adımı)
+- Kutu 5: 30 Gün (Kalıcı hafıza)
+- Kural: Doğru bilinen soru bir sonraki kutuya terfi eder. Yanlış bilinen soru anında Kutu 1'e düşer.
+
+3.2. Çok Branşlı Deneme Sınavı Oluşturucu (Stratified Sampling):
+- quick_20       : 20 soru / 25 dakika (Hızlı tempo, tüm derslerden dengeli örneklem)
+- gy_gk_full_120 : 120 soru / 130 dakika (Tam ÖSYM formatı: 30 Türkçe, 30 Mat, 27 Tarih, 18 Coğrafya, 9 Vatandaşlık, 6 Güncel)
+- gy_branch_60   : 60 soru / 65 dakika (Yalnızca Türkçe ve Matematik)
+- gk_branch_60   : 60 soru / 65 dakika (Tarih, Coğrafya, Vatandaşlık, Güncel)
+
+3.3. Hiyerarşik Ters Dizinli Arama Motoru:
+- Müfredat önceden belleğe indekslenir (Warmup Cache).
+- Türkçe karakterler normalize edilir (ı/i, ğ/g, ü/u, ş/s, ö/o, ç/c).
+- Skorlama: Tam başlık (100p), Ön ek (75p), İçerik (50p), Breadcrumb (25p).
+
+
+4. SERVİS KATMANI VE API
+--------------------------------------------------------------------------------
+- api.ts: UUID doğrulaması (isUuid) yaparak Supabase sorgular. Geçersiz ID'lerde yerel depolamaya başvurur. 400 Bad Request'i önler.
+- authService.ts: Giriş, kayıt, şifre sıfırlama, oturum doğrulama. 'kpss_auth_changed' yayını yapar.
+- subscriptionService.ts: PRO üyelik katmanı, kart ödeme simülasyonu, 'kpss_subscription_changed' yayını yapar.
+- themeService.ts: DOM :root üzerine CSS değişkenlerini dinamik enjekte eder.
+
+
+5. KULLANICI AKIŞI VE SAYFA DURUM MAKİNESİ (STATE MACHINE)
+--------------------------------------------------------------------------------
+StudentQuiz.tsx ana durum değişkenleri:
+- activeTab: 'home' | 'subjects' | 'errors' | 'profile' | 'settings'
+- viewState: 'subjects' | 'quiz' | 'feedback' | 'summary'
+
+Akış Sırası:
+1. Ders Seçimi -> Ünite Seçimi -> Konu Seçimi -> Soru Bankası Seçimi
+2. 'quiz' moduna geçiş: Soru metni, 5 şık, zamanlayıcı
+3. Şık seçimi ve onayı: 'feedback' moduna geçiş (doğru/yanlış + çözüm)
+4. Hata yapıldıysa: Otomatik 'Yanlışlarım' soru bankasına ve Leitner Kutu 1'e kayıt
+5. Test bitimi: 'summary' moduna geçiş (net, doğruluk oranı ve hız karnesi)
+================================================================================
