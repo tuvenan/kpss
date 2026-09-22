@@ -7,19 +7,15 @@ import {
   AlertTriangle,
   BookOpen,
   ChevronRight,
-  Award,
   CheckCircle2,
   Clock,
   Sparkles,
   Calendar,
-  Flame,
-  BarChart2,
-  ArrowRight,
   TrendingUp,
 } from 'lucide-react';
 import { UserProfile } from '../services/userProfileService';
 import { spacedRepetitionService } from '../services/spacedRepetitionService';
-import { studentProgressService, TopicRecord } from '../services/studentProgressService';
+import { studentProgressService } from '../services/studentProgressService';
 import { offlineSyncService } from '../services/offlineSyncService';
 import { examSessionService, ActiveExamSession } from '../services/examSessionService';
 
@@ -120,8 +116,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
       const todayStr = new Date().toISOString().split('T')[0];
       const attempts = offlineSyncService.getLocalAttemptsHistory();
       const todayAttempts = attempts.filter((a) => a.answered_at && a.answered_at.startsWith(todayStr));
-      
-      // Eğer bugün hiç kayıt yoksa varsayılan taban aktiviteden ilham al
+
       if (todayAttempts.length > 0) {
         setTodaySolved(todayAttempts.length);
       } else {
@@ -173,10 +168,8 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
     // E) Zayıf Konu Tespiti (Akıllı AI Önerisi)
     try {
       const topicList = studentProgressService.getTopicAnalysisList();
-      // En çok yanlışı olan veya başarı oranı en düşük olan konuyu bul
       const withAttempts = topicList.filter((t) => t.solvedCount > 0);
       if (withAttempts.length > 0) {
-        // En düşük yüzdeye sahip konuyu sırala
         const sorted = [...withAttempts].sort((a, b) => a.percentage - b.percentage);
         const worst = sorted[0];
         setWeakTopic({
@@ -187,7 +180,6 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
           wrongCount: worst.wrongCount,
         });
       } else {
-        // Genel radar skorlarına göre en düşük puanlı dersin konusunu öner
         const radar = studentProgressService.getRadarScores();
         const lowestSubject = [...radar].sort((a, b) => a.score - b.score)[0];
         setWeakTopic({
@@ -206,7 +198,6 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
   const progressPercent = Math.min(100, Math.round((todaySolved / dailyGoal) * 100));
   const isGoalReached = todaySolved >= dailyGoal;
 
-  // Tarih formatlama
   const todayDateStr = new Date().toLocaleDateString('tr-TR', {
     day: 'numeric',
     month: 'long',
@@ -214,8 +205,19 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
   });
   const todayDayStr = new Date().toLocaleDateString('tr-TR', { weekday: 'long' });
 
+  // Standart KPSS Font Ailesi
+  const fontFamily = "var(--kpss-font, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif)";
+
   return (
-    <div className="action-home-wrapper" style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
+    <div
+      className="action-home-wrapper"
+      style={{
+        width: '100%',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        fontFamily,
+      }}
+    >
       {/* 1. ÜST KARŞILAMA VE GÜN BİLGİSİ */}
       <div
         style={{
@@ -232,7 +234,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             <h1
               style={{
                 fontSize: '24px',
-                fontWeight: 800,
+                fontWeight: 700,
                 color: 'var(--kpss-text, #0F172A)',
                 margin: 0,
                 letterSpacing: '-0.3px',
@@ -243,19 +245,20 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             <span
               style={{
                 fontSize: '11px',
-                fontWeight: 700,
-                backgroundColor: 'rgba(79, 70, 229, 0.12)',
-                color: 'var(--kpss-primary, #4F46E5)',
+                fontWeight: 600,
+                backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                color: 'var(--kpss-text-muted, #64748B)',
+                border: '1px solid var(--kpss-border, #E2E8F0)',
                 padding: '2px 8px',
                 borderRadius: '6px',
               }}
             >
-              {userProfile.examType || 'KPSS Lisans'}
+              {userProfile.examType || 'KPSS Lisans (GY-GK)'}
             </span>
           </div>
           <p
             style={{
-              fontSize: '14px',
+              fontSize: '13px',
               color: 'var(--kpss-text-muted, #64748B)',
               margin: '4px 0 0 0',
             }}
@@ -273,12 +276,12 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             borderRadius: '12px',
             padding: '8px 14px',
             gap: '10px',
-            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
           }}
         >
-          <Calendar size={18} color="var(--kpss-primary, #4F46E5)" />
+          <Calendar size={18} color="var(--kpss-text, #0F172A)" />
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
               {todayDateStr}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #64748B)' }}>
@@ -288,13 +291,13 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
         </div>
       </div>
 
-      {/* 2. HIZLI BAŞLA AKSİYON ÇUBUĞU (TEK TIKLA BAŞLATMA) */}
+      {/* 2. HIZLI BAŞLA AKSİYON ÇUBUĞU (TEK TIKLA BAŞLATMA - SABİT MONOKROM KURUMSAL TEMA) */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '12px',
-          marginBottom: '24px',
+          marginBottom: '22px',
         }}
       >
         {/* Hızlı 20'li Deneme */}
@@ -304,32 +307,32 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            padding: '12px 16px',
+            padding: '12px 14px',
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '14px',
+            borderRadius: '12px',
             cursor: 'pointer',
             textAlign: 'left',
-            transition: 'all 0.15s ease',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            transition: 'border-color 0.15s ease',
+            fontFamily,
           }}
         >
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(79, 70, 229, 0.12)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Zap size={20} color="var(--kpss-primary, #4F46E5)" />
+            <Zap size={18} color="var(--kpss-text, #0F172A)" />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
               20'li Hızlı Deneme
             </div>
             <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #64748B)' }}>
@@ -345,32 +348,32 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            padding: '12px 16px',
+            padding: '12px 14px',
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '14px',
+            borderRadius: '12px',
             cursor: 'pointer',
             textAlign: 'left',
-            transition: 'all 0.15s ease',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            transition: 'border-color 0.15s ease',
+            fontFamily,
           }}
         >
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Play size={18} color="#10B981" />
+            <Play size={16} color="var(--kpss-text, #0F172A)" />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
               Günün Planını Başlat
             </div>
             <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #64748B)' }}>
@@ -386,32 +389,32 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            padding: '12px 16px',
+            padding: '12px 14px',
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '14px',
+            borderRadius: '12px',
             cursor: 'pointer',
             textAlign: 'left',
-            transition: 'all 0.15s ease',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            transition: 'border-color 0.15s ease',
+            fontFamily,
           }}
         >
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <AlertTriangle size={18} color="#EF4444" />
+            <AlertTriangle size={16} color="var(--kpss-text, #0F172A)" />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
               Hata Havuzum
             </div>
             <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #64748B)' }}>
@@ -427,32 +430,32 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            padding: '12px 16px',
+            padding: '12px 14px',
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '14px',
+            borderRadius: '12px',
             cursor: 'pointer',
             textAlign: 'left',
-            transition: 'all 0.15s ease',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            transition: 'border-color 0.15s ease',
+            fontFamily,
           }}
         >
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(245, 158, 11, 0.12)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Clock size={18} color="#F59E0B" />
+            <Clock size={16} color="var(--kpss-text, #0F172A)" />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
               Deneme Sınavı Kur
             </div>
             <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #64748B)' }}>
@@ -462,12 +465,12 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
         </button>
       </div>
 
-      {/* 3. ANA AKSİYON PANOROMASI (2 SÜTUNLU KARTLAR) */}
+      {/* 3. ANA AKSİYON PANOROMASI (SABİT KPSS KURUMSAL TASARIMI) */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '18px',
+          gap: '16px',
           marginBottom: '26px',
         }}
       >
@@ -476,31 +479,30 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
           style={{
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)',
+            borderRadius: '14px',
+            padding: '18px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
           }}
         >
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div
                   style={{
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Target size={18} color="var(--kpss-primary, #4F46E5)" />
+                  <Target size={16} color="var(--kpss-text, #0F172A)" />
                 </div>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                   Günlük Soru Hedefi
                 </span>
               </div>
@@ -509,11 +511,12 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--kpss-primary, #4F46E5)',
+                  color: 'var(--kpss-text-muted, #64748B)',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
                   padding: 0,
+                  fontFamily,
                 }}
               >
                 Hedefi Değiştir
@@ -521,21 +524,22 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--kpss-text, #0F172A)' }}>
+              <span style={{ fontSize: '32px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
                 {todaySolved}
               </span>
-              <span style={{ fontSize: '16px', color: 'var(--kpss-text-muted, #64748B)', fontWeight: 600 }}>
+              <span style={{ fontSize: '15px', color: 'var(--kpss-text-muted, #64748B)' }}>
                 / {dailyGoal} Soru
               </span>
               <span
                 style={{
                   marginLeft: 'auto',
-                  fontSize: '12px',
-                  fontWeight: 700,
+                  fontSize: '11px',
+                  fontWeight: 600,
                   padding: '2px 8px',
-                  borderRadius: '12px',
-                  backgroundColor: isGoalReached ? 'rgba(16, 185, 129, 0.15)' : 'rgba(79, 70, 229, 0.1)',
-                  color: isGoalReached ? '#10B981' : 'var(--kpss-primary, #4F46E5)',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                  color: 'var(--kpss-text, #0F172A)',
+                  border: '1px solid var(--kpss-border, #E2E8F0)',
                 }}
               >
                 %{progressPercent} Tamamlandı
@@ -546,9 +550,9 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             <div
               style={{
                 width: '100%',
-                height: '10px',
+                height: '8px',
                 backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
-                borderRadius: '999px',
+                borderRadius: '4px',
                 overflow: 'hidden',
                 marginBottom: '10px',
               }}
@@ -557,9 +561,9 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                 style={{
                   width: `${progressPercent}%`,
                   height: '100%',
-                  backgroundColor: isGoalReached ? '#10B981' : 'var(--kpss-primary, #4F46E5)',
-                  borderRadius: '999px',
-                  transition: 'width 0.4s ease',
+                  backgroundColor: '#111111',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
                 }}
               />
             </div>
@@ -576,23 +580,24 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             }}
           >
             {isGoalReached ? (
-              <span style={{ color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <CheckCircle2 size={14} /> Harika! Bugünün hedefine ulaştın 🎉
+              <span style={{ color: 'var(--kpss-text, #0F172A)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle2 size={14} color="#16A34A" /> Tebrikler! Bugünün hedefine ulaşıldı.
               </span>
             ) : (
-              <span>Hedefe {dailyGoal - todaySolved} soru kaldı. Azimli çalışmaya devam et!</span>
+              <span>Hedefe {dailyGoal - todaySolved} soru kaldı.</span>
             )}
             <button
               onClick={onStartQuick20}
               style={{
                 backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
-                border: 'none',
+                border: '1px solid var(--kpss-border, #E2E8F0)',
                 borderRadius: '6px',
                 padding: '4px 10px',
                 fontSize: '11px',
-                fontWeight: 700,
+                fontWeight: 600,
                 color: 'var(--kpss-text, #0F172A)',
                 cursor: 'pointer',
+                fontFamily,
               }}
             >
               +20 Soru Çöz
@@ -605,49 +610,49 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
           style={{
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)',
+            borderRadius: '14px',
+            padding: '18px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
           }}
         >
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div
                   style={{
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    backgroundColor: leitnerDueCount > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <RotateCcw size={18} color={leitnerDueCount > 0 ? '#F59E0B' : '#10B981'} />
+                  <RotateCcw size={16} color="var(--kpss-text, #0F172A)" />
                 </div>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                   Aralıklı Tekrar (Leitner)
                 </span>
               </div>
               <span
                 style={{
                   fontSize: '11px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  backgroundColor: leitnerDueCount > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                  color: leitnerDueCount > 0 ? '#F59E0B' : '#10B981',
+                  backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                  color: 'var(--kpss-text, #0F172A)',
+                  border: '1px solid var(--kpss-border, #E2E8F0)',
                 }}
               >
                 {leitnerDueCount > 0 ? `${leitnerDueCount} Soru Vadesi Geldi` : 'Tamamı Güncel'}
               </span>
             </div>
 
-            <p style={{ fontSize: '13px', color: 'var(--kpss-text-muted, #64748B)', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--kpss-text-muted, #64748B)', margin: '0 0 14px 0', lineHeight: 1.4 }}>
               {leitnerDueCount > 0
                 ? `Hafıza eğrisine göre unutulma eşiğine gelen ${leitnerDueCount} soruyu bugün tekrar ederek kalıcı hafızaya aktarın.`
                 : 'Bugün için vadesi gelen tüm tekrar kartları tamamlandı. Hafıza taze tutuldu!'}
@@ -663,16 +668,16 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  backgroundColor: '#F59E0B',
+                  gap: '6px',
+                  backgroundColor: '#111111',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '10px',
                   padding: '10px 14px',
                   fontSize: '13px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(245, 158, 11, 0.25)',
+                  fontFamily,
                 }}
               >
                 <RotateCcw size={15} />
@@ -686,7 +691,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
+                  gap: '6px',
                   backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
                   color: 'var(--kpss-text, #0F172A)',
                   border: '1px solid var(--kpss-border, #E2E8F0)',
@@ -695,6 +700,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   fontSize: '13px',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  fontFamily,
                 }}
               >
                 <span>Hafıza Kutularını Gör</span>
@@ -708,10 +714,9 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
         <div
           style={{
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
-            border: activeSession ? '2px solid rgba(79, 70, 229, 0.35)' : '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)',
+            border: '1px solid var(--kpss-border, #E2E8F0)',
+            borderRadius: '14px',
+            padding: '18px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -725,36 +730,36 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(79, 70, 229, 0.12)',
+                    backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Play size={17} color="var(--kpss-primary, #4F46E5)" />
+                  <Play size={15} color="var(--kpss-text, #0F172A)" />
                 </div>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                   Kaldığın Yerden Devam Et
                 </span>
               </div>
               <span
                 style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
+                  fontSize: '11px',
+                  fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  backgroundColor: activeSession ? '#FEF2F2' : 'var(--kpss-subtle-bg, #F1F5F9)',
-                  color: activeSession ? '#DC2626' : 'var(--kpss-text-muted, #64748B)',
-                  border: activeSession ? '1px solid #FECACA' : undefined,
+                  backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                  color: 'var(--kpss-text-muted, #64748B)',
+                  border: '1px solid var(--kpss-border, #E2E8F0)',
                 }}
               >
-                {activeSession ? '🔴 Devam Eden Sınav' : 'Son Çalışılan'}
+                {activeSession ? 'Yarım Kalan Sınav' : 'Son Çalışılan'}
               </span>
             </div>
 
             {activeSession ? (
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
                   {activeSession.templateName || 'KPSS Deneme Sınavı'}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginBottom: '12px' }}>
@@ -764,7 +769,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
               </div>
             ) : lastActivity ? (
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
                   {lastActivity.title}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginBottom: '12px' }}>
@@ -773,7 +778,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
               </div>
             ) : (
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
                   Tarih — İslamiyet Öncesi Türk Tarihi
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginBottom: '12px' }}>
@@ -792,19 +797,19 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  backgroundColor: 'var(--kpss-primary, #4F46E5)',
+                  gap: '6px',
+                  backgroundColor: '#111111',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '10px',
                   padding: '10px 14px',
                   fontSize: '13px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
+                  fontFamily,
                 }}
               >
-                <Play size={15} fill="#FFFFFF" />
+                <Play size={14} fill="#FFFFFF" />
                 <span>Sınava Devam Et ({activeSession.currentIndex + 1}. Soru)</span>
               </button>
             ) : (
@@ -821,18 +826,19 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  backgroundColor: 'var(--kpss-primary, #4F46E5)',
+                  gap: '6px',
+                  backgroundColor: '#111111',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '10px',
                   padding: '10px 14px',
                   fontSize: '13px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: 'pointer',
+                  fontFamily,
                 }}
               >
-                <Play size={15} fill="#FFFFFF" />
+                <Play size={14} fill="#FFFFFF" />
                 <span>Kaldığın Yerden Devam Et</span>
               </button>
             )}
@@ -844,9 +850,8 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
           style={{
             backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
             border: '1px solid var(--kpss-border, #E2E8F0)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)',
+            borderRadius: '14px',
+            padding: '18px 20px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -860,36 +865,37 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                    backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <TrendingUp size={18} color="#EF4444" />
+                  <TrendingUp size={16} color="var(--kpss-text, #0F172A)" />
                 </div>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                   Zayıf Konu Önerisi
                 </span>
               </div>
               <span
                 style={{
                   fontSize: '11px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                  color: '#DC2626',
+                  backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                  color: 'var(--kpss-text-muted, #64748B)',
+                  border: '1px solid var(--kpss-border, #E2E8F0)',
                 }}
               >
-                Net Kazanım Fırsatı
+                Öneri
               </span>
             </div>
 
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)', marginBottom: '4px' }}>
               {weakTopic.topicTitle}
             </div>
-            <p style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--kpss-text-muted, #64748B)', margin: '0 0 12px 0', lineHeight: 1.4 }}>
               {weakTopic.reasonText}
             </p>
           </div>
@@ -907,16 +913,17 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
+              gap: '6px',
               backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
-              color: 'var(--kpss-primary, #4F46E5)',
+              color: 'var(--kpss-text, #0F172A)',
               border: '1px solid var(--kpss-border, #E2E8F0)',
               borderRadius: '10px',
               padding: '10px 14px',
               fontSize: '13px',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               transition: 'background-color 0.15s ease',
+              fontFamily,
             }}
           >
             <Sparkles size={15} />
@@ -925,7 +932,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
         </div>
       </div>
 
-      {/* 4. DERSLER & KONULAR ÖZETİ (KOMPAKT SEÇİM ALANI) */}
+      {/* 4. DERSLER & KONULAR ÖZETİ (SABİT KPSS KURUMSAL TASARIMI) */}
       <div style={{ marginBottom: '28px' }}>
         <div
           style={{
@@ -939,14 +946,15 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             <h2
               style={{
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 700,
                 color: 'var(--kpss-text, #0F172A)',
                 margin: 0,
+                letterSpacing: '-0.2px',
               }}
             >
               Dersler & Konu İlerlemeleri
             </h2>
-            <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginTop: '2px' }}>
               Çözmek istediğin dersin üzerine tıklayarak üniteleri keşfet
             </div>
           </div>
@@ -955,22 +963,23 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--kpss-primary, #4F46E5)',
+              color: 'var(--kpss-text-muted, #64748B)',
               fontSize: '13px',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              fontFamily,
             }}
           >
-            <span>Tüm Dersler</span>
-            <ChevronRight size={16} />
+            <span>Tümünü Gör</span>
+            <ChevronRight size={15} />
           </button>
         </div>
 
         {/* Genel Yetenek Dersleri */}
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text-muted, #64748B)', marginBottom: '8px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text-muted, #64748B)', marginBottom: '8px' }}>
           KPSS Genel Yetenek
         </div>
         <div
@@ -993,9 +1002,8 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                 borderRadius: '14px',
                 padding: '14px 16px',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                transition: 'border-color 0.15s ease',
                 gap: '12px',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)',
               }}
             >
               <div
@@ -1010,14 +1018,14 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   flexShrink: 0,
                 }}
               >
-                <BookOpen size={18} color="var(--kpss-primary, #4F46E5)" />
+                <BookOpen size={18} color="var(--kpss-text, #0F172A)" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                     {sub.title}
                   </span>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--kpss-primary, #4F46E5)' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                     %{sub.percentage}
                   </span>
                 </div>
@@ -1027,9 +1035,9 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                 <div
                   style={{
                     width: '100%',
-                    height: '6px',
+                    height: '5px',
                     backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
-                    borderRadius: '999px',
+                    borderRadius: '3px',
                     overflow: 'hidden',
                   }}
                 >
@@ -1037,8 +1045,8 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                     style={{
                       width: `${sub.percentage}%`,
                       height: '100%',
-                      backgroundColor: 'var(--kpss-primary, #4F46E5)',
-                      borderRadius: '999px',
+                      backgroundColor: '#111111',
+                      borderRadius: '3px',
                     }}
                   />
                 </div>
@@ -1049,7 +1057,7 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
         </div>
 
         {/* Genel Kültür Dersleri */}
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text-muted, #64748B)', marginBottom: '8px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text-muted, #64748B)', marginBottom: '8px' }}>
           KPSS Genel Kültür
         </div>
         <div
@@ -1071,9 +1079,8 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                 borderRadius: '14px',
                 padding: '14px 16px',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                transition: 'border-color 0.15s ease',
                 gap: '12px',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)',
               }}
             >
               <div
@@ -1088,14 +1095,14 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                   flexShrink: 0,
                 }}
               >
-                <BookOpen size={18} color="var(--kpss-primary, #4F46E5)" />
+                <BookOpen size={18} color="var(--kpss-text, #0F172A)" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                     {sub.title}
                   </span>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--kpss-primary, #4F46E5)' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--kpss-text, #0F172A)' }}>
                     %{sub.percentage}
                   </span>
                 </div>
@@ -1105,9 +1112,9 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                 <div
                   style={{
                     width: '100%',
-                    height: '6px',
+                    height: '5px',
                     backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
-                    borderRadius: '999px',
+                    borderRadius: '3px',
                     overflow: 'hidden',
                   }}
                 >
@@ -1115,8 +1122,8 @@ export const ActionOrientedHome: React.FC<ActionOrientedHomeProps> = ({
                     style={{
                       width: `${sub.percentage}%`,
                       height: '100%',
-                      backgroundColor: 'var(--kpss-primary, #4F46E5)',
-                      borderRadius: '999px',
+                      backgroundColor: '#111111',
+                      borderRadius: '3px',
                     }}
                   />
                 </div>
