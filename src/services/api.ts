@@ -9,6 +9,7 @@ import {
   getMistakesBankQuestions,
   getOrCreateMistakesBank,
 } from './mockExamService';
+import { offlineSyncService } from './offlineSyncService';
 
 // ==========================================
 // YEREL KALICI DEPOLAMA (LOCAL PERSISTENCE)
@@ -742,6 +743,27 @@ export const api = {
     } catch (e) {
       console.warn('markQuestionResolved error:', e);
     }
+  },
+
+  // ----------------------------------------------------
+  // OFFLINE-FIRST QUESTION_ATTEMPTS & SP_CARDS SENKRONİZASYONU
+  // ----------------------------------------------------
+  recordQuestionAttempt(params: {
+    questionId: string;
+    selectedOption: OptionId;
+    isCorrect: boolean;
+    timeSpentSeconds?: number;
+    examAttemptId?: string | null;
+  }) {
+    return offlineSyncService.recordQuestionAttempt(params);
+  },
+
+  syncOfflineAttempts() {
+    return offlineSyncService.syncPendingData();
+  },
+
+  getOfflineSyncStats() {
+    return offlineSyncService.getPendingStats();
   },
 
   // ----------------------------------------------------

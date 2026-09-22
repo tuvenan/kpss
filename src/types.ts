@@ -82,3 +82,27 @@ export interface UnitResult {
   emptyCount: number;
   totalTimeSeconds: number;
 }
+
+export interface QuestionAttempt {
+  id?: string;
+  client_event_id: string; // Benzersiz olay UUID'si (Idempotency için)
+  user_id?: string;
+  question_id: string;
+  selected_option: OptionId;
+  is_correct: boolean;
+  time_spent_seconds: number;
+  answered_at: string;
+  exam_attempt_id?: string | null;
+}
+
+export interface DbSpacedRepetitionCard {
+  id?: string;
+  user_id?: string;
+  question_id: string;
+  box: number; // 1 to 5
+  consecutive_correct: number;
+  review_count: number;
+  last_reviewed_at: string;
+  due_at: string;
+}
+

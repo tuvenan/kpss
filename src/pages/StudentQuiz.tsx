@@ -667,6 +667,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     spacedRepetitionService.recordReviewResult(currentQ.id, isCorrect);
     setLeitnerStats(spacedRepetitionService.getSummaryStats());
 
+    // Offline-First Idempotent Soru Çözümü & Bulut Senkronizasyonu (question_attempts & spaced_repetition_cards)
+    api.recordQuestionAttempt({
+      questionId: currentQ.id,
+      selectedOption: stagedOption,
+      isCorrect,
+      timeSpentSeconds: 5,
+    }).catch(console.warn);
+
     // Gerçek öğrenci analitiğine kaydet
     const topicKey = currentQ?.subjectTitle
       ? `${currentQ.subjectTitle} - ${currentQ.topicTitle || 'Deneme'}`
