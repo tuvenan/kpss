@@ -175,7 +175,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
         {/* Gelişim Özeti Kartı */}
         <div style={styles.summaryCard}>
           <div style={styles.summaryHeader}>
-            <Star size={15} color="#0F172A" strokeWidth={2.2} style={{ marginRight: '6px' }} />
+            <Star size={15} color="var(--kpss-primary, #4F46E5)" strokeWidth={2.2} style={{ marginRight: '6px' }} />
             <span style={styles.summaryTitle}>GELİŞİM ÖZETİNİZ</span>
           </div>
           <p style={styles.summaryBodyText}>{getSummaryText()}</p>
@@ -357,7 +357,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
                 y={y}
                 dy={dy}
                 textAnchor={textAnchor}
-                fill={isHovered ? '#0F172A' : '#334155'}
+                fill={isHovered ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text, #334155)'}
                 fontSize={isHovered ? '12.5' : '11.5'}
                 fontWeight={isHovered ? '700' : '600'}
                 style={{
@@ -428,14 +428,14 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '20px',
   },
   tabBtnActive: {
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #0F172A',
+    backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
+    border: '1.5px solid var(--kpss-primary, #4F46E5)',
     borderRadius: '8px',
-    color: '#0F172A',
+    color: 'var(--kpss-text, #0F172A)',
     fontWeight: 700,
     fontSize: '13px',
     padding: '7px 22px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+    boxShadow: 'var(--kpss-shadow, 0 1px 3px rgba(0, 0, 0, 0.06))',
     cursor: 'pointer',
     outline: 'none',
   },
@@ -443,7 +443,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
     border: '1.5px solid transparent',
     borderRadius: '8px',
-    color: '#64748B',
+    color: 'var(--kpss-text-muted, #64748B)',
     fontWeight: 600,
     fontSize: '13px',
     padding: '7px 22px',
@@ -452,8 +452,8 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'color 0.15s ease',
   },
   summaryCard: {
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #E2E8F0',
+    backgroundColor: 'var(--kpss-subtle-bg, #F8FAFC)',
+    border: '1px solid var(--kpss-border, #E2E8F0)',
     borderRadius: '14px',
     padding: '16px 20px',
     width: '100%',
@@ -468,11 +468,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     fontWeight: 700,
     letterSpacing: '0.5px',
-    color: '#0F172A',
+    color: 'var(--kpss-text, #0F172A)',
   },
   summaryBodyText: {
     fontSize: '13px',
-    color: '#475569',
+    color: 'var(--kpss-text-muted, #475569)',
     lineHeight: 1.55,
     margin: 0,
   },
@@ -482,15 +482,15 @@ const styles: Record<string, React.CSSProperties> = {
   toggleStateBtn: {
     background: 'none',
     border: 'none',
-    color: '#94A3B8',
+    color: 'var(--kpss-text-muted, #94A3B8)',
     fontSize: '12px',
     cursor: 'pointer',
     padding: 0,
     textDecoration: 'underline',
   },
   rightCol: {
-    backgroundColor: '#FAFAFC',
-    border: '1px solid #F1F5F9',
+    backgroundColor: 'var(--kpss-subtle-bg, #FAFAFC)',
+    border: '1px solid var(--kpss-border, #F1F5F9)',
     borderRadius: '20px',
     padding: '16px',
     display: 'flex',

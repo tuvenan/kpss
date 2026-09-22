@@ -177,7 +177,7 @@ export const StudentSettingsView: React.FC = () => {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
-            <User size={18} color="#0F172A" />
+            <User size={18} color="var(--kpss-primary, #4F46E5)" />
           </div>
           <div>
             <h2 style={styles.cardTitle}>Kişisel Bilgiler & Profil</h2>
@@ -193,8 +193,8 @@ export const StudentSettingsView: React.FC = () => {
           justifyContent: 'space-between',
           padding: '12px 16px',
           borderRadius: '12px',
-          backgroundColor: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? '#ECFDF5' : '#FFFBEB',
-          border: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? '1px solid #A7F3D0' : '1px solid #FDE68A',
+          backgroundColor: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+          border: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
           marginBottom: '20px',
           gap: '12px',
           flexWrap: 'wrap',
@@ -214,12 +214,12 @@ export const StudentSettingsView: React.FC = () => {
               <Globe size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>
                 {currentUser.isLoggedIn && currentUser.id !== 'local_user_1'
                   ? 'Bulut Senkronizasyonu Aktif'
                   : 'Cihazlar Arası Senkronizasyon'}
               </div>
-              <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+              <div style={{ fontSize: '11.5px', color: 'var(--kpss-text-muted, #64748B)' }}>
                 {currentUser.isLoggedIn && currentUser.id !== 'local_user_1'
                   ? `(${currentUser.email}) ile profiliniz Web ve Mobil arasında otomatik eşitleniyor.`
                   : 'Profil fotoğrafınız ve ayarlarınızın telefonunuz ile bilgisayarınızda senkronize görünmesi için giriş yapın.'}
@@ -296,8 +296,8 @@ export const StudentSettingsView: React.FC = () => {
                 style={{
                   padding: '7px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                   border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                  backgroundColor: activeAvatarTab === tab ? '#0F172A' : '#F1F5F9',
-                  color: activeAvatarTab === tab ? '#fff' : '#475569',
+                  backgroundColor: activeAvatarTab === tab ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-subtle-bg, #F1F5F9)',
+                  color: activeAvatarTab === tab ? '#FFFFFF' : 'var(--kpss-text-muted, #475569)',
                 }}
               >
                 {tab === 'photo' ? '📷 Fotoğraf Yükle' : '🎨 Avatar Seç'}
@@ -310,8 +310,8 @@ export const StudentSettingsView: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
               <div style={{
                 width: '90px', height: '90px', borderRadius: '50%',
-                border: '3px solid #E2E8F0', overflow: 'hidden',
-                backgroundColor: '#F8FAFC',
+                border: '3px solid var(--kpss-border, #E2E8F0)', overflow: 'hidden',
+                backgroundColor: 'var(--kpss-subtle-bg, #F8FAFC)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
               }}>
@@ -342,14 +342,14 @@ export const StudentSettingsView: React.FC = () => {
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     style={{
-                      border: '2px dashed #CBD5E1', borderRadius: '12px',
+                      border: '2px dashed var(--kpss-border, #CBD5E1)', borderRadius: '12px',
                       padding: '20px 16px', textAlign: 'center',
-                      cursor: 'pointer', backgroundColor: '#F8FAFC',
+                      cursor: 'pointer', backgroundColor: 'var(--kpss-subtle-bg, #F8FAFC)',
                       transition: 'border-color 0.2s',
                     }}
                   >
                     <div style={{ fontSize: '28px', marginBottom: '6px' }}>📸</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--kpss-text, #334155)', marginBottom: '4px' }}>
                       Tıkla veya fotoğraf sürükle
                     </div>
                     <div style={{ fontSize: '11px', color: '#94A3B8' }}>
@@ -384,9 +384,9 @@ export const StudentSettingsView: React.FC = () => {
                           }}
                           style={{
                             ...styles.avatarPillBtn,
-                            backgroundColor: isSelected ? '#0F172A' : '#F1F5F9',
-                            color: isSelected ? '#FFFFFF' : '#334155',
-                            border: isSelected ? '1.5px solid #0F172A' : '1.5px solid transparent',
+                            backgroundColor: isSelected ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-subtle-bg, #F1F5F9)',
+                            color: isSelected ? '#FFFFFF' : 'var(--kpss-text, #334155)',
+                            border: isSelected ? '1.5px solid var(--kpss-primary, #4F46E5)' : '1.5px solid var(--kpss-border, transparent)',
                           }}
                         >
                           <span style={{ marginRight: '6px' }}>{opt.emoji}</span>
@@ -420,12 +420,12 @@ export const StudentSettingsView: React.FC = () => {
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
                     padding: '6px 12px', borderRadius: '20px',
-                    border: `1.5px solid ${earned ? '#C7D2FE' : '#E2E8F0'}`,
-                    backgroundColor: earned ? '#EEF2FF' : '#F8FAFC',
-                    opacity: earned ? 1 : 0.5,
+                    border: `1.5px solid ${earned ? 'var(--kpss-primary, #6366F1)' : 'var(--kpss-border, #E2E8F0)'}`,
+                    backgroundColor: earned ? 'rgba(99, 102, 241, 0.15)' : 'var(--kpss-subtle-bg, #F8FAFC)',
+                    opacity: earned ? 1 : 0.6,
                     cursor: 'default', fontSize: '12px',
                     fontWeight: earned ? 700 : 400,
-                    color: earned ? '#3730A3' : '#94A3B8',
+                    color: earned ? 'var(--kpss-primary, #6366F1)' : 'var(--kpss-text-muted, #94A3B8)',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -520,7 +520,7 @@ export const StudentSettingsView: React.FC = () => {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
-            <Target size={18} color="#0F172A" />
+            <Target size={18} color="var(--kpss-primary, #4F46E5)" />
           </div>
           <div>
             <h2 style={styles.cardTitle}>KPSS Sınavı & Hedef Ayarları</h2>
@@ -601,8 +601,8 @@ export const StudentSettingsView: React.FC = () => {
                     onClick={() => setProfile({ ...profile, dailyGoal: goal })}
                     style={{
                       ...styles.pillOptionBtn,
-                      backgroundColor: isSelected ? '#0F172A' : '#F1F5F9',
-                      color: isSelected ? '#FFFFFF' : '#334155',
+                      backgroundColor: isSelected ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-subtle-bg, #F1F5F9)',
+                      color: isSelected ? '#FFFFFF' : 'var(--kpss-text, #334155)',
                       fontWeight: isSelected ? 700 : 500,
                     }}
                   >
@@ -619,7 +619,7 @@ export const StudentSettingsView: React.FC = () => {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
-            <Clock size={18} color="#0F172A" />
+            <Clock size={18} color="var(--kpss-primary, #4F46E5)" />
           </div>
           <div>
             <h2 style={styles.cardTitle}>Çalışma & Uygulama Tercihleri</h2>
@@ -684,7 +684,7 @@ export const StudentSettingsView: React.FC = () => {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
-            <Palette size={18} color="#0F172A" />
+            <Palette size={18} color="var(--kpss-primary, #4F46E5)" />
           </div>
           <div>
             <h2 style={styles.cardTitle}>Görsel Stil & Tema Seçimi</h2>
@@ -734,7 +734,7 @@ export const StudentSettingsView: React.FC = () => {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div style={styles.cardIconBox}>
-            <Lock size={18} color="#0F172A" />
+            <Lock size={18} color="var(--kpss-primary, #4F46E5)" />
           </div>
           <div>
             <h2 style={styles.cardTitle}>Güvenlik & Hesap Yönetimi</h2>

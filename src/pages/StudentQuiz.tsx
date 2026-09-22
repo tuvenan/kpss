@@ -935,25 +935,26 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   };
 
   const renderIcon = (iconName: string) => {
+    const iconColor = 'var(--kpss-primary, #4F46E5)';
     switch (iconName) {
       case 'calculator':
-        return <Calculator size={20} color="#111" />;
+        return <Calculator size={20} color={iconColor} />;
       case 'landmark':
-        return <Landmark size={20} color="#111" />;
+        return <Landmark size={20} color={iconColor} />;
       case 'earth':
       case 'globe':
-        return <Globe size={20} color="#111" />;
+        return <Globe size={20} color={iconColor} />;
       case 'users':
-        return <Users size={20} color="#111" />;
+        return <Users size={20} color={iconColor} />;
       case 'shield':
-        return <Shield size={20} color="#111" />;
+        return <Shield size={20} color={iconColor} />;
       case 'newspaper':
-        return <Newspaper size={20} color="#111" />;
+        return <Newspaper size={20} color={iconColor} />;
       case 'bookmark':
-        return <Bookmark size={20} color="#111" />;
+        return <Bookmark size={20} color={iconColor} />;
       case 'book':
       default:
-        return <BookOpen size={20} color="#111" />;
+        return <BookOpen size={20} color={iconColor} />;
     }
   };
 
@@ -997,7 +998,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               style={styles.unitBackButton}
               title="Ana Sayfaya Dön"
             >
-              <ChevronLeft size={22} color="#111" />
+              <ChevronLeft size={22} color="var(--kpss-text, #111)" />
             </button>
             <div style={styles.unitDetailHeaderTitle}>Deneme Sınavı Raporu</div>
             <div style={{ width: '40px' }} />
@@ -1266,7 +1267,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             style={styles.unitBackButton}
             title="Konulara Dön"
           >
-            <ChevronLeft size={22} color="#111" />
+            <ChevronLeft size={22} color="var(--kpss-text, #111)" />
           </button>
           <div style={styles.unitDetailHeaderTitle}>Test Sonucu</div>
           <div style={{ width: '40px' }} />
@@ -1372,7 +1373,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       <div style={styles.subjectInfo}>
         <div style={styles.subjectRow}>
           <span style={styles.subjectTitle}>{subject.title}</span>
-          <ChevronRight size={18} color="#666" />
+          <ChevronRight size={18} color="var(--kpss-text-muted, #94A3B8)" />
         </div>
         <div style={styles.unitText}>{subject.unitCount} Ünite</div>
 
@@ -1829,7 +1830,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 title="Bildirimler"
                 onClick={() => setShowNotifications(n => !n)}
               >
-                <Bell size={18} color={showNotifications ? '#111' : '#333'} />
+                <Bell size={18} color={showNotifications ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text, #333)'} />
                 {unreadCount > 0 && (
                   <span style={{
                     position: 'absolute', top: '4px', right: '4px',
@@ -1854,21 +1855,21 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   />
                   <div style={{
                     position: 'fixed', top: '62px', right: '8px',
-                    width: '320px', maxWidth: 'calc(100vw - 16px)', backgroundColor: '#fff',
-                    borderRadius: '14px', border: '1px solid #E5E7EB',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    width: '320px', maxWidth: 'calc(100vw - 16px)', backgroundColor: 'var(--kpss-card-bg, #fff)',
+                    borderRadius: '14px', border: '1px solid var(--kpss-border, #E5E7EB)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
                     zIndex: 200, overflow: 'hidden',
                   }}>
                     <div style={{
                       padding: '14px 18px',
-                      borderBottom: '1px solid #F3F4F6',
+                      borderBottom: '1px solid var(--kpss-border, #F3F4F6)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      backgroundColor: '#F9FAFB',
+                      backgroundColor: 'var(--kpss-subtle-bg, #F9FAFB)',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>Bildirimler</span>
+                        <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--kpss-text, #0F172A)' }}>Bildirimler</span>
                         {unreadCount > 0 && (
                           <span style={{
                             backgroundColor: '#EF4444',
@@ -1890,7 +1891,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            color: '#4F46E5',
+                            color: 'var(--kpss-primary, #4F46E5)',
                             fontSize: '12px',
                             fontWeight: 600,
                             padding: '4px 6px',
@@ -1915,8 +1916,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                             alignItems: 'flex-start',
                             gap: '12px',
                             padding: '12px 16px',
-                            backgroundColor: n.unread ? '#F8FAFC' : '#FFFFFF',
-                            borderBottom: '1px solid #F1F5F9',
+                            backgroundColor: n.unread ? 'var(--kpss-subtle-bg, #F8FAFC)' : 'var(--kpss-card-bg, #FFFFFF)',
+                            borderBottom: '1px solid var(--kpss-border, #F1F5F9)',
                             cursor: 'pointer',
                             transition: 'background-color 0.15s ease',
                           }}
@@ -1941,7 +1942,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                               <span style={{
                                 fontSize: '13px',
                                 fontWeight: n.unread ? 700 : 600,
-                                color: n.unread ? '#0F172A' : '#334155',
+                                color: n.unread ? 'var(--kpss-text, #0F172A)' : 'var(--kpss-text-muted, #94A3B8)',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -1952,8 +1953,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                                 <span style={{
                                   fontSize: '10px',
                                   fontWeight: 600,
-                                  color: '#6366F1',
-                                  backgroundColor: '#EEF2FF',
+                                  color: 'var(--kpss-primary, #6366F1)',
+                                  backgroundColor: 'var(--kpss-subtle-bg, #EEF2FF)',
                                   padding: '1px 6px',
                                   borderRadius: '4px',
                                   flexShrink: 0,
@@ -1965,7 +1966,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
                             <div style={{
                               fontSize: '12px',
-                              color: '#64748B',
+                              color: 'var(--kpss-text-muted, #64748B)',
                               lineHeight: '16px',
                               marginBottom: '4px',
                             }}>
@@ -1977,8 +1978,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                               justifyContent: 'space-between',
                               alignItems: 'center',
                             }}>
-                              <span style={{ fontSize: '11px', color: '#94A3B8' }}>{n.time}</span>
-                              <span style={{ fontSize: '11px', color: '#4F46E5', fontWeight: 600 }}>Görüntüle →</span>
+                              <span style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #94A3B8)' }}>{n.time}</span>
+                              <span style={{ fontSize: '11px', color: 'var(--kpss-primary, #4F46E5)', fontWeight: 600 }}>Görüntüle →</span>
                             </div>
                           </div>
 
@@ -2078,10 +2079,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   title="Hesap ve Ayarlar"
                 >
                   <div style={styles.headerUserAvatar}>
-                    <User size={14} color="#333" />
+                    <User size={14} color="var(--kpss-text, #333)" />
                   </div>
                   <span style={styles.headerUserName}>{authUser?.name?.split(' ')[0] || userProfile.name.split(' ')[0] || 'Hesabım'}</span>
-                  <ChevronDown size={14} color="#666" style={{ marginLeft: '4px' }} />
+                  <ChevronDown size={14} color="var(--kpss-text-muted, #666)" style={{ marginLeft: '4px' }} />
                 </div>
 
                 {showUserDropdown && (
@@ -2258,7 +2259,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     <div style={styles.welcomeSubheading}>Bugün ne çalışalım?</div>
                   </div>
                   <div className="date-badge-container" style={styles.dateBadgeContainer}>
-                    <Calendar size={18} color="#444" style={{ marginRight: '10px' }} />
+                    <Calendar size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '10px' }} />
                     <div>
                       <div style={styles.dateBadgeTitle}>24 Eylül 2025</div>
                       <div style={styles.dateBadgeSub}>Çarşamba</div>
@@ -2270,7 +2271,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 <div className="deneme-theme-banner" style={styles.denemeThemeCard}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                     <div style={styles.denemeThemeIconBox}>
-                      <Timer size={20} color="#111" />
+                      <Timer size={20} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -2299,7 +2300,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <div style={styles.goalHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={styles.goalTargetIconBox}>
-                        <Target size={18} color="#111" />
+                        <Target size={18} color="var(--kpss-primary, #4F46E5)" />
                       </div>
                       <span style={styles.goalTitleText}>Günlük İlerleme</span>
                     </div>
@@ -2339,12 +2340,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.dashSubjectCard}
                   >
                     <div style={styles.dashSubjectIconBox}>
-                      <BookOpen size={18} color="#111" />
+                      <BookOpen size={18} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
                         <span style={styles.dashSubjectName}>Türkçe</span>
-                        <ChevronRight size={16} color="#666" />
+                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                       </div>
                       <div style={styles.dashSubjectUnits}>12 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
@@ -2360,12 +2361,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.dashSubjectCard}
                   >
                     <div style={styles.dashSubjectIconBox}>
-                      <Calculator size={18} color="#111" />
+                      <Calculator size={18} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
                         <span style={styles.dashSubjectName}>Matematik</span>
-                        <ChevronRight size={16} color="#666" />
+                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                       </div>
                       <div style={styles.dashSubjectUnits}>8 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
@@ -2384,12 +2385,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.dashSubjectCard}
                   >
                     <div style={styles.dashSubjectIconBox}>
-                      <Landmark size={18} color="#111" />
+                      <Landmark size={18} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
                         <span style={styles.dashSubjectName}>Tarih</span>
-                        <ChevronRight size={16} color="#666" />
+                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                       </div>
                       <div style={styles.dashSubjectUnits}>5 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
@@ -2405,12 +2406,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.dashSubjectCard}
                   >
                     <div style={styles.dashSubjectIconBox}>
-                      <Globe size={18} color="#111" />
+                      <Globe size={18} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
                         <span style={styles.dashSubjectName}>Coğrafya</span>
-                        <ChevronRight size={16} color="#666" />
+                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                       </div>
                       <div style={styles.dashSubjectUnits}>0 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
@@ -2426,12 +2427,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.dashSubjectCard}
                   >
                     <div style={styles.dashSubjectIconBox}>
-                      <Users size={18} color="#111" />
+                      <Users size={18} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
                         <span style={styles.dashSubjectName}>Vatandaşlık</span>
-                        <ChevronRight size={16} color="#666" />
+                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                       </div>
                       <div style={styles.dashSubjectUnits}>8 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
@@ -2447,12 +2448,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.dashSubjectCard}
                   >
                     <div style={styles.dashSubjectIconBox}>
-                      <Newspaper size={18} color="#111" />
+                      <Newspaper size={18} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={styles.dashSubjectTop}>
                         <span style={styles.dashSubjectName}>Güncel Bilgiler</span>
-                        <ChevronRight size={16} color="#666" />
+                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                       </div>
                       <div style={styles.dashSubjectUnits}>6 / 20 ünite</div>
                       <div style={styles.dashMiniBarBg}>
@@ -2471,7 +2472,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.quickAccessCard}
                   >
                     <div style={styles.quickAccessIconBox}>
-                      <Timer size={16} color="#111" />
+                      <Timer size={16} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Deneme Sınavı</div>
@@ -2484,7 +2485,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.quickAccessCard}
                   >
                     <div style={styles.quickAccessIconBox}>
-                      <Play size={16} color="#111" />
+                      <Play size={16} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Soru Çöz</div>
@@ -2497,7 +2498,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.quickAccessCard}
                   >
                     <div style={styles.quickAccessIconBox}>
-                      <FileText size={16} color="#111" />
+                      <FileText size={16} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div>
                       <div style={{ ...styles.quickAccessTitleText, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2526,7 +2527,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.quickAccessCard}
                   >
                     <div style={styles.quickAccessIconBox}>
-                      <BookOpen size={16} color="#111" />
+                      <BookOpen size={16} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Dersler</div>
@@ -2539,7 +2540,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.quickAccessCard}
                   >
                     <div style={styles.quickAccessIconBox}>
-                      <User size={16} color="#111" />
+                      <User size={16} color="var(--kpss-primary, #4F46E5)" />
                     </div>
                     <div>
                       <div style={styles.quickAccessTitleText}>Profil</div>
@@ -2555,7 +2556,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 <div style={styles.widgetBox}>
                   <div style={styles.widgetHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <Calendar size={18} color="#111" style={{ marginRight: '8px' }} />
+                      <Calendar size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '8px' }} />
                       <span style={styles.widgetTitleText}>Bugünün Çalışma Planı</span>
                     </div>
                     <button style={styles.widgetLinkBtn}>Düzenle</button>
@@ -2571,7 +2572,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.planItemTitle}>Tarih — İslamiyet Öncesi Türk Tarihi</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
-                      <ChevronRight size={16} color="#666" />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                     </div>
 
                     <div
@@ -2583,7 +2584,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.planItemTitle}>Türkçe — Sözcükte Anlam</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
-                      <ChevronRight size={16} color="#666" />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                     </div>
 
                     <div
@@ -2595,7 +2596,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.planItemTitle}>Matematik — Problemler</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
-                      <ChevronRight size={16} color="#666" />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                     </div>
 
                     <div
@@ -2607,7 +2608,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.planItemTitle}>Coğrafya — Türkiye Fiziki Yapısı</div>
                         <div style={styles.planItemSub}>20 soru</div>
                       </div>
-                      <ChevronRight size={16} color="#666" />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
                     </div>
                   </div>
 
@@ -2623,7 +2624,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 <div style={styles.widgetBox}>
                   <div style={styles.widgetHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <BarChart2 size={18} color="#111" style={{ marginRight: '8px' }} />
+                      <BarChart2 size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '8px' }} />
                       <span style={styles.widgetTitleText}>Sonuçlarım</span>
                     </div>
                     <button
@@ -2658,7 +2659,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 <div style={styles.widgetBox}>
                   <div style={styles.widgetHeaderRow}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <AlertTriangle size={18} color="#111" style={{ marginRight: '8px' }} />
+                      <AlertTriangle size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '8px' }} />
                       <span style={styles.widgetTitleText}>Hata Havuzu</span>
                     </div>
                     <button
@@ -2680,7 +2681,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.errorItemSub}>Soru 07</div>
                       </div>
                       <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
                     </div>
 
                     <div
@@ -2692,7 +2693,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.errorItemSub}>Soru 13</div>
                       </div>
                       <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
                     </div>
 
                     <div
@@ -2704,7 +2705,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.errorItemSub}>Soru 05</div>
                       </div>
                       <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
                     </div>
 
                     <div
@@ -2716,7 +2717,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         <div style={styles.errorItemSub}>Soru 11</div>
                       </div>
                       <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="#666" style={{ marginLeft: '6px' }} />
+                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
                     </div>
                   </div>
                 </div>
@@ -2736,7 +2737,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     alignItems: 'center',
                     gap: '8px',
                     padding: '8px 16px',
-                    backgroundColor: '#111111',
+                    backgroundColor: 'var(--kpss-primary, #4F46E5)',
                     color: '#FFFFFF',
                     borderRadius: '10px',
                     border: 'none',
@@ -2780,18 +2781,18 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   style={styles.errorFilterButton}
                 >
                   <span>{errorFilter}</span>
-                  <ChevronDown size={14} color="#333" style={{ marginLeft: '6px' }} />
+                  <ChevronDown size={14} color="var(--kpss-text, #333)" style={{ marginLeft: '6px' }} />
                 </button>
               </div>
 
               {/* ARALIKLI TEKRAR (SPACED REPETITION / LEITNER 5-KUTU SİSTEMİ) KARTI */}
               <div style={{
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
                 borderRadius: '16px',
-                border: '1px solid #E0E7FF',
+                border: '1px solid var(--kpss-border, #E0E7FF)',
                 padding: '20px',
                 marginBottom: '18px',
-                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.06)',
+                boxShadow: 'var(--kpss-shadow, 0 4px 14px rgba(79, 70, 229, 0.06))',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2799,8 +2800,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       width: '40px',
                       height: '40px',
                       borderRadius: '10px',
-                      backgroundColor: '#EEF2FF',
-                      color: '#4F46E5',
+                      backgroundColor: 'var(--kpss-subtle-bg, #EEF2FF)',
+                      color: 'var(--kpss-primary, #4F46E5)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -2809,14 +2810,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>
+                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--kpss-text, #0F172A)' }}>
                           Aralıklı Tekrar & Kalıcı Hafıza (Leitner)
                         </span>
-                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: '#EEF2FF', color: '#4F46E5' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: 'var(--kpss-subtle-bg, #EEF2FF)', color: 'var(--kpss-primary, #4F46E5)' }}>
                           5-Kutu Algoritması
                         </span>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginTop: '2px' }}>
                         Öğrendiğiniz ve hata yaptığınız sorular unutma eğrisine göre periyodik olarak önünüze gelir.
                       </div>
                     </div>
@@ -2826,12 +2827,13 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    backgroundColor: leitnerStats.dueTodayCount > 0 ? '#FEF3C7' : '#F0FDF4',
+                    backgroundColor: leitnerStats.dueTodayCount > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
                     padding: '6px 12px',
                     borderRadius: '8px',
+                    border: `1px solid ${leitnerStats.dueTodayCount > 0 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
                   }}>
-                    <Zap size={14} color={leitnerStats.dueTodayCount > 0 ? '#D97706' : '#16A34A'} />
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: leitnerStats.dueTodayCount > 0 ? '#B45309' : '#15803D' }}>
+                    <Zap size={14} color={leitnerStats.dueTodayCount > 0 ? '#F59E0B' : '#10B981'} />
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: leitnerStats.dueTodayCount > 0 ? '#F59E0B' : '#10B981' }}>
                       {leitnerStats.dueTodayCount > 0
                         ? `Bugün ${leitnerStats.dueTodayCount} soru tekrar bekliyor`
                         : 'Bugün için tüm tekrarlar tamamlandı!'}
@@ -2842,32 +2844,32 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 {/* 5 Kutu İlerleme Izgarası */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
                   {[
-                    { box: 1, name: '1. Kutu', interval: '1 Gün', count: leitnerStats.boxes[0]?.count || 0, color: '#EF4444', bg: '#FEE2E2' },
-                    { box: 2, name: '2. Kutu', interval: '3 Gün', count: leitnerStats.boxes[1]?.count || 0, color: '#F97316', bg: '#FFEDD5' },
-                    { box: 3, name: '3. Kutu', interval: '7 Gün', count: leitnerStats.boxes[2]?.count || 0, color: '#F59E0B', bg: '#FEF3C7' },
-                    { box: 4, name: '4. Kutu', interval: '14 Gün', count: leitnerStats.boxes[3]?.count || 0, color: '#3B82F6', bg: '#DBEAFE' },
-                    { box: 5, name: '5. Kutu (Kalıcı)', interval: '30 Gün', count: leitnerStats.boxes[4]?.count || 0, color: '#10B981', bg: '#D1FAE5' },
+                    { box: 1, name: '1. Kutu', interval: '1 Gün', count: leitnerStats.boxes[0]?.count || 0, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.15)' },
+                    { box: 2, name: '2. Kutu', interval: '3 Gün', count: leitnerStats.boxes[1]?.count || 0, color: '#F97316', bg: 'rgba(249, 115, 22, 0.15)' },
+                    { box: 3, name: '3. Kutu', interval: '7 Gün', count: leitnerStats.boxes[2]?.count || 0, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)' },
+                    { box: 4, name: '4. Kutu', interval: '14 Gün', count: leitnerStats.boxes[3]?.count || 0, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.15)' },
+                    { box: 5, name: '5. Kutu (Kalıcı)', interval: '30 Gün', count: leitnerStats.boxes[4]?.count || 0, color: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' },
                   ].map((b) => (
                     <div
                       key={b.box}
                       style={{
-                        backgroundColor: '#F8FAFC',
+                        backgroundColor: 'var(--kpss-subtle-bg, #F8FAFC)',
                         borderRadius: '12px',
                         padding: '12px 10px',
-                        border: '1px solid #F1F5F9',
+                        border: '1px solid var(--kpss-border, #F1F5F9)',
                         textAlign: 'center',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>{b.name}</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--kpss-text-muted, #475569)' }}>{b.name}</span>
                         <span style={{ fontSize: '9px', fontWeight: 600, color: b.color, backgroundColor: b.bg, padding: '1px 5px', borderRadius: '4px' }}>
                           {b.interval}
                         </span>
                       </div>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
+                      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--kpss-text, #0F172A)' }}>
                         {b.count}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #94A3B8)', marginTop: '2px' }}>
                         soru hafızada
                       </div>
                     </div>
@@ -2877,15 +2879,15 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
               {/* 'Yanlışlarım' Özel Soru Bankası Kartı */}
               <div style={{
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
                 borderRadius: '16px',
-                border: '1px solid #FECACA',
+                border: '1px solid var(--kpss-border, #FECACA)',
                 padding: '16px 20px',
                 marginBottom: '18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.06)',
+                boxShadow: 'var(--kpss-shadow, 0 4px 14px rgba(220, 38, 38, 0.06))',
                 flexWrap: 'wrap',
                 gap: '12px',
               }}>
@@ -2894,7 +2896,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     width: '44px',
                     height: '44px',
                     borderRadius: '12px',
-                    backgroundColor: '#FEE2E2',
+                    backgroundColor: 'rgba(220, 38, 38, 0.12)',
                     color: '#DC2626',
                     display: 'flex',
                     alignItems: 'center',
@@ -2905,12 +2907,12 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '15px', color: '#111827' }}>'Yanlışlarım' Soru Bankası</span>
-                      <span style={{ fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                      <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--kpss-text, #111827)' }}>'Yanlışlarım' Soru Bankası</span>
+                      <span style={{ fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(220, 38, 38, 0.12)', color: '#DC2626' }}>
                         Otomatik Banka
                       </span>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '3px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #6B7280)', marginTop: '3px' }}>
                       Deneme sınavlarında yanlış çözdüğünüz sorular otomatik olarak bu soru bankasında birikir. ({mistakesBankCount} Soru)
                     </div>
                   </div>
@@ -2924,8 +2926,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     alignItems: 'center',
                     gap: '6px',
                     padding: '9px 18px',
-                    backgroundColor: mistakesBankCount > 0 ? '#DC2626' : '#E5E7EB',
-                    color: mistakesBankCount > 0 ? '#FFFFFF' : '#9CA3AF',
+                    backgroundColor: mistakesBankCount > 0 ? '#DC2626' : 'var(--kpss-subtle-bg, #E5E7EB)',
+                    color: mistakesBankCount > 0 ? '#FFFFFF' : 'var(--kpss-text-muted, #9CA3AF)',
                     borderRadius: '10px',
                     border: 'none',
                     fontWeight: 700,
@@ -2934,7 +2936,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     boxShadow: mistakesBankCount > 0 ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none',
                   }}
                 >
-                  <Play size={15} fill={mistakesBankCount > 0 ? '#FFFFFF' : '#9CA3AF'} />
+                  <Play size={15} fill={mistakesBankCount > 0 ? '#FFFFFF' : 'var(--kpss-text-muted, #9CA3AF)'} />
                   <span>Yanlışlarımı Çöz ({mistakesBankCount})</span>
                 </button>
               </div>
@@ -2971,15 +2973,15 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             return (
               <div style={{ maxWidth: '980px', margin: '0 auto', width: '100%' }}>
                 <h1 style={styles.mainTitle}>Öğrenci Profili</h1>
-                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EFEFF2', padding: '24px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                <div style={{ backgroundColor: 'var(--kpss-card-bg, #FFFFFF)', borderRadius: '16px', border: '1px solid var(--kpss-border, #EFEFF2)', padding: '24px', marginBottom: '20px', boxShadow: 'var(--kpss-shadow, 0 2px 10px rgba(0,0,0,0.02))' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#F2F2F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <User size={28} color="#111" />
+                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'var(--kpss-subtle-bg, #F2F2F5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={28} color="var(--kpss-text, #111)" />
                       </div>
                       <div>
-                        <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{userProfile.name || 'Öğrenci'}</h2>
-                        <div style={{ fontSize: '14px', color: '#666' }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 4px 0', color: 'var(--kpss-text, #111)' }}>{userProfile.name || 'Öğrenci'}</h2>
+                        <div style={{ fontSize: '14px', color: 'var(--kpss-text-muted, #64748B)' }}>
                           {userProfile.examType} Adayı • Hedef: {userProfile.targetScore}+ Puan
                           {userProfile.branch ? ` • ${userProfile.branch}` : ''}
                         </div>
@@ -2993,31 +2995,31 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                         gap: '6px',
                         padding: '9px 16px',
                         borderRadius: '10px',
-                        border: '1px solid #E5E7EB',
-                        backgroundColor: '#F9FAFB',
+                        border: '1px solid var(--kpss-border, #E5E7EB)',
+                        backgroundColor: 'var(--kpss-subtle-bg, #F9FAFB)',
                         cursor: 'pointer',
                         fontSize: '13px',
                         fontWeight: 600,
-                        color: '#111827',
+                        color: 'var(--kpss-text, #111827)',
                         transition: 'background-color 0.15s',
                       }}
                     >
-                      <Settings size={16} color="#4B5563" />
+                      <Settings size={16} color="var(--kpss-text-muted, #4B5563)" />
                       <span>Ayarları Düzenle</span>
                     </button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-                    <div style={{ padding: '14px', backgroundColor: '#F9F9FB', borderRadius: '12px', border: '1px solid #EFEFF2' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Çözülen Soru</div>
-                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#111' }}>{overallStats.totalSolved}</div>
+                    <div style={{ padding: '14px', backgroundColor: 'var(--kpss-subtle-bg, #F9F9FB)', borderRadius: '12px', border: '1px solid var(--kpss-border, #EFEFF2)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginBottom: '4px' }}>Çözülen Soru</div>
+                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--kpss-text, #111)' }}>{overallStats.totalSolved}</div>
                     </div>
-                    <div style={{ padding: '14px', backgroundColor: '#F9F9FB', borderRadius: '12px', border: '1px solid #EFEFF2' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Başarı Oranı</div>
-                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2E7D32' }}>%{overallStats.percentage}</div>
+                    <div style={{ padding: '14px', backgroundColor: 'var(--kpss-subtle-bg, #F9F9FB)', borderRadius: '12px', border: '1px solid var(--kpss-border, #EFEFF2)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginBottom: '4px' }}>Başarı Oranı</div>
+                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10B981' }}>%{overallStats.percentage}</div>
                     </div>
-                    <div style={{ padding: '14px', backgroundColor: '#F9F9FB', borderRadius: '12px', border: '1px solid #EFEFF2' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Günlük Hedef</div>
-                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2563EB' }}>{userProfile.dailyGoal} Soru</div>
+                    <div style={{ padding: '14px', backgroundColor: 'var(--kpss-subtle-bg, #F9F9FB)', borderRadius: '12px', border: '1px solid var(--kpss-border, #EFEFF2)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #64748B)', marginBottom: '4px' }}>Günlük Hedef</div>
+                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--kpss-primary, #6366F1)' }}>{userProfile.dailyGoal} Soru</div>
                     </div>
                   </div>
                 </div>
@@ -3057,7 +3059,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 style={styles.unitBackButton}
                 title="Derslere Dön"
               >
-                <ChevronLeft size={22} color="#111" />
+                <ChevronLeft size={22} color="var(--kpss-text, #111)" />
               </button>
               <div style={styles.unitHeaderTitle}>{selectedSubject.title}</div>
               <div style={{ width: '40px' }} /> {/* Dengeleme boşluğu */}
@@ -3083,7 +3085,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       <div style={styles.unitName}>{unit.title}</div>
                       <div style={styles.unitQuestionText}>{unit.topicCount || 3} Konu • Testler</div>
                     </div>
-                    <ChevronRight size={18} color="#666" />
+                    <ChevronRight size={18} color="var(--kpss-text-muted, #94A3B8)" />
                   </div>
                 );
               })}
@@ -3101,7 +3103,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 style={styles.unitBackButton}
                 title="Ünitelere Dön"
               >
-                <ChevronLeft size={22} color="#111" />
+                <ChevronLeft size={22} color="var(--kpss-text, #111)" />
               </button>
               <div style={styles.unitHeaderTitle}>{selectedUnit.title}</div>
               <div style={{ width: '40px' }} />
@@ -3159,7 +3161,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                           : `${topic.questionCount || 20} Soru • Test`}
                       </div>
                     </div>
-                    {isUnder20 ? <Lock size={18} color="#94A3B8" /> : <ChevronRight size={18} color="#666" />}
+                    {isUnder20 ? <Lock size={18} color="#94A3B8" /> : <ChevronRight size={18} color="var(--kpss-text-muted, #94A3B8)" />}
                   </div>
                 );
               })}
@@ -3177,7 +3179,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 style={styles.unitBackButton}
                 title="Konulara Dön"
               >
-                <ChevronLeft size={22} color="#111" />
+                <ChevronLeft size={22} color="var(--kpss-text, #111)" />
               </button>
               <div style={styles.unitDetailHeaderTitle}>{selectedTopic ? selectedTopic.title : selectedUnit?.title}</div>
               <div style={{ width: '40px' }} />
@@ -3589,7 +3591,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                       style={styles.quizMenuButton}
                       title="Seçenekler"
                     >
-                      <MoreVertical size={18} color="#111" />
+                      <MoreVertical size={18} color="var(--kpss-text, #111)" />
                     </button>
                   )}
                 </div>
@@ -3599,7 +3601,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   <div
                     style={{
                       ...styles.cardProgressBarFill,
-                      backgroundColor: '#111111',
+                      backgroundColor: 'var(--kpss-primary, #4F46E5)',
                       width: `${questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0}%`,
                     }}
                   />
