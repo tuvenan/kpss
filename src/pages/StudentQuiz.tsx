@@ -58,6 +58,70 @@ import {
   MISTAKES_BANK_ID,
 } from '../services/mockExamService';
 
+export interface StudentNotificationItem {
+  id: string;
+  icon: string;
+  title: string;
+  sub: string;
+  time: string;
+  unread: boolean;
+  actionType: 'calendar' | 'radar' | 'errors' | 'deneme';
+  badgeText?: string;
+}
+
+const INITIAL_STUDENT_NOTIFICATIONS: StudentNotificationItem[] = [
+  {
+    id: 'notif-1',
+    icon: '🎯',
+    title: 'Günlük hedefin tamamlandı!',
+    sub: 'Bugün 60 soru çözdün. Çalışma takvimini ve hedeflerini gör.',
+    time: '5 dk önce',
+    unread: true,
+    actionType: 'calendar',
+    badgeText: 'Takvim & Hedef',
+  },
+  {
+    id: 'notif-2',
+    icon: '🔥',
+    title: '7 günlük seri devam ediyor',
+    sub: 'Düzenli soru çözme serini korumak için bugün de soru çöz.',
+    time: '1 saat önce',
+    unread: true,
+    actionType: 'calendar',
+    badgeText: 'Seri',
+  },
+  {
+    id: 'notif-3',
+    icon: '📊',
+    title: 'Yeterlilik raporun hazır',
+    sub: 'Ders ve konu bazlı akademik yeterlilik radarını incele.',
+    time: '2 saat önce',
+    unread: true,
+    actionType: 'radar',
+    badgeText: 'Radar',
+  },
+  {
+    id: 'notif-4',
+    icon: '⏱️',
+    title: '20 Soruluk Deneme Sınavı',
+    sub: 'Rastgele konulardan 20 soruyla canlı süreli sınav simülasyonu başlat.',
+    time: 'Bugün',
+    unread: true,
+    actionType: 'deneme',
+    badgeText: 'Deneme',
+  },
+  {
+    id: 'notif-5',
+    icon: '⚠️',
+    title: 'Hata Havuzu & Yanlışlarım',
+    sub: 'Yanlış yaptığın soruları tekrar çözerek kalıcı öğrenme sağla.',
+    time: 'Dün',
+    unread: false,
+    actionType: 'errors',
+    badgeText: 'Yanlışlarım',
+  },
+];
+
 export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavigateAdmin }) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -245,12 +309,62 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     }
   };
 
-  const notifications = [
-    { id: 1, icon: '🎯', title: 'Günlük hedefin tamamlandı!', sub: 'Bugün 60 soru çözdün. Harika!', time: '5 dk önce', unread: true },
-    { id: 2, icon: '🔥', title: '7 günlük seri devam ediyor', sub: 'Her gün düzenli çalışıyorsun.', time: '1 saat önce', unread: true },
-    { id: 3, icon: '📊', title: 'Haftalık rapor hazır', sub: 'Bu hafta 240 soru çözdün.', time: '2 saat önce', unread: false },
-  ];
+  // ----------------------------------------------------
+  // BİLDİRİM MERKEZİ STATE VE ETKİLEŞİMLERİ
+  // ----------------------------------------------------
+  const [notifications, setNotifications] = useState<StudentNotificationItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('kpss_student_notifications');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return INITIAL_STUDENT_NOTIFICATIONS;
+  });
+
+  const saveNotifications = (newList: StudentNotificationItem[]) => {
+    setNotifications(newList);
+    try {
+      localStorage.setItem('kpss_student_notifications', JSON.stringify(newList));
+    } catch {}
+  };
+
   const unreadCount = notifications.filter(n => n.unread).length;
+
+  // Bildirime tıklandığında okundu say ve ilgili sayfaya/özelliğe yönlendir
+  const handleNotificationClick = (notif: StudentNotificationItem) => {
+    const updated = notifications.map((n) =>
+      n.id === notif.id ? { ...n, unread: false } : n
+    );
+    saveNotifications(updated);
+    setShowNotifications(false);
+
+    switch (notif.actionType) {
+      case 'calendar':
+        setActiveTab('profile');
+        setViewState('subjects');
+        break;
+      case 'radar':
+        setActiveTab('home');
+        setViewState('subjects');
+        break;
+      case 'errors':
+        setActiveTab('errors');
+        setViewState('subjects');
+        break;
+      case 'deneme':
+        handleOpenDenemeSetup();
+        break;
+      default:
+        setActiveTab('home');
+        setViewState('subjects');
+        break;
+    }
+  };
+
+  // Tüm bildirimleri okundu olarak işaretleme
+  const handleMarkAllNotificationsRead = () => {
+    const updated = notifications.map((n) => ({ ...n, unread: false }));
+    saveNotifications(updated);
+  };
 
   const [errorFilter, setErrorFilter] = useState('Tümü');
 
@@ -1189,6 +1303,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
         .search-result-item:hover {
           background-color: #F8FAFC !important;
         }
+        .notification-item:hover {
+          background-color: #F1F5F9 !important;
+        }
         @media (max-width: 900px) {
           .search-dropdown-menu {
             position: fixed !important;
@@ -1503,37 +1620,142 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                     zIndex: 200, overflow: 'hidden',
                   }}>
-                    <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 700, fontSize: '15px' }}>Bildirimler</span>
-                      <button
-                        onClick={() => setShowNotifications(false)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: '13px' }}
-                      >
-                        Tümünü gör →
-                      </button>
-                    </div>
-                    {notifications.map(n => (
-                      <div
-                        key={n.id}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: '12px',
-                          padding: '12px 18px',
-                          backgroundColor: n.unread ? '#F9FAFB' : '#fff',
-                          borderBottom: '1px solid #F3F4F6',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>{n.icon}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: n.unread ? 700 : 500, color: '#111', marginBottom: '2px' }}>{n.title}</div>
-                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{n.sub}</div>
-                          <div style={{ fontSize: '11px', color: '#999' }}>{n.time}</div>
-                        </div>
-                        {n.unread && (
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0, marginTop: '4px' }} />
+                    <div style={{
+                      padding: '14px 18px',
+                      borderBottom: '1px solid #F3F4F6',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: '#F9FAFB',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>Bildirimler</span>
+                        {unreadCount > 0 && (
+                          <span style={{
+                            backgroundColor: '#EF4444',
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '1px 7px',
+                            borderRadius: '9999px',
+                          }}>
+                            {unreadCount} yeni
+                          </span>
                         )}
                       </div>
-                    ))}
+                      {unreadCount > 0 ? (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllNotificationsRead}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#4F46E5',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            padding: '4px 6px',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          Tümünü Okundu Say
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>Tümü okundu ✓</span>
+                      )}
+                    </div>
+
+                    <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                      {notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className="notification-item"
+                          onClick={() => handleNotificationClick(n)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            backgroundColor: n.unread ? '#F8FAFC' : '#FFFFFF',
+                            borderBottom: '1px solid #F1F5F9',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '20px',
+                            lineHeight: 1,
+                            flexShrink: 0,
+                            marginTop: '2px',
+                          }}>
+                            {n.icon}
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '6px',
+                              marginBottom: '3px',
+                            }}>
+                              <span style={{
+                                fontSize: '13px',
+                                fontWeight: n.unread ? 700 : 600,
+                                color: n.unread ? '#0F172A' : '#334155',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}>
+                                {n.title}
+                              </span>
+                              {n.badgeText && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 600,
+                                  color: '#6366F1',
+                                  backgroundColor: '#EEF2FF',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  flexShrink: 0,
+                                }}>
+                                  {n.badgeText}
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#64748B',
+                              lineHeight: '16px',
+                              marginBottom: '4px',
+                            }}>
+                              {n.sub}
+                            </div>
+
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}>
+                              <span style={{ fontSize: '11px', color: '#94A3B8' }}>{n.time}</span>
+                              <span style={{ fontSize: '11px', color: '#4F46E5', fontWeight: 600 }}>Görüntüle →</span>
+                            </div>
+                          </div>
+
+                          {n.unread && (
+                            <div style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: '#3B82F6',
+                              flexShrink: 0,
+                              marginTop: '6px',
+                            }} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
