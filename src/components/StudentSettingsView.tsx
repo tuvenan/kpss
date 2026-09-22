@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { userProfileService, UserProfile, ALL_BADGES } from '../services/userProfileService';
+import { userProfileService, UserProfile, ALL_BADGES, resizeImageToAvatar } from '../services/userProfileService';
 import { themeService, PRESET_THEMES, ThemeConfig } from '../services/themeService';
 import { authService, AuthUser } from '../services/authService';
 import {
@@ -15,11 +15,14 @@ import {
   Palette,
   LogOut,
   Shield,
+  Globe,
+  RefreshCw,
 } from 'lucide-react';
 
 export const StudentSettingsView: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(userProfileService.getProfile());
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(profile.photoUrl || '');
   const [activeAvatarTab, setActiveAvatarTab] = useState<'photo' | 'avatar'>('photo');
@@ -50,28 +53,52 @@ export const StudentSettingsView: React.FC = () => {
     const p = userProfileService.getProfile();
     setProfile(p);
     setPhotoPreview(p.photoUrl || '');
+
+    // Buluttaki en güncel profili arka planda çek ve güncelle
+    userProfileService.fetchProfileFromCloud().then((cloudProf) => {
+      if (cloudProf) {
+        setProfile(cloudProf);
+        setPhotoPreview(cloudProf.photoUrl || '');
+      }
+    });
+
+    const handleProfileUpdated = () => {
+      const updated = userProfileService.getProfile();
+      setProfile(updated);
+      setPhotoPreview(updated.photoUrl || '');
+    };
+    window.addEventListener('kpss_profile_updated', handleProfileUpdated);
+    return () => window.removeEventListener('kpss_profile_updated', handleProfileUpdated);
   }, []);
 
-  // Fotoğraf yükleme
+  // Fotoğraf yükleme (Otomatik avatar optimizasyonu & bulut senkronizasyonu)
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Dosya boyutu 2 MB\'ı aşamaz.');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Dosya boyutu 5 MB\'ı aşamaz.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const base64 = ev.target?.result as string;
-      setPhotoPreview(base64);
-      setProfile(prev => ({ ...prev, photoUrl: base64 }));
-    };
-    reader.readAsDataURL(file);
+    resizeImageToAvatar(file).then((compressedBase64) => {
+      setPhotoPreview(compressedBase64);
+      setProfile((prev) => {
+        const updated = { ...prev, photoUrl: compressedBase64 };
+        userProfileService.saveProfile(updated);
+        return updated;
+      });
+    }).catch((err) => {
+      console.warn('Fotoğraf işleme hatası:', err);
+      alert('Fotoğraf yüklenirken bir hata oluştu.');
+    });
   };
 
   const handleRemovePhoto = () => {
     setPhotoPreview('');
-    setProfile(prev => ({ ...prev, photoUrl: '' }));
+    setProfile(prev => {
+      const updated = { ...prev, photoUrl: '' };
+      userProfileService.saveProfile(updated);
+      return updated;
+    });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -159,6 +186,104 @@ export const StudentSettingsView: React.FC = () => {
         </div>
 
 
+        {/* === CİHAZLAR ARASI BULUT SENKRONİZASYON DURUMU === */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          backgroundColor: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? '#ECFDF5' : '#FFFBEB',
+          border: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? '1px solid #A7F3D0' : '1px solid #FDE68A',
+          marginBottom: '20px',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              backgroundColor: currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? '#10B981' : '#F59E0B',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Globe size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                {currentUser.isLoggedIn && currentUser.id !== 'local_user_1'
+                  ? 'Bulut Senkronizasyonu Aktif'
+                  : 'Cihazlar Arası Senkronizasyon'}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                {currentUser.isLoggedIn && currentUser.id !== 'local_user_1'
+                  ? `(${currentUser.email}) ile profiliniz Web ve Mobil arasında otomatik eşitleniyor.`
+                  : 'Profil fotoğrafınız ve ayarlarınızın telefonunuz ile bilgisayarınızda senkronize görünmesi için giriş yapın.'}
+              </div>
+            </div>
+          </div>
+
+          {currentUser.isLoggedIn && currentUser.id !== 'local_user_1' ? (
+            <button
+              type="button"
+              disabled={isSyncingCloud}
+              onClick={async () => {
+                setIsSyncingCloud(true);
+                try {
+                  const cloudP = await userProfileService.fetchProfileFromCloud();
+                  if (cloudP) {
+                    setProfile(cloudP);
+                    setPhotoPreview(cloudP.photoUrl || '');
+                  }
+                  await userProfileService.saveProfile(profile);
+                  alert('Profiliniz bulutla başarıyla eşitlendi.');
+                } finally {
+                  setIsSyncingCloud(false);
+                }
+              }}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #10B981',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#065F46',
+                cursor: isSyncingCloud ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <RefreshCw size={12} />
+              <span>{isSyncingCloud ? 'Eşitleniyor...' : 'Şimdi Eşitle'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('kpss_open_auth_modal', { detail: { mode: 'login' } }));
+              }}
+              style={{
+                padding: '7px 14px',
+                backgroundColor: '#F59E0B',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                cursor: 'pointer',
+              }}
+            >
+              Giriş Yap / Eşitle
+            </button>
+          )}
+        </div>
+
         {/* === PROFİL FOTOĞRAFI & AVATAR === */}
         <div style={{ marginBottom: '24px' }}>
           {/* Sekme Seçimi */}
@@ -228,7 +353,7 @@ export const StudentSettingsView: React.FC = () => {
                       Tıkla veya fotoğraf sürükle
                     </div>
                     <div style={{ fontSize: '11px', color: '#94A3B8' }}>
-                      JPG, PNG, WEBP · Maks. 2 MB
+                      JPG, PNG, WEBP · Maks. 5 MB (Otomatik Boyutlandırılır)
                     </div>
                   </div>
                   <input
@@ -238,8 +363,9 @@ export const StudentSettingsView: React.FC = () => {
                     onChange={handlePhotoUpload}
                     style={{ display: 'none' }}
                   />
-                  <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '8px' }}>
-                    Fotoğraf cihazınızda saklanır, sunucuya yüklenmez.
+                  <p style={{ fontSize: '11.5px', color: '#059669', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Check size={13} color="#059669" />
+                    <span>Fotoğrafınız ve profil bilgileriniz tüm cihazlarınızda (Web & Mobil) güvenle senkronize edilir.</span>
                   </p>
                 </>
               ) : (

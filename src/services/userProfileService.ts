@@ -1,3 +1,5 @@
+import { supabase, isSupabaseConfigured } from './supabase';
+
 // Rozet altyapısı — ileride aktif edilecek
 export interface Badge {
   id: string;
@@ -59,6 +61,50 @@ export const DEFAULT_PROFILE: UserProfile = {
   earnedBadgeIds: ['first-quiz', 'streak-7'],
 };
 
+/**
+ * Yüklenen görseli maksimum 400x400 boyutunda ve ~30KB civarında sıkıştırır.
+ * Bu sayede hem localStorage kotasını aşmaz hem de buluta saniyenin altında senkronize olur.
+ */
+export function resizeImageToAvatar(file: File, maxDim = 400, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => resolve(e.target?.result as string);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export const userProfileService = {
   getProfile(): UserProfile {
     if (typeof window === 'undefined') return DEFAULT_PROFILE;
@@ -73,7 +119,10 @@ export const userProfileService = {
     return DEFAULT_PROFILE;
   },
 
-  saveProfile(profile: UserProfile): void {
+  /**
+   * Profili hem yerel hafızaya kaydeder hem de varsa Supabase oturumuna yazar.
+   */
+  async saveProfile(profile: UserProfile): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
@@ -81,18 +130,116 @@ export const userProfileService = {
     } catch (e) {
       console.warn('saveProfile error:', e);
     }
+
+    // Supabase Bulut Senkronizasyonu
+    if (isSupabaseConfigured()) {
+      try {
+        const { data: authData } = await supabase.auth.getSession();
+        const user = authData?.session?.user;
+
+        if (user) {
+          // 1. Supabase profiles tablosuna upsert
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            display_name: profile.name,
+            avatar_url: profile.photoUrl || '',
+            daily_goal: profile.dailyGoal || 60,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+
+          // 2. Auth kullanıcı metadatasını güncelle
+          await supabase.auth.updateUser({
+            data: {
+              full_name: profile.name,
+              username: profile.username,
+              phone: profile.phone,
+              avatar_url: profile.photoUrl || '',
+              profile_data: profile,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('saveProfile cloud sync error:', err);
+      }
+    }
+  },
+
+  /**
+   * Supabase bulutundaki en güncel profil bilgilerini çeker ve yerel hafıza ile birleştirir.
+   */
+  async fetchProfileFromCloud(): Promise<UserProfile | null> {
+    if (typeof window === 'undefined' || !isSupabaseConfigured()) return null;
+
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const user = authData?.session?.user;
+      if (!user) return null;
+
+      let current = userProfileService.getProfile();
+      let changed = false;
+
+      // 1. profiles tablosunu sorgula
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url, daily_goal')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (dbProfile) {
+        if (dbProfile.display_name && dbProfile.display_name !== current.name) {
+          current.name = dbProfile.display_name;
+          changed = true;
+        }
+        if (dbProfile.avatar_url && dbProfile.avatar_url !== current.photoUrl) {
+          current.photoUrl = dbProfile.avatar_url;
+          changed = true;
+        }
+        if (dbProfile.daily_goal && dbProfile.daily_goal !== current.dailyGoal) {
+          current.dailyGoal = dbProfile.daily_goal;
+          changed = true;
+        }
+      }
+
+      // 2. Auth user_metadata'daki profile_data'yı kontrol et
+      const meta = user.user_metadata;
+      if (meta?.profile_data) {
+        current = { ...current, ...meta.profile_data };
+        changed = true;
+      }
+      if (meta?.avatar_url && meta.avatar_url !== current.photoUrl) {
+        current.photoUrl = meta.avatar_url;
+        changed = true;
+      }
+      if (meta?.full_name && meta.full_name !== current.name) {
+        current.name = meta.full_name;
+        changed = true;
+      }
+
+      // Eğer cihazda henüz buluta aktarılmamış yerel bir fotoğraf varsa, onu buluta aktar
+      if (current.photoUrl && (!dbProfile?.avatar_url || !meta?.avatar_url)) {
+        await userProfileService.saveProfile(current);
+      } else if (changed) {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(current));
+        window.dispatchEvent(new Event('kpss_profile_updated'));
+      }
+
+      return current;
+    } catch (e) {
+      console.warn('fetchProfileFromCloud error:', e);
+      return null;
+    }
   },
 
   /** Fotoğrafı base64 olarak profile kaydeder */
-  savePhoto(base64: string): void {
+  async savePhoto(base64: string): Promise<void> {
     const profile = userProfileService.getProfile();
-    userProfileService.saveProfile({ ...profile, photoUrl: base64 });
+    await userProfileService.saveProfile({ ...profile, photoUrl: base64 });
   },
 
   /** Fotoğrafı kaldır, emoji avatar'a dön */
-  removePhoto(): void {
+  async removePhoto(): Promise<void> {
     const profile = userProfileService.getProfile();
-    userProfileService.saveProfile({ ...profile, photoUrl: '' });
+    await userProfileService.saveProfile({ ...profile, photoUrl: '' });
   },
 
   /** Rozet ekle (ileride backend/logic tarafından çağrılacak) */

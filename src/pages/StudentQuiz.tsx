@@ -221,6 +221,10 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     const handleSrChange = () => {
       setLeitnerStats(spacedRepetitionService.getSummaryStats());
     };
+    const handleOpenAuthModal = (e: any) => {
+      setAuthModalMode(e?.detail?.mode || 'login');
+      setShowAuthModal(true);
+    };
 
     // İlk yüklemede aktif temayı uygula
     themeService.applyTheme(themeService.getActiveTheme());
@@ -229,12 +233,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     window.addEventListener('kpss_subscription_changed', handleSubChange);
     window.addEventListener('kpss_theme_changed', handleThemeChange);
     window.addEventListener('kpss_spaced_repetition_updated', handleSrChange);
+    window.addEventListener('kpss_open_auth_modal', handleOpenAuthModal);
 
     return () => {
       window.removeEventListener('kpss_auth_changed', handleAuthChange);
       window.removeEventListener('kpss_subscription_changed', handleSubChange);
       window.removeEventListener('kpss_theme_changed', handleThemeChange);
       window.removeEventListener('kpss_spaced_repetition_updated', handleSrChange);
+      window.removeEventListener('kpss_open_auth_modal', handleOpenAuthModal);
     };
   }, []);
 

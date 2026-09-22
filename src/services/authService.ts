@@ -26,6 +26,62 @@ const DEFAULT_GUEST: AuthUser = {
 class AuthService {
   private currentUser: AuthUser = this.loadInitialUser();
 
+  constructor() {
+    this.initAuthListener();
+  }
+
+  private initAuthListener(): void {
+    if (typeof window === 'undefined' || !isSupabaseConfigured()) return;
+
+    // Başlangıçta mevcut Supabase oturumunu kontrol et
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user;
+        const authUser: AuthUser = {
+          id: u.id,
+          email: u.email || '',
+          name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'Öğrenci',
+          username: u.user_metadata?.username || u.email?.split('@')[0] || 'ogrenci',
+          isLoggedIn: true,
+          role: 'student',
+          createdAt: u.created_at,
+          avatarUrl: u.user_metadata?.avatar_url || '',
+        };
+        this.saveSession(authUser);
+        userProfileService.fetchProfileFromCloud();
+      }
+    }).catch(console.warn);
+
+    // Oturum değişikliklerini canlı dinle
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        const u = session.user;
+        const authUser: AuthUser = {
+          id: u.id,
+          email: u.email || '',
+          name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'Öğrenci',
+          username: u.user_metadata?.username || u.email?.split('@')[0] || 'ogrenci',
+          isLoggedIn: true,
+          role: 'student',
+          createdAt: u.created_at,
+          avatarUrl: u.user_metadata?.avatar_url || '',
+        };
+        this.saveSession(authUser);
+        userProfileService.fetchProfileFromCloud();
+      } else if (event === 'SIGNED_OUT') {
+        const guestUser: AuthUser = {
+          id: 'guest_' + Date.now(),
+          email: '',
+          name: 'Misafir Öğrenci',
+          username: 'misafir',
+          isLoggedIn: false,
+          role: 'student',
+        };
+        this.saveSession(guestUser);
+      }
+    });
+  }
+
   private loadInitialUser(): AuthUser {
     if (typeof window === 'undefined') return DEFAULT_GUEST;
     try {
@@ -94,6 +150,8 @@ class AuthService {
             createdAt: data.user.created_at,
           };
           this.saveSession(authUser);
+          // Buluttaki profil verilerini çek ve yerel profil ile birleştir
+          await userProfileService.fetchProfileFromCloud();
           return { success: true, user: authUser };
         }
       } catch (err: any) {
