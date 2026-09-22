@@ -1506,18 +1506,18 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background-color: #FFFFFF;
-          border: 1px solid #EFEFF2;
+          background-color: var(--kpss-card-bg, #FFFFFF);
+          border: 1px solid var(--kpss-border, #EFEFF2);
           border-radius: 16px;
           padding: 14px 18px;
           margin-bottom: 16px;
           gap: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+          box-shadow: var(--kpss-shadow, 0 2px 8px rgba(0, 0, 0, 0.02));
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         .deneme-theme-banner:hover {
-          border-color: #D1D5DB;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+          border-color: var(--kpss-primary, #D1D5DB);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
         .deneme-btn-desktop-text {
           display: inline;
@@ -1531,18 +1531,18 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           top: 48px;
           left: 0;
           width: 380px;
-          background-color: #FFFFFF;
+          background-color: var(--kpss-card-bg, #FFFFFF);
           border-radius: 12px;
-          border: 1px solid #E2E8F0;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+          border: 1px solid var(--kpss-border, #E2E8F0);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
           z-index: 2500;
           overflow: hidden;
         }
         .search-result-item:hover {
-          background-color: #F8FAFC !important;
+          background-color: var(--kpss-hover-bg, #F8FAFC) !important;
         }
         .notification-item:hover {
-          background-color: #F1F5F9 !important;
+          background-color: var(--kpss-hover-bg, #F1F5F9) !important;
         }
         @media (max-width: 900px) {
           .search-dropdown-menu {
@@ -1561,8 +1561,9 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             bottom: 64px !important;
             padding: 10px 16px !important;
             z-index: 990 !important;
-            background-color: #FFFFFF !important;
-            box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.05) !important;
+            background-color: var(--kpss-card-bg, #FFFFFF) !important;
+            border-top: 1px solid var(--kpss-border, #EFEFF2) !important;
+            box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.15) !important;
           }
           .feedback-content-container {
             padding-bottom: 160px !important;
@@ -1584,7 +1585,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       <aside className="web-sidebar-desktop" style={styles.webSidebar}>
         <div>
           <div style={styles.sidebarBrand}>
-            <BookOpen size={24} color="#111" style={{ marginRight: '10px', flexShrink: 0 }} />
+            <BookOpen size={24} color="var(--kpss-text, #111)" style={{ marginRight: '10px', flexShrink: 0 }} />
             <div>
               <div style={styles.sidebarLogoTitle}>KPSS</div>
               <div style={styles.sidebarLogoSubtitle}>Hedefine Odaklan</div>
@@ -1606,7 +1607,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             >
               <Timer
                 size={18}
-                color={isDenemeMode && viewState === 'quiz' ? '#111' : '#666'}
+                color={isDenemeMode && viewState === 'quiz' ? 'var(--kpss-text, #111)' : 'var(--kpss-text-muted, #666)'}
                 style={{ marginRight: '12px', flexShrink: 0 }}
               />
               <span>Deneme Sınavı</span>
@@ -3490,7 +3491,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={styles.quizBackButton}
                     title={isDenemeMode ? 'Denemeden Çık' : 'Testten Çık'}
                   >
-                    <ChevronLeft size={22} color="#111" />
+                    <ChevronLeft size={22} color="var(--kpss-text, #111)" />
                   </button>
 
                   {isDenemeMode ? (
@@ -3808,11 +3809,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               ...(activeTab === 'home' && viewState === 'subjects' ? styles.mobileBottomNavItemActive : {}),
             }}
           >
-            <Home size={20} color={activeTab === 'home' && viewState === 'subjects' ? '#111' : '#888'} />
+            <Home size={20} color={activeTab === 'home' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)'} />
             <span style={{
               ...styles.mobileBottomNavLabel,
-              color: activeTab === 'home' && viewState === 'subjects' ? '#111' : '#888',
-              fontWeight: activeTab === 'home' && viewState === 'subjects' ? 600 : 500,
+              color: activeTab === 'home' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)',
+              fontWeight: activeTab === 'home' && viewState === 'subjects' ? 700 : 500,
             }}>Ana Sayfa</span>
           </button>
 
@@ -3823,11 +3824,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               ...(activeTab === 'subjects' && viewState === 'subjects' ? styles.mobileBottomNavItemActive : {}),
             }}
           >
-            <BookOpen size={20} color={activeTab === 'subjects' && viewState === 'subjects' ? '#111' : '#888'} />
+            <BookOpen size={20} color={activeTab === 'subjects' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)'} />
             <span style={{
               ...styles.mobileBottomNavLabel,
-              color: activeTab === 'subjects' && viewState === 'subjects' ? '#111' : '#888',
-              fontWeight: activeTab === 'subjects' && viewState === 'subjects' ? 600 : 500,
+              color: activeTab === 'subjects' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)',
+              fontWeight: activeTab === 'subjects' && viewState === 'subjects' ? 700 : 500,
             }}>Dersler</span>
           </button>
 
@@ -3838,11 +3839,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               ...(activeTab === 'errors' && viewState === 'subjects' ? styles.mobileBottomNavItemActive : {}),
             }}
           >
-            <AlertTriangle size={20} color={activeTab === 'errors' && viewState === 'subjects' ? '#111' : '#888'} />
+            <AlertTriangle size={20} color={activeTab === 'errors' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)'} />
             <span style={{
               ...styles.mobileBottomNavLabel,
-              color: activeTab === 'errors' && viewState === 'subjects' ? '#111' : '#888',
-              fontWeight: activeTab === 'errors' && viewState === 'subjects' ? 600 : 500,
+              color: activeTab === 'errors' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)',
+              fontWeight: activeTab === 'errors' && viewState === 'subjects' ? 700 : 500,
             }}>Hatalarım</span>
           </button>
 
@@ -3853,11 +3854,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               ...(activeTab === 'profile' && viewState === 'subjects' ? styles.mobileBottomNavItemActive : {}),
             }}
           >
-            <User size={20} color={activeTab === 'profile' && viewState === 'subjects' ? '#111' : '#888'} />
+            <User size={20} color={activeTab === 'profile' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)'} />
             <span style={{
               ...styles.mobileBottomNavLabel,
-              color: activeTab === 'profile' && viewState === 'subjects' ? '#111' : '#888',
-              fontWeight: activeTab === 'profile' && viewState === 'subjects' ? 600 : 500,
+              color: activeTab === 'profile' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)',
+              fontWeight: activeTab === 'profile' && viewState === 'subjects' ? 700 : 500,
             }}>Profil</span>
           </button>
 
@@ -3868,11 +3869,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               ...(activeTab === 'settings' && viewState === 'subjects' ? styles.mobileBottomNavItemActive : {}),
             }}
           >
-            <Settings size={20} color={activeTab === 'settings' && viewState === 'subjects' ? '#111' : '#888'} />
+            <Settings size={20} color={activeTab === 'settings' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)'} />
             <span style={{
               ...styles.mobileBottomNavLabel,
-              color: activeTab === 'settings' && viewState === 'subjects' ? '#111' : '#888',
-              fontWeight: activeTab === 'settings' && viewState === 'subjects' ? 600 : 500,
+              color: activeTab === 'settings' && viewState === 'subjects' ? 'var(--kpss-primary, #4F46E5)' : 'var(--kpss-text-muted, #64748B)',
+              fontWeight: activeTab === 'settings' && viewState === 'subjects' ? 700 : 500,
             }}>Ayarlar</span>
           </button>
         </nav>

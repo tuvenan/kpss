@@ -380,11 +380,11 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   cardContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
     borderRadius: '24px',
-    border: '1px solid #E5E7EB',
+    border: '1px solid var(--kpss-border, #E5E7EB)',
     padding: '32px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+    boxShadow: 'var(--kpss-shadow, 0 4px 20px rgba(0, 0, 0, 0.04))',
     margin: '24px 0',
   },
   leftCol: {
@@ -394,7 +394,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   badgeWrapper: {
     display: 'inline-block',
-    backgroundColor: '#EDF2F7',
+    backgroundColor: 'var(--kpss-subtle-bg, #EDF2F7)',
     padding: '5px 12px',
     borderRadius: '9999px',
     marginBottom: '14px',
@@ -403,25 +403,25 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     fontWeight: 700,
     letterSpacing: '0.6px',
-    color: '#334155',
+    color: 'var(--kpss-text, #334155)',
   },
   headingTitle: {
     fontFamily: "'Playfair Display', 'Merriweather', Georgia, serif",
     fontSize: '28px',
     fontWeight: 700,
-    color: '#0F172A',
+    color: 'var(--kpss-text, #0F172A)',
     margin: '0 0 10px 0',
     lineHeight: 1.25,
   },
   descriptionText: {
     fontSize: '14px',
-    color: '#64748B',
+    color: 'var(--kpss-text-muted, #64748B)',
     lineHeight: 1.6,
     margin: '0 0 22px 0',
   },
   tabsContainer: {
     display: 'inline-flex',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
     padding: '4px',
     borderRadius: '12px',
     gap: '4px',

@@ -176,6 +176,29 @@ export const themeService = {
     };
     root.style.setProperty('--kpss-shadow', shadowMap[theme.shadowStyle] || shadowMap.soft);
 
+    // Koyu / Açık Mod için ek yardımcı CSS değişkenleri
+    const subtleBg = theme.isDark ? '#1F2937' : '#F1F5F9';
+    const hoverBg = theme.isDark ? '#374151' : '#E2E8F0';
+    const inputBg = theme.isDark ? '#111827' : '#FFFFFF';
+    root.style.setProperty('--kpss-subtle-bg', subtleBg);
+    root.style.setProperty('--kpss-hover-bg', hoverBg);
+    root.style.setProperty('--kpss-input-bg', inputBg);
+
+    // HTML ve Body üzerinde .dark sınıfını ve data-theme özelliğini yönet
+    if (theme.isDark) {
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+      if (document.body) {
+        document.body.classList.add('dark');
+      }
+    } else {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
+      if (document.body) {
+        document.body.classList.remove('dark');
+      }
+    }
+
     // Body arka plan rengini ve fontunu güncelle
     document.body.style.backgroundColor = theme.backgroundColor;
     document.body.style.color = theme.textColor;

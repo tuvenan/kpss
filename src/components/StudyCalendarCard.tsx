@@ -59,22 +59,22 @@ export const StudyCalendarCard: React.FC = () => {
 
   return (
     <div style={{
-      backgroundColor: '#FFFFFF',
+      backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
       borderRadius: '16px',
-      border: '1px solid #EFEFF2',
+      border: '1px solid var(--kpss-border, #EFEFF2)',
       padding: '24px',
       marginBottom: '20px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+      boxShadow: 'var(--kpss-shadow, 0 2px 10px rgba(0,0,0,0.02))',
     }}>
       {/* Başlık */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Calendar size={18} color="#4F46E5" />
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'var(--kpss-subtle-bg, #EEF2FF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Calendar size={18} color="var(--kpss-primary, #4F46E5)" />
           </div>
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111' }}>Çalışma Takvimi</h2>
-            <p style={{ fontSize: '12px', color: '#888', margin: 0 }}>Bu haftaki çalışma planın</p>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--kpss-text, #111)' }}>Çalışma Takvimi</h2>
+            <p style={{ fontSize: '12px', color: 'var(--kpss-text-muted, #888)', margin: 0 }}>Bu haftaki çalışma planın</p>
           </div>
         </div>
 

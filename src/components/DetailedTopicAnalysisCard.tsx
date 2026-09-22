@@ -171,16 +171,16 @@ export const DetailedTopicAnalysisCard: React.FC<DetailedTopicAnalysisCardProps>
 
 const styles: Record<string, React.CSSProperties> = {
   cardContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
     borderRadius: '24px',
-    border: '1px solid #E5E7EB',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+    border: '1px solid var(--kpss-border, #E5E7EB)',
+    boxShadow: 'var(--kpss-shadow, 0 4px 20px rgba(0, 0, 0, 0.04))',
     overflow: 'hidden',
     marginBottom: '40px',
   },
   headerArea: {
     padding: '28px 32px 20px',
-    borderBottom: '1px solid #F1F5F9',
+    borderBottom: '1px solid var(--kpss-border, #F1F5F9)',
   },
   titleRow: {
     display: 'flex',
@@ -193,7 +193,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Playfair Display', 'Merriweather', Georgia, serif",
     fontSize: '24px',
     fontWeight: 700,
-    color: '#0F172A',
+    color: 'var(--kpss-text, #0F172A)',
     margin: 0,
     lineHeight: 1.25,
   },

@@ -1,0 +1,201 @@
+/* ==========================================================================
+   KPSS GLOBAL THEME & DARK MODE STYLESHEET
+   ========================================================================== */
+
+:root {
+  --kpss-primary: #4F46E5;
+  --kpss-primary-hover: #4338CA;
+  --kpss-bg: #F8FAFC;
+  --kpss-card-bg: #FFFFFF;
+  --kpss-text: #0F172A;
+  --kpss-text-muted: #64748B;
+  --kpss-border: #E2E8F0;
+  --kpss-subtle-bg: #F1F5F9;
+  --kpss-hover-bg: #E2E8F0;
+  --kpss-input-bg: #FFFFFF;
+  --kpss-accent: #10B981;
+  --kpss-radius: 12px;
+  --kpss-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   DARK MODE (html.dark & [data-theme="dark"])
+   ========================================================================== */
+
+html.dark {
+  --kpss-bg: #0B0F19;
+  --kpss-card-bg: #111827;
+  --kpss-text: #F9FAFB;
+  --kpss-text-muted: #9CA3AF;
+  --kpss-border: #1F2937;
+  --kpss-subtle-bg: #1E293B;
+  --kpss-hover-bg: #374151;
+  --kpss-input-bg: #0F172A;
+  --kpss-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+html.dark,
+html.dark body {
+  background-color: var(--kpss-bg, #0B0F19) !important;
+  color: var(--kpss-text, #F9FAFB) !important;
+}
+
+/* 1. Kapsayıcılar & Ana Düzen */
+html.dark .web-sidebar-desktop,
+html.dark .web-header,
+html.dark .web-mobile-bottom-nav,
+html.dark .web-main-scroll {
+  background-color: var(--kpss-card-bg, #111827) !important;
+  border-color: var(--kpss-border, #1F2937) !important;
+  color: var(--kpss-text, #F9FAFB) !important;
+}
+
+/* 2. Kartlar & Bölümler */
+html.dark .deneme-theme-banner,
+html.dark .search-dropdown-menu,
+html.dark .analytics-cards-grid > div,
+html.dark .radar-card-container,
+html.dark .detailed-topic-card-container,
+html.dark .calendar-card-container,
+html.dark .settings-card,
+html.dark .quiz-question-card,
+html.dark .quiz-option-card,
+html.dark .modal-card-box {
+  background-color: var(--kpss-card-bg, #111827) !important;
+  border-color: var(--kpss-border, #1F2937) !important;
+  color: var(--kpss-text, #F9FAFB) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 3. Genel Başlıklar & Metinler */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: var(--kpss-text, #F9FAFB) !important;
+}
+
+html.dark p,
+html.dark span:not([class*="badge"]):not([class*="pill"]) {
+  color: inherit;
+}
+
+/* 4. Form Elemanları & Arama Kutusu */
+html.dark input[type="text"],
+html.dark input[type="search"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input[type="tel"],
+html.dark textarea,
+html.dark select {
+  background-color: var(--kpss-input-bg, #0F172A) !important;
+  border-color: var(--kpss-border, #1F2937) !important;
+  color: var(--kpss-text, #F9FAFB) !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748B !important;
+}
+
+/* 5. Alt Menü (Mobile Bottom Nav) & Butonlar */
+html.dark .web-mobile-bottom-nav {
+  background-color: #0F172A !important;
+  border-top-color: #1E293B !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .feedback-bottom-bar,
+html.dark .quiz-footer-container {
+  background-color: #0F172A !important;
+  border-top-color: #1E293B !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 6. Soru Şıkları (Quiz Options) Koyu Mod Uyumu */
+html.dark .quiz-option-card:hover {
+  background-color: var(--kpss-hover-bg, #1E293B) !important;
+}
+
+/* 7. Dropdown ve Açılır Pencereler */
+html.dark .search-dropdown-menu,
+html.dark .notifications-dropdown-menu,
+html.dark .user-dropdown-menu {
+  background-color: #111827 !important;
+  border-color: #1F2937 !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark .search-result-item:hover,
+html.dark .notification-item:hover {
+  background-color: #1E293B !important;
+}
+
+/* 8. Koyu mod kaydırma çubuğu (Scrollbar) */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #0B0F19;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1F2937;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* 9. Akıllı Koyu Mod Düşüş Kuralları (Tüm iç kart ve kutular) */
+html.dark [style*="background-color: #FFFFFF"],
+html.dark [style*="backgroundColor: #FFFFFF"],
+html.dark [style*="background-color: #fff"],
+html.dark [style*="backgroundColor: #fff"],
+html.dark [style*="background: #FFFFFF"],
+html.dark [style*="background: #ffffff"] {
+  background-color: var(--kpss-card-bg, #111827) !important;
+  color: var(--kpss-text, #F9FAFB) !important;
+}
+
+html.dark [style*="background-color: #F8FAFC"],
+html.dark [style*="backgroundColor: #F8FAFC"],
+html.dark [style*="background-color: #F9F9FB"],
+html.dark [style*="backgroundColor: #F9F9FB"],
+html.dark [style*="background-color: #F1F5F9"],
+html.dark [style*="backgroundColor: #F1F5F9"],
+html.dark [style*="background-color: #F2F2F5"],
+html.dark [style*="backgroundColor: #F2F2F5"],
+html.dark [style*="background-color: #EFEFF2"],
+html.dark [style*="backgroundColor: #EFEFF2"] {
+  background-color: var(--kpss-subtle-bg, #1E293B) !important;
+}
+
+html.dark [style*="border: 1px solid #EFEFF2"],
+html.dark [style*="border: 1px solid #E5E7EB"],
+html.dark [style*="border: 1px solid #E2E8F0"],
+html.dark [style*="border-color: #EFEFF2"],
+html.dark [style*="border-color: #E5E7EB"],
+html.dark [style*="border-color: #E2E8F0"] {
+  border-color: var(--kpss-border, #1F2937) !important;
+}
+
+html.dark [style*="color: #111"],
+html.dark [style*="color: #111827"],
+html.dark [style*="color: #0F172A"],
+html.dark [style*="color: #000000"] {
+  color: var(--kpss-text, #F9FAFB) !important;
+}
+
+html.dark [style*="color: #666"],
+html.dark [style*="color: #777"],
+html.dark [style*="color: #64748B"],
+html.dark [style*="color: #6B7280"],
+html.dark [style*="color: #888"],
+html.dark [style*="color: #9CA3AF"] {
+  color: var(--kpss-text-muted, #9CA3AF) !important;
+}
+
