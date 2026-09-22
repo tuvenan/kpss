@@ -508,50 +508,97 @@ export function generateRandomMockExam(
     );
   }
 
-  // 3. Konulara / Derslere göre grupla
-  const groupedBySubject: Record<string, typeof pool> = {};
-  pool.forEach((item) => {
-    const sub = item.subjectTitle || 'Genel';
-    if (!groupedBySubject[sub]) groupedBySubject[sub] = [];
-    groupedBySubject[sub].push(item);
-  });
+  // 3. ÖSYM Sınav Şablonu Kural Dağılımları (exam_templates ile uyumlu)
+  const SUBJECT_QUOTAS: Record<MockExamType, { subject: string; count: number }[]> = {
+    gy_gk_full_120: [
+      { subject: 'Türkçe', count: 30 },
+      { subject: 'Matematik', count: 30 },
+      { subject: 'Tarih', count: 27 },
+      { subject: 'Coğrafya', count: 18 },
+      { subject: 'Vatandaşlık', count: 9 },
+      { subject: 'Güncel Bilgiler', count: 6 },
+    ],
+    gy_branch_60: [
+      { subject: 'Türkçe', count: 30 },
+      { subject: 'Matematik', count: 30 },
+    ],
+    gk_branch_60: [
+      { subject: 'Tarih', count: 27 },
+      { subject: 'Coğrafya', count: 18 },
+      { subject: 'Vatandaşlık', count: 9 },
+      { subject: 'Güncel Bilgiler', count: 6 },
+    ],
+    quick_20: [
+      { subject: 'Türkçe', count: 5 },
+      { subject: 'Matematik', count: 5 },
+      { subject: 'Tarih', count: 4 },
+      { subject: 'Coğrafya', count: 3 },
+      { subject: 'Vatandaşlık', count: 2 },
+      { subject: 'Güncel Bilgiler', count: 1 },
+    ],
+  };
 
-  // 4. Her ders grubunu kendi içinde karıştır
-  Object.keys(groupedBySubject).forEach((sub) => {
-    groupedBySubject[sub].sort(() => Math.random() - 0.5);
-  });
-
-  // 5. Dengeli dağıtımla soruları çek
   const selected: (typeof pool[0])[] = [];
-  const subjects = Object.keys(groupedBySubject);
 
-  let loopSafety = 0;
-  while (selected.length < targetCount && loopSafety < 300) {
-    loopSafety++;
-    for (const sub of subjects) {
-      if (selected.length >= targetCount) break;
-      const subList = groupedBySubject[sub];
-      if (subList && subList.length > 0) {
-        const nextQ = subList.shift();
-        if (nextQ) {
-          selected.push(nextQ);
+  const quotaRules = SUBJECT_QUOTAS[examType];
+  if (quotaRules && quotaRules.length > 0) {
+    // Şablona göre her branştan kurallı adette soru seç
+    for (const rule of quotaRules) {
+      const subjectPool = pool.filter((p) => p.subjectTitle?.toLowerCase() === rule.subject.toLowerCase());
+      const shuffled = [...(subjectPool.length > 0 ? subjectPool : pool)].sort(() => Math.random() - 0.5);
+
+      for (let i = 0; i < rule.count; i++) {
+        selected.push(shuffled[i % shuffled.length]);
+      }
+    }
+  } else {
+    // Standart dengeli dağıtım
+    const groupedBySubject: Record<string, typeof pool> = {};
+    pool.forEach((item) => {
+      const sub = item.subjectTitle || 'Genel';
+      if (!groupedBySubject[sub]) groupedBySubject[sub] = [];
+      groupedBySubject[sub].push(item);
+    });
+
+    Object.keys(groupedBySubject).forEach((sub) => {
+      groupedBySubject[sub].sort(() => Math.random() - 0.5);
+    });
+
+    const subjects = Object.keys(groupedBySubject);
+    let loopSafety = 0;
+    while (selected.length < targetCount && loopSafety < 300) {
+      loopSafety++;
+      for (const sub of subjects) {
+        if (selected.length >= targetCount) break;
+        const subList = groupedBySubject[sub];
+        if (subList && subList.length > 0) {
+          const nextQ = subList.shift();
+          if (nextQ) {
+            selected.push(nextQ);
+          }
         }
+      }
+    }
+
+    if (selected.length < targetCount && pool.length > 0) {
+      let poolIndex = 0;
+      while (selected.length < targetCount) {
+        selected.push(pool[poolIndex % pool.length]);
+        poolIndex++;
       }
     }
   }
 
-  // Eğer hala hedef adede ulaşılmadıysa mevcut havuzdan tekrar karıştırıp tamamla
-  if (selected.length < targetCount && pool.length > 0) {
-    let poolIndex = 0;
-    while (selected.length < targetCount) {
-      selected.push(pool[poolIndex % pool.length]);
-      poolIndex++;
+  // 4. Soruları formatlayıp UUID ve ardışık soru numarası ata
+  const createUuid = (index: number) => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
     }
-  }
+    return `00000000-0000-4000-8000-${String(Date.now() + index).padStart(12, '0').slice(-12)}`;
+  };
 
-  // 6. Soruları formatlayıp numaralandır
   return selected.slice(0, targetCount).map((q, idx) => ({
-    id: `deneme-${examType}-q-${Date.now()}-${idx + 1}`,
+    id: createUuid(idx),
     questionNumber: idx + 1,
     questionText: q.questionText,
     options: q.options,

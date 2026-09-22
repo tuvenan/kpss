@@ -73,6 +73,7 @@ import {
   getOrCreateMistakesBank,
   MISTAKES_BANK_ID,
 } from '../services/mockExamService';
+import { examSessionService, ActiveExamSession } from '../services/examSessionService';
 
 export interface StudentNotificationItem {
   id: string;
@@ -183,6 +184,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
   const [timeRemainingSeconds, setTimeRemainingSeconds] = useState<number>(25 * 60);
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
   const [denemeTotalElapsedSeconds, setDenemeTotalElapsedSeconds] = useState<number>(0);
+  const [activeExamAttemptId, setActiveExamAttemptId] = useState<string | null>(() => {
+    const s = examSessionService.getActiveSession();
+    return s ? s.examAttemptId : null;
+  });
+  const [recoveredSession, setRecoveredSession] = useState<ActiveExamSession | null>(() => examSessionService.getActiveSession());
 
   // ----------------------------------------------------
   // AUTH, ABONELİK (PAYWALL), ÇEVRİMDIŞI & TEMALAR
@@ -576,11 +582,95 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   // Deneme Modu tamamlandığında (zaman aşımı, erken bitirme veya son soruya ulaşma)
   // tüm yanlış yapılan soruları otomatik olarak 'Yanlışlarım' özel soru bankasına kaydet
+  // ve buluttaki/yereldeki exam_attempts oturumunu 'completed' olarak kapat
   useEffect(() => {
     if (isCompleted && isDenemeMode && questions.length > 0) {
       recordDenemeMistakesToMistakesBank(questions, userAnswers);
+
+      const activeSession = examSessionService.getActiveSession();
+      if (activeSession) {
+        let correctCount = 0;
+        let wrongCount = 0;
+        Object.values(userAnswers).forEach((a) => {
+          if (a.isCorrect) correctCount++;
+          else wrongCount++;
+        });
+        const netScore = Math.max(0, +(correctCount - (wrongCount / 4)).toFixed(2));
+        examSessionService.completeActiveSession(activeSession, {
+          netScore,
+          correctCount,
+          wrongCount,
+        });
+      }
     }
   }, [isCompleted, isDenemeMode, questions, userAnswers]);
+
+  // Sınav Oturumu Kurtarma (Exam Session Recovery) - Canlı oturumu periyodik ve sayfa kapanırken kaydet
+  useEffect(() => {
+    if (!isDenemeMode || !activeExamAttemptId || isCompleted) return;
+
+    const saveSession = () => {
+      examSessionService.saveActiveSession({
+        examAttemptId: activeExamAttemptId,
+        templateCode: selectedExamType,
+        templateName: MOCK_EXAM_CONFIGS[selectedExamType]?.title || 'KPSS Deneme Sınavı',
+        durationMinutes: denemeDurationMinutes,
+        timeRemainingSeconds,
+        totalElapsedSeconds: denemeTotalElapsedSeconds,
+        currentIndex,
+        questions,
+        userAnswers,
+        startedAt: new Date(startTime).toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        status: 'in_progress',
+      });
+    };
+
+    const interval = setInterval(saveSession, 5000);
+    window.addEventListener('beforeunload', saveSession);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', saveSession);
+    };
+  }, [
+    isDenemeMode,
+    activeExamAttemptId,
+    isCompleted,
+    selectedExamType,
+    denemeDurationMinutes,
+    timeRemainingSeconds,
+    denemeTotalElapsedSeconds,
+    currentIndex,
+    questions,
+    userAnswers,
+    startTime,
+  ]);
+
+  const handleResumeSession = () => {
+    if (!recoveredSession) return;
+    setActiveExamAttemptId(recoveredSession.examAttemptId);
+    setSelectedExamType(recoveredSession.templateCode);
+    setQuestions(recoveredSession.questions);
+    setCurrentIndex(recoveredSession.currentIndex || 0);
+    setUserAnswers(recoveredSession.userAnswers || {});
+    setDenemeDurationMinutes(recoveredSession.durationMinutes || 25);
+    setTimeRemainingSeconds(recoveredSession.timeRemainingSeconds ?? (25 * 60));
+    setDenemeTotalElapsedSeconds(recoveredSession.totalElapsedSeconds || 0);
+    setStartTime(new Date(recoveredSession.startedAt).getTime() || Date.now());
+    setIsDenemeMode(true);
+    setIsCompleted(false);
+    setStagedOption(null);
+    setViewState('quiz');
+    setRecoveredSession(null);
+  };
+
+  const handleDiscardSession = () => {
+    if (recoveredSession) {
+      examSessionService.abandonActiveSession(recoveredSession);
+    }
+    setRecoveredSession(null);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -596,6 +686,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     const config = MOCK_EXAM_CONFIGS[examType] || MOCK_EXAM_CONFIGS.quick_20;
     const targetCount = config.questionCount || 20;
     const mockQuestions = generateRandomMockExam(targetCount, examType);
+    const newAttemptId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `00000000-0000-4000-8000-${String(Date.now()).padStart(12, '0').slice(-12)}`;
+
+    setActiveExamAttemptId(newAttemptId);
     setQuestions(mockQuestions);
     setCurrentIndex(0);
     setUserAnswers({});
@@ -603,16 +698,35 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     setStagedOption(null);
     setIsDenemeMode(true);
     setDenemeDurationMinutes(durationMinutes);
-    setTimeRemainingSeconds(durationMinutes > 0 ? durationMinutes * 60 : 0);
+    const initialSeconds = durationMinutes > 0 ? durationMinutes * 60 : 0;
+    setTimeRemainingSeconds(initialSeconds);
     setDenemeTotalElapsedSeconds(0);
     setIsTimerPaused(false);
-    setStartTime(Date.now());
+    const now = Date.now();
+    setStartTime(now);
     setSelectedSubject(null);
     setSelectedUnit(null);
     setSelectedTopic(null);
     setSelectedBank(null);
     setShowDenemeSetupModal(false);
+    setRecoveredSession(null);
     setViewState('quiz');
+
+    // Yeni oturumu kaydet
+    examSessionService.saveActiveSession({
+      examAttemptId: newAttemptId,
+      templateCode: examType,
+      templateName: config.title || 'KPSS Deneme Sınavı',
+      durationMinutes,
+      timeRemainingSeconds: initialSeconds,
+      totalElapsedSeconds: 0,
+      currentIndex: 0,
+      questions: mockQuestions,
+      userAnswers: {},
+      startedAt: new Date(now).toISOString(),
+      lastActiveAt: new Date(now).toISOString(),
+      status: 'in_progress',
+    });
   };
 
   const handleStartQuiz = () => {
@@ -673,7 +787,34 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
       selectedOption: stagedOption,
       isCorrect,
       timeSpentSeconds: 5,
+      examAttemptId: isDenemeMode && activeExamAttemptId ? activeExamAttemptId : undefined,
     }).catch(console.warn);
+
+    // Eğer aktif deneme oturumu varsa anında güncelle
+    if (isDenemeMode && activeExamAttemptId) {
+      examSessionService.saveActiveSession({
+        examAttemptId: activeExamAttemptId,
+        templateCode: selectedExamType,
+        templateName: MOCK_EXAM_CONFIGS[selectedExamType]?.title || 'KPSS Deneme Sınavı',
+        durationMinutes: denemeDurationMinutes,
+        timeRemainingSeconds,
+        totalElapsedSeconds: denemeTotalElapsedSeconds,
+        currentIndex,
+        questions,
+        userAnswers: {
+          ...userAnswers,
+          [currentQ.id]: {
+            questionId: currentQ.id,
+            selectedOption: stagedOption,
+            isCorrect,
+            timeSpentSeconds: 5,
+          },
+        },
+        startedAt: new Date(startTime).toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        status: 'in_progress',
+      });
+    }
 
     // Gerçek öğrenci analitiğine kaydet
     const topicKey = currentQ?.subjectTitle
@@ -2875,7 +3016,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 </div>
 
                 {/* 1. BLOK: YETERLİLİK RADARI & KAZANIM-KONU ANALİZİ */}
-                <CompetencyRadarCard />
+                <CompetencyRadarCard derslerData={studentProgressService.getRadarScores()} />
 
                 {/* 2. BLOK: GENEL BAŞARI DAĞILIMI & HAFTALIK SORU ÇÖZÜMÜ */}
                 <StudentAnalyticsCards
@@ -3811,6 +3952,98 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               }}
             >
               Tamam, Anladım
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sınav Oturumu Kurtarma (Exam Session Recovery) Bildirimi */}
+      {recoveredSession && viewState !== 'quiz' && viewState !== 'feedback' && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '20px',
+          left: '20px',
+          maxWidth: '520px',
+          margin: '0 auto',
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          boxShadow: '0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.1)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: '#4F46E5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <Timer size={20} color="#FFFFFF" />
+              </div>
+              <div>
+                <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#F8FAFC' }}>
+                  Yarım Kalan Sınav Oturumu
+                </div>
+                <div style={{ fontSize: '12px', color: '#94A3B8' }}>
+                  {recoveredSession.templateName} • Soru {recoveredSession.currentIndex + 1}/{recoveredSession.questions.length} • Kalan: {formatTime(recoveredSession.timeRemainingSeconds)}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleDiscardSession}
+              style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+              title="Oturumu İptal Et"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleResumeSession}
+              style={{
+                flex: 2,
+                padding: '10px 14px',
+                backgroundColor: '#4F46E5',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <Play size={15} />
+              <span>Kaldığım Yerden Devam Et</span>
+            </button>
+            <button
+              onClick={handleDiscardSession}
+              style={{
+                flex: 1,
+                padding: '10px 12px',
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                color: '#E2E8F0',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '10px',
+                fontWeight: 600,
+                fontSize: '12.5px',
+                cursor: 'pointer',
+              }}
+            >
+              Sınavı İptal Et
             </button>
           </div>
         </div>
