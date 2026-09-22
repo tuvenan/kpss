@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured, getAdminClient, hasAdminSecretKey } from './supabase';
 import { Question, UserAnswer } from '../types';
 import { MockExamType } from './mockExamService';
+import { isUuid } from './offlineSyncService';
 
 const ACTIVE_EXAM_SESSION_KEY = 'kpss_active_exam_session_v1';
 
@@ -23,6 +24,7 @@ export interface ExamTemplateConfig {
 
 export interface ActiveExamSession {
   examAttemptId: string;
+  templateId?: string | null;
   templateCode: MockExamType;
   templateName: string;
   durationMinutes: number;
@@ -155,10 +157,11 @@ class ExamSessionService {
           const userId = authData?.session?.user?.id;
           if (userId) {
             const client = hasAdminSecretKey() ? getAdminClient() : supabase;
+            const validTemplateId = session.templateId && isUuid(session.templateId) ? session.templateId : null;
             await client.from('exam_attempts').upsert({
               id: session.examAttemptId,
               user_id: userId,
-              template_id: session.templateCode,
+              template_id: validTemplateId,
               status: session.status,
               started_at: session.startedAt,
               current_question_index: session.currentIndex,
@@ -212,10 +215,11 @@ class ExamSessionService {
         const userId = authData?.session?.user?.id;
         if (userId) {
           const client = hasAdminSecretKey() ? getAdminClient() : supabase;
+          const validTemplateId = session.templateId && isUuid(session.templateId) ? session.templateId : null;
           await client.from('exam_attempts').upsert({
             id: session.examAttemptId,
             user_id: userId,
-            template_id: session.templateCode,
+            template_id: validTemplateId,
             status: 'completed',
             started_at: session.startedAt,
             completed_at: new Date().toISOString(),
@@ -251,10 +255,11 @@ class ExamSessionService {
         const userId = authData?.session?.user?.id;
         if (userId) {
           const client = hasAdminSecretKey() ? getAdminClient() : supabase;
+          const validTemplateId = current.templateId && isUuid(current.templateId) ? current.templateId : null;
           await client.from('exam_attempts').upsert({
             id: current.examAttemptId,
             user_id: userId,
-            template_id: current.templateCode,
+            template_id: validTemplateId,
             status: 'abandoned',
             started_at: current.startedAt,
             completed_at: new Date().toISOString(),
