@@ -902,7 +902,7 @@ export const AdvancedCurriculumManager: React.FC<AdvancedCurriculumManagerProps>
               ) : (
                 <span style={styles.liveBadge}>
                   <CheckCircle size={13} style={{ marginRight: '4px' }} />
-                  Tüm Müfredat Yayında &amp; Güncel
+                  Tüm Müfredat Yayında & Güncel
                 </span>
               )}
             </div>

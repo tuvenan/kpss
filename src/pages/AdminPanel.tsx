@@ -540,7 +540,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
   const handleCreateUnit = async () => {
     const title = newUnitTitle.trim();
     if (!title || !selectedSubjectId) {
-      alert('Lütfen ünite başlığı giriniz.');
+      notify('Lütfen ünite başlığı giriniz.', 'error');
       return;
     }
     try {
@@ -584,7 +584,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
   const handleCreateTopic = async () => {
     const title = newTopicTitle.trim();
     if (!title || !selectedUnitId) {
-      alert('Lütfen konu başlığı giriniz.');
+      notify('Lütfen konu başlığı giriniz.', 'error');
       return;
     }
     try {
@@ -656,15 +656,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
     e.preventDefault();
     const targetId = selectedTopicId || selectedUnitId;
     if (!targetId) {
-      alert('Lütfen soru eklenecek bir ünite veya konu seçiniz.');
+      notify('Lütfen soru eklenecek bir ünite veya konu seçiniz.', 'error');
       return;
     }
     if (!qFormText.trim()) {
-      alert('Lütfen soru metnini yazınız.');
+      notify('Lütfen soru metnini yazınız.', 'error');
       return;
     }
     if (!qFormA.trim() || !qFormB.trim() || !qFormC.trim() || !qFormD.trim() || !qFormE.trim()) {
-      alert('Lütfen 5 seçeneğin (A, B, C, D, E) tamamını doldurunuz.');
+      notify('Lütfen 5 seçeneğin (A, B, C, D, E) tamamını doldurunuz.', 'error');
       return;
     }
 
@@ -734,7 +734,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
   const handleUploadSample20 = async () => {
     const targetId = selectedTopicId || selectedUnitId;
     if (!targetId) {
-      alert('Lütfen önce bir ünite veya konu seçiniz.');
+      notify('Lütfen önce bir ünite veya konu seçiniz.', 'error');
       return;
     }
 
@@ -802,12 +802,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
   const handleImportJson = async () => {
     const targetId = selectedTopicId || selectedUnitId;
     if (!targetId) {
-      alert('Lütfen önce bir ünite veya konu seçiniz.');
+      notify('Lütfen önce bir ünite veya konu seçiniz.', 'error');
       return;
     }
     const parsedList = validateAndParseJson(jsonInput);
     if (!parsedList || parsedList.length === 0) {
-      alert('Lütfen geçerli bir JSON soru listesi yapıştırınız.');
+      notify('Lütfen geçerli bir JSON soru listesi yapıştırınız.', 'error');
       return;
     }
 
@@ -859,7 +859,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
 
   const handleExportQuestions = () => {
     if (questions.length === 0) {
-      alert('Dışa aktarılacak soru bulunmuyor.');
+      notify('Dışa aktarılacak soru bulunmuyor.', 'info');
       return;
     }
     const cleanList = questions.map(({ questionNumber, questionText, options, correctOption, explanation }) => ({
@@ -895,7 +895,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
 
   const handleSaveSecretKey = () => {
     if (!secretInput.trim()) {
-      alert('Lütfen secret key giriniz.');
+      notify('Lütfen secret key giriniz.', 'error');
       return;
     }
     setAdminSecretKey(secretInput.trim());
@@ -1045,7 +1045,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
             }}
           >
             <FolderTree size={18} color={activeTab === 'curriculum' ? '#818CF8' : '#64748B'} />
-            <span>Müfredat &amp; İçerik</span>
+            <span>Müfredat & İçerik</span>
           </button>
 
           <button
@@ -1072,7 +1072,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
             }}
           >
             <PackagePlus size={18} color={activeTab === 'bulk_packages' ? '#818CF8' : '#64748B'} />
-            <span>Toplu Paket &amp; JSON</span>
+            <span>Toplu Paket & JSON</span>
           </button>
 
           <button
@@ -1098,7 +1098,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
             }}
           >
             <Users size={18} color={activeTab === 'student_data' ? '#818CF8' : '#64748B'} />
-            <span>Öğrenci &amp; Veri</span>
+            <span>Öğrenci & Veri</span>
           </button>
 
           <button
@@ -1111,7 +1111,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
             }}
           >
             <Palette size={18} color={activeTab === 'theme_editor' ? '#818CF8' : '#64748B'} />
-            <span>Tema &amp; Görsel Stil</span>
+            <span>Tema & Görsel Stil</span>
           </button>
 
           <button
@@ -1124,7 +1124,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
             }}
           >
             <Settings size={18} color={activeTab === 'system_settings' ? '#818CF8' : '#64748B'} />
-            <span>Sistem &amp; Depolama</span>
+            <span>Sistem & Depolama</span>
           </button>
         </nav>
 
@@ -1291,7 +1291,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
               {/* Sistem Özeti */}
               <div style={styles.twoColGrid}>
                 <div style={styles.sectionCard}>
-                  <h3 style={styles.sectionTitle}>Veritabanı &amp; Depolama</h3>
+                  <h3 style={styles.sectionTitle}>Veritabanı & Depolama</h3>
                   <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={styles.infoRow}>
                       <span style={styles.infoLabel}>Depolama Motoru:</span>
@@ -1676,7 +1676,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
                       <HardDrive size={22} color="#4F46E5" />
                     </div>
                     <div>
-                      <h3 style={{ ...styles.sectionTitle, margin: 0, fontSize: '16px' }}>Önbellek &amp; Depolama Yönetimi (Cache Cleaner)</h3>
+                      <h3 style={{ ...styles.sectionTitle, margin: 0, fontSize: '16px' }}>Önbellek & Depolama Yönetimi (Cache Cleaner)</h3>
                       <p style={{ ...styles.sectionSub, margin: '2px 0 0' }}>Tarayıcıda saklanan yerel önbelleği, müfredat ve geçici verileri inceleyin ve güvenle temizleyin.</p>
                     </div>
                   </div>
@@ -1705,32 +1705,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
                   </div>
 
                   <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>MÜFREDAT &amp; SORU</div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>MÜFREDAT & SORU</div>
                     <div style={{ fontSize: '18px', fontWeight: 800, color: '#4F46E5', marginTop: '4px' }}>
                       {storageInfo.curriculumFormatted}
                     </div>
                     <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
-                      Ders, Ünite, Konu &amp; Bankalar
+                      Ders, Ünite, Konu & Bankalar
                     </div>
                   </div>
 
                   <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>ÖĞRENCİ &amp; TEST</div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>ÖĞRENCİ & TEST</div>
                     <div style={{ fontSize: '18px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>
                       {storageInfo.studentFormatted}
                     </div>
                     <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
-                      Profil &amp; Çözüm Geçmişi
+                      Profil & Çözüm Geçmişi
                     </div>
                   </div>
 
                   <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>TEMA &amp; DİĞER</div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>TEMA & DİĞER</div>
                     <div style={{ fontSize: '18px', fontWeight: 800, color: '#D97706', marginTop: '4px' }}>
                       {storageInfo.themeFormatted}
                     </div>
                     <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
-                      Aktif Renk &amp; Tasarım Ayarları
+                      Aktif Renk & Tasarım Ayarları
                     </div>
                   </div>
                 </div>
@@ -1869,7 +1869,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => 
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                         <AlertTriangle size={18} color="#DC2626" />
-                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#991B1B' }}>Tam Önbellek &amp; Depolama Sıfırlama</h4>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#991B1B' }}>Tam Önbellek & Depolama Sıfırlama</h4>
                       </div>
                       <p style={{ margin: 0, fontSize: '12px', color: '#B91C1C', lineHeight: 1.4 }}>
                         Tüm yerel depolamayı ve servis önbelleğini temizleyip uygulamayı sıfırlar (Yönetici şifreniz korunur).

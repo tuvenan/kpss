@@ -82,7 +82,7 @@ export const AdvancedThemeEditor: React.FC<AdvancedThemeEditorProps> = ({ onNoti
               <Palette size={22} color="#4F46E5" />
             </div>
             <div>
-              <h2 style={styles.headerTitle}>Görsel Stil &amp; Tema Editörü</h2>
+              <h2 style={styles.headerTitle}>Görsel Stil & Tema Editörü</h2>
               <p style={styles.headerSub}>
                 Uygulamanın renk paletini, karanlık modunu, yazı tipini ve arayüz geometrisini anlık olarak özelleştirin.
               </p>
@@ -284,7 +284,7 @@ export const AdvancedThemeEditor: React.FC<AdvancedThemeEditorProps> = ({ onNoti
           <div style={styles.sectionCard}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <Type size={17} color="#4F46E5" />
-              <h3 style={styles.sectionTitle}>Tipografi &amp; Yazı Tipi</h3>
+              <h3 style={styles.sectionTitle}>Tipografi & Yazı Tipi</h3>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -296,9 +296,9 @@ export const AdvancedThemeEditor: React.FC<AdvancedThemeEditorProps> = ({ onNoti
                   onChange={(e) => handleUpdateTheme({ ...theme, fontFamily: e.target.value, id: 'custom' })}
                   style={styles.dropdown}
                 >
-                  <option value="'Plus Jakarta Sans', 'Roboto', sans-serif">Plus Jakarta Sans (Modern &amp; Okunaklı)</option>
-                  <option value="'Roboto', sans-serif">Roboto (Klasik &amp; Standart)</option>
-                  <option value="'Poppins', sans-serif">Poppins (Geometrik &amp; Şık)</option>
+                  <option value="'Plus Jakarta Sans', 'Roboto', sans-serif">Plus Jakarta Sans (Modern & Okunaklı)</option>
+                  <option value="'Roboto', sans-serif">Roboto (Klasik & Standart)</option>
+                  <option value="'Poppins', sans-serif">Poppins (Geometrik & Şık)</option>
                   <option value="'Merriweather', Georgia, serif">Merriweather (Serif - Kitap / Paragraf Hissi)</option>
                   <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Sistem Varsayılanı</option>
                 </select>
@@ -335,7 +335,7 @@ export const AdvancedThemeEditor: React.FC<AdvancedThemeEditorProps> = ({ onNoti
           <div style={styles.sectionCard}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <Box size={17} color="#4F46E5" />
-              <h3 style={styles.sectionTitle}>Kenar Yuvarlaklığı &amp; Gölgeler</h3>
+              <h3 style={styles.sectionTitle}>Kenar Yuvarlaklığı & Gölgeler</h3>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

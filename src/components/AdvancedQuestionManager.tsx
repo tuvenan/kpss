@@ -405,7 +405,7 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
   const handleExecuteMoveCopy = async () => {
     const targetId = targetMoveBankId || targetMoveTopicId || targetMoveUnitId;
     if (!targetId) {
-      alert('Lütfen hedef ünite, konu veya soru bankası seçiniz.');
+      onNotify('Lütfen hedef ünite, konu veya soru bankası seçiniz.', 'error');
       return;
     }
     const selectedQuestions = questions.filter((q) => selectedQuestionIds.includes(q.id));
@@ -649,11 +649,11 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
       return;
     }
     if (!formText.trim()) {
-      alert('Lütfen soru metnini yazınız.');
+      onNotify('Lütfen soru metnini yazınız.', 'error');
       return;
     }
     if (!formA.trim() || !formB.trim() || !formC.trim() || !formD.trim() || !formE.trim()) {
-      alert('Lütfen 5 seçeneğin (A, B, C, D, E) tamamını doldurunuz.');
+      onNotify('Lütfen 5 seçeneğin (A, B, C, D, E) tamamını doldurunuz.', 'error');
       return;
     }
 
@@ -703,7 +703,7 @@ export const AdvancedQuestionManager: React.FC<AdvancedQuestionManagerProps> = (
       return;
     }
     if (!bankTitleInput.trim()) {
-      alert('Lütfen soru bankası başlığı giriniz.');
+      onNotify('Lütfen soru bankası başlığı giriniz.', 'error');
       return;
     }
     try {
@@ -1026,7 +1026,7 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
 
           {/* Soru Arama */}
           <div style={{ ...styles.selectGroup, flex: 1, minWidth: '220px' }}>
-            <label style={styles.fieldLabel}>Soru Metninde &amp; Şıklarda Ara:</label>
+            <label style={styles.fieldLabel}>Soru Metninde & Şıklarda Ara:</label>
             <div style={{ position: 'relative' }}>
               <Search
                 size={15}
@@ -1461,7 +1461,7 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                 {q.explanation ? (
                   <div style={styles.explanationBox}>
                     <div style={{ fontWeight: 600, color: '#4F46E5', fontSize: '12px', marginBottom: '2px' }}>
-                      💡 Soru Çözümü &amp; Açıklaması:
+                      💡 Soru Çözümü & Açıklaması:
                     </div>
                     <div style={{ fontSize: '12px', color: '#334155', lineHeight: 1.5 }}>
                       {q.explanation}
@@ -1841,7 +1841,7 @@ Açıklama: Hilat, İslamiyetin kabulünden sonra Abbasi halifeleri tarafından 
                 {/* Çözüm ve Açıklama Metni */}
                 <div>
                   <label style={styles.fieldLabel}>
-                    Detaylı Çözüm &amp; Açıklama (Öğrencinin öğrenmesi için önerilir):
+                    Detaylı Çözüm & Açıklama (Öğrencinin öğrenmesi için önerilir):
                   </label>
                   <textarea
                     rows={3}

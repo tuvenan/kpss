@@ -109,7 +109,7 @@ export const StudentSettingsView: React.FC = () => {
       {/* ÜST BAŞLIK ALANI */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.heading}>Ayarlar &amp; Profil Düzenleme</h1>
+          <h1 style={styles.heading}>Ayarlar & Profil Düzenleme</h1>
           <p style={styles.subheading}>
             Kişisel bilgilerinizi, KPSS sınav hedeflerinizi ve çalışma tercihlerinizi buradan özelleştirin.
           </p>
@@ -136,7 +136,7 @@ export const StudentSettingsView: React.FC = () => {
             <User size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>Kişisel Bilgiler &amp; Profil</h2>
+            <h2 style={styles.cardTitle}>Kişisel Bilgiler & Profil</h2>
             <p style={styles.cardSubtitle}>Görünüm ve iletişim bilgilerinizi güncelleyin.</p>
           </div>
         </div>
@@ -362,7 +362,7 @@ export const StudentSettingsView: React.FC = () => {
 
         {/* Biyografi / Hedef Notu */}
         <div style={{ marginTop: '16px' }}>
-          <label style={styles.inputLabel}>Biyografi &amp; Motivasyon Notu</label>
+          <label style={styles.inputLabel}>Biyografi & Motivasyon Notu</label>
           <textarea
             value={profile.bio}
             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
@@ -380,7 +380,7 @@ export const StudentSettingsView: React.FC = () => {
             <Target size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>KPSS Sınavı &amp; Hedef Ayarları</h2>
+            <h2 style={styles.cardTitle}>KPSS Sınavı & Hedef Ayarları</h2>
             <p style={styles.cardSubtitle}>Hazırlandığınız sınav türüne göre analitikleri ve planları şekillendirin.</p>
           </div>
         </div>
@@ -413,7 +413,7 @@ export const StudentSettingsView: React.FC = () => {
               <option value="Memurluk (B Grubu)">Memurluk (B Grubu Kadrolar)</option>
               <option value="Öğretmenlik (MEB)">Öğretmenlik (MEB Atamaları)</option>
               <option value="Uzmanlık / Müfettişlik (A Grubu)">Uzmanlık / Müfettişlik (A Grubu Kariyer)</option>
-              <option value="Sağlık / Teknik Kadrolar">Sağlık &amp; Teknik Hizmetler</option>
+              <option value="Sağlık / Teknik Kadrolar">Sağlık & Teknik Hizmetler</option>
             </select>
           </div>
         </div>
@@ -479,7 +479,7 @@ export const StudentSettingsView: React.FC = () => {
             <Clock size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>Çalışma &amp; Uygulama Tercihleri</h2>
+            <h2 style={styles.cardTitle}>Çalışma & Uygulama Tercihleri</h2>
             <p style={styles.cardSubtitle}>Test deneyiminizi ve hatırlatıcıları yapılandırın.</p>
           </div>
         </div>
@@ -544,7 +544,7 @@ export const StudentSettingsView: React.FC = () => {
             <Palette size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>Görsel Stil &amp; Tema Seçimi</h2>
+            <h2 style={styles.cardTitle}>Görsel Stil & Tema Seçimi</h2>
             <p style={styles.cardSubtitle}>Çalışma ortamınızı gözünüzü yormayacak renklere göre özelleştirin.</p>
           </div>
         </div>
@@ -594,7 +594,7 @@ export const StudentSettingsView: React.FC = () => {
             <Lock size={18} color="#0F172A" />
           </div>
           <div>
-            <h2 style={styles.cardTitle}>Güvenlik &amp; Hesap Yönetimi</h2>
+            <h2 style={styles.cardTitle}>Güvenlik & Hesap Yönetimi</h2>
             <p style={styles.cardSubtitle}>Giriş şifrenizi güncelleyin ve veri geçmişinizi kontrol edin.</p>
           </div>
         </div>

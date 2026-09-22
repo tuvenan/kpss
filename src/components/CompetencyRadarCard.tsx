@@ -139,7 +139,7 @@ export const CompetencyRadarCard: React.FC<CompetencyRadarCardProps> = ({
 
         {/* Ana Başlık */}
         <h2 style={styles.headingTitle} className="radar-title-text">
-          Kazanım &amp; Konu Analizi
+          Kazanım & Konu Analizi
         </h2>
 
         {/* Açıklama Metni */}

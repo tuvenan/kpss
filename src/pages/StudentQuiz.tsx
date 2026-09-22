@@ -535,7 +535,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               <div style={styles.percentageTextNew}>%{percentage} Başarı</div>
             </div>
 
-            {/* Doğru - Yanlış - Boş İstatistikleri */}
+            {/* Doğru - Yanlış - Boş - Net İstatistikleri */}
             <div style={styles.statsRowNew}>
               <div style={styles.statItemNew}>
                 <div style={{ ...styles.statDotNew, backgroundColor: '#2E7D32' }} />
@@ -553,6 +553,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 <div style={{ ...styles.statDotNew, backgroundColor: '#888' }} />
                 <div style={styles.statLabelNew}>Boş</div>
                 <div style={styles.statValueNew}>{empty}</div>
+              </div>
+              <div style={styles.statDividerNew} />
+              <div style={styles.statItemNew}>
+                <div style={{ ...styles.statDotNew, backgroundColor: '#4F46E5' }} />
+                <div style={styles.statLabelNew}>KPSS Net</div>
+                <div style={{ ...styles.statValueNew, color: '#4F46E5' }}>
+                  {Math.max(0, correct - wrong * 0.25).toFixed(2).replace(/\.00$/, '')}
+                </div>
               </div>
             </div>
           </div>
@@ -792,7 +800,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             <div style={styles.percentageTextNew}>%{percentage} Başarı</div>
           </div>
 
-          {/* Doğru - Yanlış - Boş İstatistikleri */}
+          {/* Doğru - Yanlış - Boş - Net İstatistikleri */}
           <div style={styles.statsRowNew}>
             <div style={styles.statItemNew}>
               <div style={{ ...styles.statDotNew, backgroundColor: '#2E7D32' }} />
@@ -810,6 +818,14 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               <div style={{ ...styles.statDotNew, backgroundColor: '#888' }} />
               <div style={styles.statLabelNew}>Boş</div>
               <div style={styles.statValueNew}>{empty}</div>
+            </div>
+            <div style={styles.statDividerNew} />
+            <div style={styles.statItemNew}>
+              <div style={{ ...styles.statDotNew, backgroundColor: '#4F46E5' }} />
+              <div style={styles.statLabelNew}>KPSS Net</div>
+              <div style={{ ...styles.statValueNew, color: '#4F46E5' }}>
+                {Math.max(0, correct - wrong * 0.25).toFixed(2).replace(/\.00$/, '')}
+              </div>
             </div>
           </div>
         </div>
@@ -1028,9 +1044,27 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
           display: none;
         }
 
+        @media (max-width: 900px) {
+          .feedback-bottom-bar,
+          .quiz-footer-container {
+            bottom: 64px !important;
+            padding: 10px 16px !important;
+            z-index: 990 !important;
+            background-color: #FFFFFF !important;
+            box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.05) !important;
+          }
+          .feedback-content-container {
+            padding-bottom: 160px !important;
+          }
+        }
+
         @media (min-width: 901px) {
           .web-mobile-bottom-nav {
             display: none !important;
+          }
+          .feedback-bottom-bar,
+          .quiz-footer-container {
+            bottom: 0 !important;
           }
         }
       `}</style>
@@ -2213,7 +2247,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             </div>
 
             {/* Sabit Alt Teste Başla Butonu */}
-            <div style={styles.footerContainer}>
+            <div style={styles.footerContainer} className="quiz-footer-container">
               {questions.length < 20 ? (
                 <div style={{
                   padding: '14px',
@@ -2254,6 +2288,54 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
         {viewState === 'quiz' && (
           <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingBottom: '110px' }}>
             {!isCompleted ? (
+              questions.length === 0 || !currentQ ? (
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #E2E8F0',
+                  padding: '48px 24px',
+                  textAlign: 'center',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px auto',
+                  }}>
+                    <BookOpen size={28} color="#64748B" />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+                    Bu Testte Henüz Soru Bulunmuyor
+                  </h3>
+                  <p style={{ fontSize: '14px', color: '#64748B', maxWidth: '360px', margin: '0 auto 24px auto', lineHeight: 1.5 }}>
+                    Seçilen konu veya soru bankasına ait soru henüz eklenmemiş. Lütfen başka bir test seçiniz.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (selectedTopic) setViewState('unit-detail');
+                      else if (selectedUnit) setViewState('topics');
+                      else setViewState('subjects');
+                    }}
+                    style={{
+                      padding: '10px 24px',
+                      backgroundColor: '#111111',
+                      color: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Geri Dön
+                  </button>
+                </div>
+              ) : (
               <div>
                 {/* Duraklatma Katmanı (Overlay) */}
                 {isTimerPaused && (
@@ -2436,7 +2518,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                     style={{
                       ...styles.cardProgressBarFill,
                       backgroundColor: '#111111',
-                      width: `${((currentIndex + 1) / questions.length) * 100}%`,
+                      width: `${questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0}%`,
                     }}
                   />
                 </div>
@@ -2466,7 +2548,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
                 {/* Şıklar Listesi */}
                 <div>
-                  {currentQ?.options.map((opt) => {
+                  {(currentQ?.options || []).map((opt) => {
                     const isSelected = stagedOption === opt.id;
                     const isCorrect = isAnswered && opt.id === currentQ.correctOption;
                     const isWrong = isAnswered && isSelected && !currentAns?.isCorrect;
@@ -2533,7 +2615,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                 )}
 
                 {/* Sabit Alt Buton */}
-                <div style={styles.footerContainer}>
+                <div style={styles.footerContainer} className="quiz-footer-container">
                   {!isAnswered ? (
                     <button
                       disabled={!stagedOption}
@@ -2556,6 +2638,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
                   )}
                 </div>
               </div>
+              )
             ) : (
               renderTestResult()
             )}
@@ -2564,7 +2647,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
         {/* 4. FEEDBACK / ÇÖZÜM VE AÇIKLAMA EKRANI */}
         {viewState === 'feedback' && currentQ && (
-          <div style={{ maxWidth: '440px', margin: '0 auto', width: '100%', padding: '48px 24px 110px' }}>
+          <div className="feedback-content-container" style={{ maxWidth: '440px', margin: '0 auto', width: '100%', padding: '36px 20px 160px' }}>
             {/* Üst Durum Alanı (Dairesel İkon, Başlık ve Alt Başlık) */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
               <div
@@ -2622,10 +2705,11 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             </div>
 
             {/* Sabit Alt Buton */}
-            <div style={styles.feedbackBottomBar}>
+            <div style={styles.feedbackBottomBar} className="feedback-bottom-bar">
               <button
                 onClick={handleNextFromFeedback}
                 style={styles.feedbackNextButton}
+                className="feedback-next-button"
               >
                 {currentIndex === questions.length - 1 ? 'Sonuçları Gör' : 'Sonraki Soru'}
               </button>
@@ -2820,6 +2904,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             padding: '24px',
             maxWidth: '500px',
             width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             position: 'relative',
           }}>
@@ -3237,7 +3323,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    zIndex: 100,
+    zIndex: 990,
   },
   startButton: {
     maxWidth: '600px',
@@ -3752,15 +3838,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   feedbackBottomBar: {
     position: 'fixed',
-    bottom: 0,
+    bottom: '64px',
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    padding: '18px 24px',
-    borderTop: '1px solid #F3F4F6',
+    padding: '12px 20px',
+    borderTop: '1px solid #E5E7EB',
     display: 'flex',
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 990,
+    boxShadow: '0 -3px 12px rgba(0, 0, 0, 0.05)',
   },
   feedbackNextButton: {
     maxWidth: '440px',

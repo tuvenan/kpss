@@ -335,7 +335,7 @@ export const AdvancedStudentManager: React.FC<AdvancedStudentManagerProps> = ({ 
         <div style={styles.sectionCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <div>
-              <h3 style={styles.sectionTitle}>Ders Bazlı Net &amp; Başarı Dağılımı</h3>
+              <h3 style={styles.sectionTitle}>Ders Bazlı Net & Başarı Dağılımı</h3>
               <p style={styles.sectionSub}>Öğrencinin KPSS derslerindeki çözülen soru ve net dökümü.</p>
             </div>
           </div>
@@ -433,7 +433,7 @@ export const AdvancedStudentManager: React.FC<AdvancedStudentManagerProps> = ({ 
 
       {/* 4. YÖNETİCİ TEST SİMÜLASYONU & SIFIRLAMA ARAÇLARI */}
       <div style={styles.sectionCard}>
-        <h3 style={styles.sectionTitle}>Gelişmiş Test Simülasyonu &amp; Veri Kontrolleri</h3>
+        <h3 style={styles.sectionTitle}>Gelişmiş Test Simülasyonu & Veri Kontrolleri</h3>
         <p style={styles.sectionSub}>
           Öğrenci sayfalarındaki grafikleri ve analizleri test etmek için hazır aktivite verisi yükleyebilir veya temizleyebilirsiniz.
         </p>
@@ -564,7 +564,7 @@ export const AdvancedStudentManager: React.FC<AdvancedStudentManagerProps> = ({ 
               </div>
 
               <div>
-                <label style={styles.fieldLabel}>Biyografi &amp; Motivasyon Notu:</label>
+                <label style={styles.fieldLabel}>Biyografi & Motivasyon Notu:</label>
                 <textarea
                   rows={2}
                   value={editForm.bio}

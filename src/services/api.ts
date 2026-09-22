@@ -999,6 +999,9 @@ export const api = {
           correct_option: question.correctOption,
           explanation: question.explanation,
         };
+        if (question.bankId) {
+          payload.bank_id = question.bankId;
+        }
         if (question.id && isUuid(question.id)) {
           payload.id = question.id;
         }
@@ -1041,6 +1044,9 @@ export const api = {
           correct_option: question.correctOption,
           explanation: question.explanation,
         };
+        if (question.bankId) {
+          payload.bank_id = question.bankId;
+        }
         const { error } = await client.from('questions').update(payload).eq('id', question.id);
         if (!error) {
           cloudUpdated = true;
@@ -1137,7 +1143,7 @@ export const api = {
       if (isSupabaseConfigured()) {
         try {
           const client = getAdminClient();
-          await client.from('questions').insert({
+          const payload: Record<string, any> = {
             unit_id: unitId,
             topic_id: topicId,
             question_number: q.questionNumber,
@@ -1145,7 +1151,11 @@ export const api = {
             options: q.options,
             correct_option: q.correctOption,
             explanation: q.explanation,
-          });
+          };
+          if (bankId) {
+            payload.bank_id = bankId;
+          }
+          await client.from('questions').insert(payload);
         } catch {}
       }
     }
@@ -1290,6 +1300,9 @@ export const api = {
             correct_option: q.correctOption,
             explanation: q.explanation || '',
           };
+          if (q.bankId) {
+            row.bank_id = q.bankId;
+          }
           if (q.id && isUuid(q.id)) {
             row.id = q.id;
           }
