@@ -1859,7 +1859,8 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               {isDarkMode ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#475569" />}
             </button>
 
-            {/* PRO / Abonelik Butonu */}
+            {/* PRO / Abonelik Butonu - Şimdilik deaktif edildi (ileride ayrı bir sayfaya yerleştirilecek) */}
+            {/*
             <button
               type="button"
               onClick={() => setShowPricingModal(true)}
@@ -1884,6 +1885,7 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
               <Crown size={14} color="#FFFFFF" />
               <span>{subscription.tier !== 'free' ? 'PRO VIP' : 'PRO Paketler'}</span>
             </button>
+            */}
 
             {/* Giriş / Profil Alanı */}
             {!authService.isUserLoggedIn() ? (
