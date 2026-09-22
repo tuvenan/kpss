@@ -74,6 +74,7 @@ import {
   MISTAKES_BANK_ID,
 } from '../services/mockExamService';
 import { examSessionService, ActiveExamSession } from '../services/examSessionService';
+import { ActionOrientedHome } from '../components/ActionOrientedHome';
 
 export interface StudentNotificationItem {
   id: string;
@@ -526,6 +527,18 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
 
   const handleSelectTopic = async (topic: Topic) => {
     if (topic.isLocked) return;
+    try {
+      localStorage.setItem('kpss_last_activity_v1', JSON.stringify({
+        type: 'topic',
+        title: `${selectedSubject?.title || 'KPSS'} — ${topic.title}`,
+        subtitle: `${selectedUnit?.title || 'Ünite'} Konu Testi`,
+        subjectTitle: selectedSubject?.title,
+        topicTitle: topic.title,
+        topicId: topic.id,
+        questionCount: topic.questionCount || 20,
+        timestamp: new Date().toISOString(),
+      }));
+    } catch {}
     setSelectedTopic(topic);
     setIsLoadingBanks(true);
     try {
@@ -882,6 +895,73 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
     setStagedOption(null);
     setStartTime(Date.now());
     setViewState('quiz');
+  };
+
+  // Aralıklı Tekrar (Leitner) Vadesi Gelmiş Sorularla Başlatma
+  const handleStartLeitnerQuiz = () => {
+    const dueQuestions = spacedRepetitionService.getDueQuestions();
+    if (dueQuestions.length === 0) {
+      handleStartMistakesBankQuiz();
+      return;
+    }
+    setIsDenemeMode(false);
+    setSelectedSubject(null);
+    setSelectedUnit(null);
+    setSelectedTopic(null);
+    setSelectedBank(getOrCreateMistakesBank());
+    setQuestions(dueQuestions);
+    setCurrentIndex(0);
+    setUserAnswers({});
+    setIsCompleted(false);
+    setStagedOption(null);
+    setStartTime(Date.now());
+    setViewState('quiz');
+  };
+
+  // 20'li Hızlı Süreli Deneme Sınavını Tek Tıkla Başlatma
+  const handleStartQuick20 = () => {
+    setSelectedExamType('quick_20');
+    setDenemeDurationMinutes(25);
+    handleStartDenemeExam(25, 'quick_20');
+  };
+
+  // Devam Eden Aktif Sınav Oturumunu Geri Yükleme
+  const handleResumeExamSession = (session: ActiveExamSession) => {
+    setIsDenemeMode(true);
+    setSelectedExamType(session.templateCode);
+    setDenemeDurationMinutes(session.durationMinutes);
+    setQuestions(session.questions);
+    setUserAnswers(session.userAnswers || {});
+    setCurrentIndex(session.currentIndex || 0);
+    setTimeRemainingSeconds(session.timeRemainingSeconds);
+    setActiveExamAttemptId(session.examAttemptId);
+    setStartTime(Date.now() - (session.totalElapsedSeconds * 1000));
+    setIsCompleted(false);
+    setViewState('quiz');
+  };
+
+  // Akıllı Zayıf Konu Önerisinde Pratik Başlatma
+  const handlePracticeTopic = (topicTitle: string, subjectTitle?: string) => {
+    const cleanTitle = topicTitle.replace(/^[^\—\-]+[\—\-]\s*/, '').trim().toLowerCase();
+    const foundTopic = topics.find((t) =>
+      t.title.toLowerCase().includes(cleanTitle) ||
+      cleanTitle.includes(t.title.toLowerCase())
+    );
+    if (foundTopic) {
+      handleSelectTopic(foundTopic);
+      return;
+    }
+
+    if (subjectTitle) {
+      const foundSub = subjects.find((s) => s.title.toLowerCase().includes(subjectTitle.toLowerCase()));
+      if (foundSub) {
+        handleSelectSubject(foundSub);
+        return;
+      }
+    }
+
+    setActiveTab('subjects');
+    setViewState('subjects');
   };
 
   const getResult = (): UnitResult => {
@@ -2249,480 +2329,24 @@ export const StudentQuiz: React.FC<{ onNavigateAdmin: () => void }> = ({ onNavig
             </div>
           )}
           {viewState === 'subjects' && activeTab === 'home' && (
-            <div className="dashboard-container" style={styles.dashboardContainer}>
-              {/* SOL KOLON (ANA AKIŞ) */}
-              <div className="dashboard-left-col" style={styles.dashboardLeftCol}>
-                {/* Karşılama ve Günlük İlerleme */}
-                <div className="welcome-row" style={styles.welcomeRow}>
-                  <div>
-                    <h1 className="welcome-heading" style={styles.welcomeHeading}>Merhaba, {userProfile.name.split(' ')[0] || 'Ali'}</h1>
-                    <div style={styles.welcomeSubheading}>Bugün ne çalışalım?</div>
-                  </div>
-                  <div className="date-badge-container" style={styles.dateBadgeContainer}>
-                    <Calendar size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '10px' }} />
-                    <div>
-                      <div style={styles.dateBadgeTitle}>24 Eylül 2025</div>
-                      <div style={styles.dateBadgeSub}>Çarşamba</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* KPSS DENEME MODU KARTI (Mevcut Görsel Temaya Tam Uyumlu & Mobilde Kompakt) */}
-                <div className="deneme-theme-banner" style={styles.denemeThemeCard}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-                    <div style={styles.denemeThemeIconBox}>
-                      <Timer size={20} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={styles.denemeThemeTitle}>KPSS Deneme Modu</span>
-                        <span style={styles.denemeThemeBadge}>20 Soru • Süreli</span>
-                      </div>
-                      <div className="deneme-desc-text" style={styles.denemeThemeDesc}>
-                        Farklı konulardan dengeli 20 soru, canlı süre takibi ve tempo analizi
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleOpenDenemeSetup}
-                    className="deneme-action-btn"
-                    style={styles.denemeThemeBtn}
-                  >
-                    <Play size={13} fill="#FFFFFF" />
-                    <span className="deneme-btn-desktop-text">Denemeyi Başlat</span>
-                    <span className="deneme-btn-mobile-text">Başlat</span>
-                  </button>
-                </div>
-
-                {/* Günlük Hedef Kartı */}
-                <div style={styles.goalCardContainer}>
-                  <div style={styles.goalHeaderRow}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={styles.goalTargetIconBox}>
-                        <Target size={18} color="var(--kpss-primary, #4F46E5)" />
-                      </div>
-                      <span style={styles.goalTitleText}>Günlük İlerleme</span>
-                    </div>
-                    <span style={styles.goalTargetText}>Hedef: 60 soru</span>
-                  </div>
-
-                  <div style={styles.goalNumberRow}>
-                    <span style={styles.goalBigNum}>42</span>
-                    <span style={styles.goalTotalDim}> / 60 soru</span>
-                  </div>
-
-                  <div style={styles.goalProgressBg}>
-                    <div style={{ ...styles.goalProgressFill, width: `${progressPercentage}%` }} />
-                  </div>
-
-                  <div style={styles.goalFooterRow}>
-                    <span>42 soru çözüldü</span>
-                  </div>
-                </div>
-
-                {/* Dersler Bölümü (Grid) */}
-                <div style={styles.sectionTitleRow}>
-                  <h2 style={styles.sectionHeadingTitle}>Dersler</h2>
-                  <button
-                    onClick={() => setActiveTab('subjects')}
-                    style={styles.textLinkBtn}
-                  >
-                    <span>Tümünü Gör →</span>
-                  </button>
-                </div>
-
-                <div style={styles.categorySubTitle}>KPSS Genel Yetenek</div>
-                <div className="subjects-grid-2" style={styles.subjectsGrid2}>
-                  {/* Türkçe */}
-                  <div
-                    onClick={() => handleSubjectClick(generalTalentSubjects[0])}
-                    style={styles.dashSubjectCard}
-                  >
-                    <div style={styles.dashSubjectIconBox}>
-                      <BookOpen size={18} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Türkçe</span>
-                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                      </div>
-                      <div style={styles.dashSubjectUnits}>12 / 20 ünite</div>
-                      <div style={styles.dashMiniBarBg}>
-                        <div style={{ ...styles.dashMiniBarFill, width: '58%' }} />
-                      </div>
-                    </div>
-                    <span style={styles.dashPercentNum}>%58</span>
-                  </div>
-
-                  {/* Matematik */}
-                  <div
-                    onClick={() => handleSubjectClick(generalTalentSubjects[1])}
-                    style={styles.dashSubjectCard}
-                  >
-                    <div style={styles.dashSubjectIconBox}>
-                      <Calculator size={18} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Matematik</span>
-                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                      </div>
-                      <div style={styles.dashSubjectUnits}>8 / 20 ünite</div>
-                      <div style={styles.dashMiniBarBg}>
-                        <div style={{ ...styles.dashMiniBarFill, width: '42%' }} />
-                      </div>
-                    </div>
-                    <span style={styles.dashPercentNum}>%42</span>
-                  </div>
-                </div>
-
-                <div style={{ ...styles.categorySubTitle, marginTop: '18px' }}>KPSS Genel Kültür</div>
-                <div className="subjects-grid-2" style={styles.subjectsGrid2}>
-                  {/* Tarih */}
-                  <div
-                    onClick={() => handleSubjectClick(generalCultureSubjects[0])}
-                    style={styles.dashSubjectCard}
-                  >
-                    <div style={styles.dashSubjectIconBox}>
-                      <Landmark size={18} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Tarih</span>
-                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                      </div>
-                      <div style={styles.dashSubjectUnits}>5 / 20 ünite</div>
-                      <div style={styles.dashMiniBarBg}>
-                        <div style={{ ...styles.dashMiniBarFill, width: '71%' }} />
-                      </div>
-                    </div>
-                    <span style={styles.dashPercentNum}>%71</span>
-                  </div>
-
-                  {/* Coğrafya */}
-                  <div
-                    onClick={() => handleSubjectClick(generalCultureSubjects[1])}
-                    style={styles.dashSubjectCard}
-                  >
-                    <div style={styles.dashSubjectIconBox}>
-                      <Globe size={18} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Coğrafya</span>
-                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                      </div>
-                      <div style={styles.dashSubjectUnits}>0 / 20 ünite</div>
-                      <div style={styles.dashMiniBarBg}>
-                        <div style={{ ...styles.dashMiniBarFill, width: '0%' }} />
-                      </div>
-                    </div>
-                    <span style={styles.dashPercentNum}>%0</span>
-                  </div>
-
-                  {/* Vatandaşlık */}
-                  <div
-                    onClick={() => handleSubjectClick(generalCultureSubjects[2])}
-                    style={styles.dashSubjectCard}
-                  >
-                    <div style={styles.dashSubjectIconBox}>
-                      <Users size={18} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Vatandaşlık</span>
-                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                      </div>
-                      <div style={styles.dashSubjectUnits}>8 / 20 ünite</div>
-                      <div style={styles.dashMiniBarBg}>
-                        <div style={{ ...styles.dashMiniBarFill, width: '38%' }} />
-                      </div>
-                    </div>
-                    <span style={styles.dashPercentNum}>%38</span>
-                  </div>
-
-                  {/* Güncel Bilgiler */}
-                  <div
-                    onClick={() => handleSubjectClick(generalCultureSubjects[3])}
-                    style={styles.dashSubjectCard}
-                  >
-                    <div style={styles.dashSubjectIconBox}>
-                      <Newspaper size={18} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={styles.dashSubjectTop}>
-                        <span style={styles.dashSubjectName}>Güncel Bilgiler</span>
-                        <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                      </div>
-                      <div style={styles.dashSubjectUnits}>6 / 20 ünite</div>
-                      <div style={styles.dashMiniBarBg}>
-                        <div style={{ ...styles.dashMiniBarFill, width: '25%' }} />
-                      </div>
-                    </div>
-                    <span style={styles.dashPercentNum}>%25</span>
-                  </div>
-                </div>
-
-                {/* Hızlı Erişim */}
-                <div style={styles.quickAccessTitle}>Hızlı Erişim</div>
-                <div className="quick-access-row" style={styles.quickAccessRow}>
-                  <div
-                    onClick={handleOpenDenemeSetup}
-                    style={styles.quickAccessCard}
-                  >
-                    <div style={styles.quickAccessIconBox}>
-                      <Timer size={16} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div>
-                      <div style={styles.quickAccessTitleText}>Deneme Sınavı</div>
-                      <div style={styles.quickAccessSubText}>20 Soru • Süreli</div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleStartPlan(1)}
-                    style={styles.quickAccessCard}
-                  >
-                    <div style={styles.quickAccessIconBox}>
-                      <Play size={16} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div>
-                      <div style={styles.quickAccessTitleText}>Soru Çöz</div>
-                      <div style={styles.quickAccessSubText}>Teste başla</div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
-                    style={styles.quickAccessCard}
-                  >
-                    <div style={styles.quickAccessIconBox}>
-                      <FileText size={16} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div>
-                      <div style={{ ...styles.quickAccessTitleText, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>Hata Havuzu</span>
-                        {mistakesBankCount > 0 && (
-                          <span style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            padding: '1px 6px',
-                            borderRadius: '8px',
-                            backgroundColor: '#FEE2E2',
-                            color: '#DC2626',
-                          }}>
-                            {mistakesBankCount}
-                          </span>
-                        )}
-                      </div>
-                      <div style={styles.quickAccessSubText}>
-                        {mistakesBankCount > 0 ? "'Yanlışlarım' soru bankası" : 'Yanlışlarını tekrar et'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => { setActiveTab('subjects'); setViewState('subjects'); }}
-                    style={styles.quickAccessCard}
-                  >
-                    <div style={styles.quickAccessIconBox}>
-                      <BookOpen size={16} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div>
-                      <div style={styles.quickAccessTitleText}>Dersler</div>
-                      <div style={styles.quickAccessSubText}>Tüm derslere göz at</div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => { setActiveTab('profile'); setViewState('subjects'); }}
-                    style={styles.quickAccessCard}
-                  >
-                    <div style={styles.quickAccessIconBox}>
-                      <User size={16} color="var(--kpss-primary, #4F46E5)" />
-                    </div>
-                    <div>
-                      <div style={styles.quickAccessTitleText}>Profil</div>
-                      <div style={styles.quickAccessSubText}>İstatistiklerini gör</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SAĞ KOLON (ÇALIŞMA PLANI & İSTATİSTİKLER) */}
-              <div className="dashboard-right-col" style={styles.dashboardRightCol}>
-                {/* 1. Bugünün Çalışma Planı */}
-                <div style={styles.widgetBox}>
-                  <div style={styles.widgetHeaderRow}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <Calendar size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '8px' }} />
-                      <span style={styles.widgetTitleText}>Bugünün Çalışma Planı</span>
-                    </div>
-                    <button style={styles.widgetLinkBtn}>Düzenle</button>
-                  </div>
-
-                  <div style={styles.planItemsContainer}>
-                    <div
-                      onClick={() => handleStartPlan(1)}
-                      style={styles.planCardItem}
-                    >
-                      <span style={styles.planNumBadge}>01</span>
-                      <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Tarih — İslamiyet Öncesi Türk Tarihi</div>
-                        <div style={styles.planItemSub}>20 soru</div>
-                      </div>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                    </div>
-
-                    <div
-                      onClick={() => handleStartPlan(2)}
-                      style={styles.planCardItem}
-                    >
-                      <span style={styles.planNumBadge}>02</span>
-                      <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Türkçe — Sözcükte Anlam</div>
-                        <div style={styles.planItemSub}>20 soru</div>
-                      </div>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                    </div>
-
-                    <div
-                      onClick={() => handleStartPlan(3)}
-                      style={styles.planCardItem}
-                    >
-                      <span style={styles.planNumBadge}>03</span>
-                      <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Matematik — Problemler</div>
-                        <div style={styles.planItemSub}>20 soru</div>
-                      </div>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                    </div>
-
-                    <div
-                      onClick={() => handleStartPlan(4)}
-                      style={styles.planCardItem}
-                    >
-                      <span style={styles.planNumBadge}>04</span>
-                      <div style={{ flex: 1, marginLeft: '12px' }}>
-                        <div style={styles.planItemTitle}>Coğrafya — Türkiye Fiziki Yapısı</div>
-                        <div style={styles.planItemSub}>20 soru</div>
-                      </div>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleStartPlan(1)}
-                    style={styles.startPlanBlackBtn}
-                  >
-                    Çalışmaya Başla
-                  </button>
-                </div>
-
-                {/* 2. Sonuçlarım */}
-                <div style={styles.widgetBox}>
-                  <div style={styles.widgetHeaderRow}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <BarChart2 size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '8px' }} />
-                      <span style={styles.widgetTitleText}>Sonuçlarım</span>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab('subjects')}
-                      style={styles.widgetLinkBtn}
-                    >
-                      Tümünü Gör →
-                    </button>
-                  </div>
-
-                  <div className="stats-horizontal-grid" style={styles.statsHorizontalGrid}>
-                    <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Toplam Soru</div>
-                      <div style={styles.statMiniVal}>1.240</div>
-                    </div>
-                    <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Doğru</div>
-                      <div style={{ ...styles.statMiniVal, color: '#16A34A' }}>982</div>
-                    </div>
-                    <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Yanlış</div>
-                      <div style={{ ...styles.statMiniVal, color: '#DC2626' }}>258</div>
-                    </div>
-                    <div style={styles.statMiniBox}>
-                      <div style={styles.statMiniLabel}>Başarı Oranı</div>
-                      <div style={styles.statMiniVal}>%79</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Hata Havuzu */}
-                <div style={styles.widgetBox}>
-                  <div style={styles.widgetHeaderRow}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <AlertTriangle size={18} color="var(--kpss-primary, #4F46E5)" style={{ marginRight: '8px' }} />
-                      <span style={styles.widgetTitleText}>Hata Havuzu</span>
-                    </div>
-                    <button
-                      onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
-                      style={styles.widgetLinkBtn}
-                    >
-                      Tümünü Gör →
-                    </button>
-                  </div>
-                  <div style={styles.errorSubCountMini}>4 hata sorusu</div>
-
-                  <div style={styles.errorItemsContainer}>
-                    <div
-                      onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
-                      style={styles.errorMiniItem}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Tarih — İslamiyet Öncesi</div>
-                        <div style={styles.errorItemSub}>Soru 07</div>
-                      </div>
-                      <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
-                    </div>
-
-                    <div
-                      onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
-                      style={styles.errorMiniItem}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Türkçe — Sözcükte Anlam</div>
-                        <div style={styles.errorItemSub}>Soru 13</div>
-                      </div>
-                      <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
-                    </div>
-
-                    <div
-                      onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
-                      style={styles.errorMiniItem}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Matematik — Problemler</div>
-                        <div style={styles.errorItemSub}>Soru 05</div>
-                      </div>
-                      <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
-                    </div>
-
-                    <div
-                      onClick={() => { setActiveTab('errors'); setViewState('subjects'); }}
-                      style={styles.errorMiniItem}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={styles.errorItemTitle}>Coğrafya — Türkiye Fiziki Yapısı</div>
-                        <div style={styles.errorItemSub}>Soru 11</div>
-                      </div>
-                      <span style={styles.errorRedPill}>Yanlış</span>
-                      <ChevronRight size={16} color="var(--kpss-text-muted, #94A3B8)" style={{ marginLeft: '6px' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ActionOrientedHome
+              userProfile={userProfile}
+              onStartQuick20={handleStartQuick20}
+              onStartPlan={handleStartPlan}
+              onStartMistakesBank={handleStartMistakesBankQuiz}
+              onStartLeitnerQuiz={handleStartLeitnerQuiz}
+              onOpenDenemeSetup={handleOpenDenemeSetup}
+              onNavigateTab={(tab) => {
+                setActiveTab(tab);
+                setViewState('subjects');
+              }}
+              onResumeExamSession={handleResumeExamSession}
+              onPracticeTopic={handlePracticeTopic}
+              generalTalentSubjects={generalTalentSubjects}
+              generalCultureSubjects={generalCultureSubjects}
+              onSubjectClick={handleSubjectClick}
+              mistakesBankCount={mistakesBankCount}
+            />
           )}
 
           {/* DERSLER SEKMESİ */}
