@@ -1,9 +1,11 @@
 import React from 'react';
-import { ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, AlertCircle, ArrowLeft, User, Lock } from 'lucide-react';
 import { adminStyles } from '../AdminPanel.styles';
 import { getRuntimeConfig } from '../../../config/runtimeConfig';
 
 interface AdminLoginProps {
+  usernameInput: string;
+  setUsernameInput: (val: string) => void;
   passwordInput: string;
   setPasswordInput: (val: string) => void;
   authError: string;
@@ -12,6 +14,8 @@ interface AdminLoginProps {
 }
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({
+  usernameInput,
+  setUsernameInput,
   passwordInput,
   setPasswordInput,
   authError,
@@ -24,29 +28,55 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
     <div style={adminStyles.loginBackdrop}>
       <div style={adminStyles.loginCard}>
         <div style={adminStyles.loginIconBox}>
-          <ShieldCheck size={36} color="#4F46E5" />
+          <ShieldCheck size={36} color="#0F172A" />
         </div>
         <div style={adminStyles.loginBadge}>KPSS YÖNETİCİ GİRİŞİ</div>
         {isDemoModeEnabled && (
-          <div style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', padding: '4px 8px', borderRadius: '6px', marginBottom: '12px', display: 'inline-block' }}>
-            🛠️ Geliştirici Demo Modu (Varsayılan: admin2026)
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#64748B',
+              backgroundColor: '#F1F5F9',
+              border: '1px solid #E2E8F0',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              marginBottom: '12px',
+              display: 'inline-block',
+            }}
+          >
+            🛠️ Yönetici Hesabı: <strong>tuvenan</strong>
           </div>
         )}
         <h2 style={adminStyles.loginTitle}>Admin Kontrol Merkezi</h2>
         <p style={adminStyles.loginSubtitle}>
-          İçerik, soru bankası ve sınav müfredatını yönetmek için lütfen yetkili şifrenizi giriniz.
+          İçerik, soru bankası ve yönetim merkezine erişmek için lütfen yönetici giriş bilgilerinizi giriniz.
         </p>
 
         <form onSubmit={onLogin} style={{ width: '100%' }}>
           <div style={{ marginBottom: '16px' }}>
+            <label style={adminStyles.label}>Kullanıcı Adı</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                required
+                placeholder="Örn: tuvenan"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                style={adminStyles.inputField}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
             <label style={adminStyles.label}>Yönetici Şifresi</label>
             <input
               type="password"
+              required
               placeholder="Şifrenizi giriniz..."
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
               style={adminStyles.inputField}
-              autoFocus
             />
           </div>
 
@@ -57,7 +87,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
             </div>
           )}
 
-          <button type="submit" style={adminStyles.loginBtn}>
+          <button
+            type="submit"
+            style={{
+              ...adminStyles.loginBtn,
+              backgroundColor: '#111111',
+              color: '#FFFFFF',
+              fontWeight: 700,
+            }}
+          >
             Giriş Yap →
           </button>
         </form>

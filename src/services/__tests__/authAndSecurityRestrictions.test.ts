@@ -125,9 +125,16 @@ describe('Kimlik Doğrulama ve Güvenlik Kısıtlamaları (Auth & Security Restr
     expect(loginRes.user?.email).toBe('demo@kpss.com');
     expect(authService.isUserLoggedIn()).toBe(true);
 
-    // 2. Demo admin doğrulaması
-    const isAdminValid = await adminAuthService.verifyPassword('admin2026');
-    expect(isAdminValid).toBe(true);
+    // 2. Demo admin doğrulaması (tuvenan / ada18kasim)
+    const isTuvenanValid = await adminAuthService.verifyCredentials('tuvenan', 'ada18kasim');
+    expect(isTuvenanValid).toBe(true);
+
+    const isWrongPass = await adminAuthService.verifyCredentials('tuvenan', 'yanlis_sifre');
+    expect(isWrongPass).toBe(false);
+
+    const isWrongUser = await adminAuthService.verifyCredentials('baskasi', 'ada18kasim');
+    expect(isWrongUser).toBe(false);
+
     adminAuthService.createSession();
     expect(adminAuthService.isAuthenticated()).toBe(true);
 

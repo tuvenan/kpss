@@ -47,6 +47,7 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return adminAuthService.isAuthenticated();
   });
+  const [usernameInput, setUsernameInput] = useState('tuvenan');
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
 
@@ -109,14 +110,14 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   // ----------------------------------------------------
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isValid = await adminAuthService.verifyPassword(passwordInput);
+    const isValid = await adminAuthService.verifyCredentials(usernameInput, passwordInput);
     if (isValid) {
       adminAuthService.createSession();
       setIsAuthenticated(true);
       setAuthError('');
       setPasswordInput('');
     } else {
-      setAuthError('Hatalı yetkili şifresi! Lütfen tekrar deneyiniz.');
+      setAuthError('Kullanıcı adı veya şifre hatalı! Lütfen tekrar deneyiniz.');
     }
   };
 
@@ -263,6 +264,8 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   if (!isAuthenticated) {
     return (
       <AdminLogin
+        usernameInput={usernameInput}
+        setUsernameInput={setUsernameInput}
         passwordInput={passwordInput}
         setPasswordInput={setPasswordInput}
         authError={authError}

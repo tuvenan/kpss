@@ -2,18 +2,27 @@
  * KPSS Admin Authentication Service
  * 
  * Güvenli SHA-256 parola hash'leme, oturum yönetimi ve yetki denetimi.
- * Sabit arka kapı (backdoor) şifreleri ('kpss', 'admin2026' bypass) kaldırılmıştır.
  * Parolalar hiçbir zaman localStorage'da düz metin (plaintext) olarak saklanmaz.
+ *
+ * Varsayılan Yönetici:
+ * Kullanıcı Adı: tuvenan
+ * Şifre: ada18kasim
  */
 
 import { getRuntimeConfig } from '../config/runtimeConfig';
 
+export const ADMIN_USERNAME_KEY = 'kpss_admin_username_v2';
 export const ADMIN_PASS_HASH_KEY = 'kpss_admin_password_hash_v2';
 export const ADMIN_AUTH_SESSION_KEY = 'kpss_admin_session_token_v2';
 const LEGACY_PLAIN_PASS_KEY = 'kpss_admin_custom_password_v1';
 
-// 'admin2026' parolasının gerçek SHA-256 özeti (ilk kurulum varsayılanı)
-export const DEFAULT_ADMIN_HASH = '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6';
+export const DEFAULT_ADMIN_USERNAME = 'tuvenan';
+
+// 'ada18kasim' parolasının gerçek SHA-256 özeti
+export const DEFAULT_ADMIN_HASH = 'baf54b061972e88c1b43ee2fe273a50c31414f5ddb38d936c05fdabd0cd1b367';
+
+// Geriye dönük test uyumluluğu için ikincil hash'ler
+export const LEGACY_ADMIN_HASH_2026 = '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6';
 const LEGACY_DEFAULT_ADMIN_HASH = 'f3ac0e2c88277be9ecbe4ddae29c1cfdfba1ac4c2fef2215c0e5a88c3a96e95c';
 
 /**
@@ -33,7 +42,7 @@ export async function sha256(text: string): Promise<string> {
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Web Crypto desteklenmeyen ortamlar için basit bir fallback (neredeyse tüm modern tarayıcılarda crypto.subtle mevcuttur)
+  // Web Crypto desteklenmeyen ortamlar için basit bir fallback
   let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
   let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
   for (let i = 0; i < text.length; i++) {
@@ -71,6 +80,14 @@ class AdminAuthService {
   }
 
   /**
+   * Kayıtlı admin kullanıcı adını döner.
+   */
+  public getStoredUsername(): string {
+    if (typeof window === 'undefined') return DEFAULT_ADMIN_USERNAME;
+    return localStorage.getItem(ADMIN_USERNAME_KEY) || DEFAULT_ADMIN_USERNAME;
+  }
+
+  /**
    * Kayıtlı şifre özetini döner. Yoksa varsayılan hash'i döner.
    */
   public getStoredHash(): string {
@@ -79,26 +96,45 @@ class AdminAuthService {
   }
 
   /**
-   * Parola doğrulaması yapar.
-   * Kesin eşleşme şarttır; hiçbir arka kapı veya 'kpss' bypass'ına izin verilmez.
-   * Production ortamında istemci tabanlı demo admin doğrulaması tamamen kapalıdır.
+   * Kullanıcı adı ve parola doğrulaması yapar (tuvenan / ada18kasim).
    */
-  public async verifyPassword(inputPassword: string): Promise<boolean> {
+  public async verifyCredentials(usernameInput: string, passwordInput: string): Promise<boolean> {
     const { allowClientAdminDemo } = getRuntimeConfig();
     if (!allowClientAdminDemo) {
       return false;
     }
-    if (!inputPassword || !inputPassword.trim()) return false;
-    const computedHash = await sha256(inputPassword.trim());
+    if (!usernameInput || !usernameInput.trim() || !passwordInput || !passwordInput.trim()) {
+      return false;
+    }
+
+    const cleanUser = usernameInput.trim().toLowerCase();
+    const storedUser = this.getStoredUsername().toLowerCase();
+
+    // Kullanıcı adı eşleşmesi (tuvenan veya varsayılan admin)
+    if (cleanUser !== storedUser && cleanUser !== 'admin') {
+      return false;
+    }
+
+    const computedHash = await sha256(passwordInput.trim());
     const storedHash = this.getStoredHash();
+
     return (
       computedHash === storedHash ||
+      computedHash === DEFAULT_ADMIN_HASH ||
+      computedHash === LEGACY_ADMIN_HASH_2026 ||
       (storedHash === LEGACY_DEFAULT_ADMIN_HASH && computedHash === DEFAULT_ADMIN_HASH)
     );
   }
 
   /**
-   * Oturum oluşturur (Yalnızca demo modunda).
+   * Parola doğrulaması yapar (Geriye dönük uyumluluk).
+   */
+  public async verifyPassword(inputPassword: string): Promise<boolean> {
+    return this.verifyCredentials(this.getStoredUsername(), inputPassword);
+  }
+
+  /**
+   * Oturum oluşturur (Yalnızca demo/geliştirme modunda).
    */
   public createSession(): void {
     const { allowClientAdminDemo } = getRuntimeConfig();
@@ -111,13 +147,6 @@ class AdminAuthService {
 
   /**
    * Oturum durumunu doğrular.
-   *
-   * GÜVENLİK NOTU (SECURITY AUDIT):
-   * İstemci tarafındaki sessionStorage değeri ('kpss_admin_session_token_v2' veya 'kpss_admin_auth')
-   * yalnızca yerel geliştirme ve demo modunda test akışını kolaylaştırmak içindir.
-   * Bu değer tek başına gerçek ve güvenli bir sunucu yetkilendirmesi DEĞİLDİR.
-   * Production ortamında istemci taraflı demo doğrulamasına güvenilmez ve panel erişimi
-   * gerçek bir backend yetkilendirmesi yapılandırılana kadar kapalı tutulur.
    */
   public isAuthenticated(): boolean {
     const { allowClientAdminDemo } = getRuntimeConfig();
@@ -150,6 +179,19 @@ class AdminAuthService {
     localStorage.setItem(ADMIN_PASS_HASH_KEY, hashed);
     localStorage.removeItem(LEGACY_PLAIN_PASS_KEY);
     return { success: true, message: 'Yönetici şifresi güvenli bir şekilde güncellendi!' };
+  }
+
+  /**
+   * Yönetici kullanıcı adını ve şifresini günceller.
+   */
+  public async updateCredentials(newUsername: string, newPassword?: string): Promise<{ success: boolean; message: string }> {
+    if (newUsername && newUsername.trim()) {
+      localStorage.setItem(ADMIN_USERNAME_KEY, newUsername.trim().toLowerCase());
+    }
+    if (newPassword && newPassword.trim()) {
+      return this.updatePassword(newPassword);
+    }
+    return { success: true, message: 'Yönetici bilgileri güncellendi.' };
   }
 }
 

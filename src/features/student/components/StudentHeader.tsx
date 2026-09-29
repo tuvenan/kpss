@@ -388,7 +388,8 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
                       type="button"
                       onClick={() => {
                         setShowUserDropdown(false);
-                        window.location.hash = '#admin';
+                        window.history.pushState({}, '', '/admin');
+                        window.dispatchEvent(new PopStateEvent('popstate'));
                       }}
                       style={{
                         width: '100%',
@@ -406,7 +407,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
                       }}
                     >
                       <Shield size={15} color="#111111" />
-                      <span>Süper Admin Paneli</span>
+                      <span>Süper Admin Paneli (/admin)</span>
                     </button>
                   )}
 

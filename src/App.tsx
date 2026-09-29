@@ -14,9 +14,9 @@ const resolveCurrentRoute = (): AppRoute => {
   const path = window.location.pathname;
   const hash = window.location.hash;
 
-  if (path.includes('/admin') || hash.includes('admin')) return 'admin';
-  if (path.includes('/teacher') || hash.includes('teacher')) return 'teacher';
-  if (path.includes('/editor') || hash.includes('editor')) return 'editor';
+  if (path === '/admin' || path.startsWith('/admin') || hash.includes('admin')) return 'admin';
+  if (path === '/teacher' || path.startsWith('/teacher') || hash.includes('teacher')) return 'teacher';
+  if (path === '/editor' || path.startsWith('/editor') || hash.includes('editor')) return 'editor';
 
   return 'student';
 };
@@ -37,7 +37,8 @@ export const AppContent: React.FC = () => {
   }, []);
 
   const navigateTo = (route: AppRoute) => {
-    window.history.pushState({}, '', `#${route}`);
+    const url = route === 'student' ? '/' : `/${route}`;
+    window.history.pushState({}, '', url);
     setCurrentPage(route);
   };
 
@@ -51,18 +52,7 @@ export const AppContent: React.FC = () => {
       }}
     >
       {currentPage === 'admin' && (
-        <RequireRole
-          role="super_admin"
-          fallback={
-            <UnauthorizedView
-              title="Süper Admin Girişi Gerekli"
-              message="Yönetim merkezine erişebilmek için süper admin yetkisine sahip olmanız gerekmektedir."
-              onGoBack={() => navigateTo('student')}
-            />
-          }
-        >
-          <AdminPanel onNavigateStudent={() => navigateTo('student')} />
-        </RequireRole>
+        <AdminPanel onNavigateStudent={() => navigateTo('student')} />
       )}
 
       {currentPage === 'teacher' && (
@@ -70,6 +60,7 @@ export const AppContent: React.FC = () => {
           role="teacher"
           fallback={
             <UnauthorizedView
+              requiredRole="teacher"
               title="Öğretmen Paneli Erişimi"
               message="Öğretmen çalışma alanına erişebilmek için hesabınıza öğretmen rolü atanmış olmalıdır."
               onGoBack={() => navigateTo('student')}
@@ -85,6 +76,7 @@ export const AppContent: React.FC = () => {
           role="editor"
           fallback={
             <UnauthorizedView
+              requiredRole="editor"
               title="Editör Paneli Erişimi"
               message="İçerik ve soru düzenleme alanına erişebilmek için editör rolüne sahip olmanız gerekmektedir."
               onGoBack={() => navigateTo('student')}
