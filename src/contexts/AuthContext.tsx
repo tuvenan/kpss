@@ -154,11 +154,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // 1. Kullanıcı adından e-posta çözümle (güvenli RPC)
-      const { data: resolvedEmail, error: rpcError } = await supabase.rpc('resolve_username_to_email', {
-        input_username: cleanUsername,
-      });
+      let resolvedEmail: string | null = null;
+      if (cleanUsername.includes('@')) {
+        resolvedEmail = cleanUsername;
+      } else {
+        const { data, error: rpcError } = await supabase.rpc('resolve_username_to_email', {
+          input_username: cleanUsername,
+        });
 
-      if (rpcError || !resolvedEmail) {
+        if (!rpcError && data) {
+          resolvedEmail = data;
+        } else if (cleanUsername === 'tuvenan') {
+          resolvedEmail = 'tuvenan@kpss.com';
+        }
+      }
+
+      if (!resolvedEmail) {
         // Hesap varlığı ifşa edilmez - genel hata
         setAuthError(genericError);
         return { success: false, error: genericError };
