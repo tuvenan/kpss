@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   WifiOff,
   Lock,
@@ -26,6 +26,7 @@ import { useStudentSession } from './hooks/useStudentSession';
 import { useCurriculumNavigation } from './hooks/useCurriculumNavigation';
 import { useQuizSession } from './hooks/useQuizSession';
 import { useExamTimer } from './hooks/useExamTimer';
+import { useExamPersistence } from './hooks/useExamPersistence';
 import { useNotifications } from './hooks/useNotifications';
 import { useCurriculumSearch } from './hooks/useCurriculumSearch';
 
@@ -52,46 +53,65 @@ import { AuthModal } from '../../components/AuthModal';
 import { PricingPaywallModal } from '../../components/PricingPaywallModal';
 
 export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () => {
-  // Session Hook (Auth, Theme, Profile, Subscription, Network)
+  // 1. Temel Deneme Modu Durumu
+  const [isDenemeMode, setIsDenemeMode] = useState<boolean>(false);
+
+  // 2. Session Hook (Auth, Theme, Profile, Subscription, Network)
   const session = useStudentSession();
 
-  // Curriculum Navigation Hook
+  // 3. Curriculum Navigation Hook
   const curriculumNav = useCurriculumNavigation({
     setQuestions: (qList) => quiz.setQuestions(qList),
   });
 
-  // Exam Timer Hook (declarative placeholders filled below)
-  const timer = useExamTimer(
-    curriculumNav.viewState,
-    false, // placeholder, dynamically wired with quiz.isCompleted
-    (val) => quiz.setIsCompleted(val),
-    [],
-    {},
-    0,
-    0
-  );
-
-  // Quiz Session Hook
+  // 4. Quiz Session Hook (Tek doğruluk kaynağı - Single Source of Truth)
   const quiz = useQuizSession({
-    isDenemeMode: timer.isDenemeMode,
-    activeExamAttemptId: timer.activeExamAttemptId,
-    selectedExamType: timer.selectedExamType,
-    denemeDurationMinutes: timer.denemeDurationMinutes,
-    timeRemainingSeconds: timer.timeRemainingSeconds,
-    denemeTotalElapsedSeconds: timer.denemeTotalElapsedSeconds,
+    isDenemeMode,
+    getActiveExamAttemptId: () => persistence.activeExamAttemptId,
     selectedSubject: curriculumNav.selectedSubject,
     selectedUnit: curriculumNav.selectedUnit,
     selectedTopic: curriculumNav.selectedTopic,
     selectedBank: curriculumNav.selectedBank,
     setViewState: curriculumNav.setViewState,
     onRefreshLeitnerStats: session.refreshLeitnerStats,
+    onAnswerSaved: (_questionId, _answerObj, nextAnswers) => {
+      persistence.saveSessionNow({ userAnswers: nextAnswers });
+    },
+    onCompleteExam: (finalQuestions, finalAnswers) => {
+      if (isDenemeMode) {
+        persistence.completeExamSession(finalQuestions, finalAnswers);
+      }
+    },
+  });
+
+  // 5. Exam Timer Hook (Yalnızca zaman yönetimi ve zaman aşımı)
+  const timer = useExamTimer({
+    isDenemeMode,
+    viewState: curriculumNav.viewState,
+    isCompleted: quiz.isCompleted,
+    onTimeout: () => {
+      quiz.completeQuiz();
+    },
+  });
+
+  // 6. Sınav Oturumu Kalıcılığı ve Kurtarma Hook'u (useExamPersistence)
+  const persistence = useExamPersistence({
+    isDenemeMode,
+    isCompleted: quiz.isCompleted,
+    questions: quiz.questions,
+    userAnswers: quiz.userAnswers,
+    currentIndex: quiz.currentIndex,
+    startTime: quiz.startTime,
+    timeRemainingSeconds: timer.timeRemainingSeconds,
+    denemeTotalElapsedSeconds: timer.denemeTotalElapsedSeconds,
+    denemeDurationMinutes: timer.denemeDurationMinutes,
   });
 
   // Notifications Hook
   const notifs = useNotifications(
     curriculumNav.setActiveTab,
     curriculumNav.setViewState,
-    () => timer.setShowDenemeSetupModal(true)
+    () => persistence.setShowDenemeSetupModal(true)
   );
 
   // Curriculum Search Hook
@@ -105,7 +125,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
     handleSelectSubject: curriculumNav.handleSelectSubject,
     handleSelectUnit: curriculumNav.handleSelectUnit,
     handleSelectTopic: curriculumNav.handleSelectTopic,
-    handleOpenDenemeSetup: () => timer.setShowDenemeSetupModal(true),
+    handleOpenDenemeSetup: () => persistence.setShowDenemeSetupModal(true),
   });
 
   // Subject Card Items
@@ -139,7 +159,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
   // Exam Handlers
   const handleStartDenemeExam = (
     durationMinutes: number = timer.denemeDurationMinutes,
-    examType: MockExamType = timer.selectedExamType
+    examType: MockExamType = persistence.selectedExamType
   ) => {
     const config = MOCK_EXAM_CONFIGS[examType] || MOCK_EXAM_CONFIGS.quick_20;
     const targetCount = config.questionCount || 20;
@@ -149,26 +169,23 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
         ? crypto.randomUUID()
         : `00000000-0000-4000-8000-${String(Date.now()).padStart(12, '0').slice(-12)}`;
 
-    timer.setActiveExamAttemptId(newAttemptId);
+    setIsDenemeMode(true);
+    persistence.setActiveExamAttemptId(newAttemptId);
+    persistence.setSelectedExamType(examType);
     quiz.setQuestions(mockQuestions);
     quiz.setCurrentIndex(0);
     quiz.setUserAnswers({});
-    quiz.setIsCompleted(false);
+    quiz.resetCompletionStatus();
     quiz.setStagedOption(null);
-    timer.setIsDenemeMode(true);
-    timer.setDenemeDurationMinutes(durationMinutes);
-    const initialSeconds = durationMinutes > 0 ? durationMinutes * 60 : 0;
-    timer.setTimeRemainingSeconds(initialSeconds);
-    timer.setDenemeTotalElapsedSeconds(0);
-    timer.setIsTimerPaused(false);
+    timer.resetTimer(durationMinutes);
     const now = Date.now();
     quiz.setStartTime(now);
     curriculumNav.setSelectedSubject(null);
     curriculumNav.setSelectedUnit(null);
     curriculumNav.setSelectedTopic(null);
     curriculumNav.setSelectedBank(null);
-    timer.setShowDenemeSetupModal(false);
-    timer.setRecoveredSession(null);
+    persistence.setShowDenemeSetupModal(false);
+    persistence.setRecoveredSession(null);
     curriculumNav.setViewState('quiz');
 
     examSessionService.saveActiveSession({
@@ -176,7 +193,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
       templateCode: examType,
       templateName: config.title || 'KPSS Deneme Sınavı',
       durationMinutes,
-      timeRemainingSeconds: initialSeconds,
+      timeRemainingSeconds: durationMinutes > 0 ? durationMinutes * 60 : 0,
       totalElapsedSeconds: 0,
       currentIndex: 0,
       questions: mockQuestions,
@@ -188,16 +205,17 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
   };
 
   const handleStartQuick20 = () => {
-    timer.setSelectedExamType('quick_20');
+    persistence.setSelectedExamType('quick_20');
     timer.setDenemeDurationMinutes(25);
     handleStartDenemeExam(25, 'quick_20');
   };
 
   const handleStartQuiz = () => {
-    timer.setIsDenemeMode(false);
+    setIsDenemeMode(false);
+    persistence.setActiveExamAttemptId(null);
     quiz.setCurrentIndex(0);
     quiz.setUserAnswers({});
-    quiz.setIsCompleted(false);
+    quiz.resetCompletionStatus();
     quiz.setStagedOption(null);
     quiz.setStartTime(Date.now());
     curriculumNav.setViewState('quiz');
@@ -211,7 +229,8 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
       );
       return;
     }
-    timer.setIsDenemeMode(false);
+    setIsDenemeMode(false);
+    persistence.setActiveExamAttemptId(null);
     curriculumNav.setSelectedSubject(null);
     curriculumNav.setSelectedUnit(null);
     curriculumNav.setSelectedTopic(null);
@@ -219,7 +238,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
     quiz.setQuestions(mistakesQuestions);
     quiz.setCurrentIndex(0);
     quiz.setUserAnswers({});
-    quiz.setIsCompleted(false);
+    quiz.resetCompletionStatus();
     quiz.setStagedOption(null);
     quiz.setStartTime(Date.now());
     curriculumNav.setViewState('quiz');
@@ -231,7 +250,8 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
       handleStartMistakesBankQuiz();
       return;
     }
-    timer.setIsDenemeMode(false);
+    setIsDenemeMode(false);
+    persistence.setActiveExamAttemptId(null);
     curriculumNav.setSelectedSubject(null);
     curriculumNav.setSelectedUnit(null);
     curriculumNav.setSelectedTopic(null);
@@ -239,42 +259,31 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
     quiz.setQuestions(dueQuestions);
     quiz.setCurrentIndex(0);
     quiz.setUserAnswers({});
-    quiz.setIsCompleted(false);
+    quiz.resetCompletionStatus();
     quiz.setStagedOption(null);
     quiz.setStartTime(Date.now());
     curriculumNav.setViewState('quiz');
   };
 
   const handleResumeExamSession = (activeSession: ActiveExamSession) => {
-    timer.setIsDenemeMode(true);
-    timer.setSelectedExamType(activeSession.templateCode);
+    setIsDenemeMode(true);
+    persistence.setActiveExamAttemptId(activeSession.examAttemptId);
+    persistence.setSelectedExamType(activeSession.templateCode);
     timer.setDenemeDurationMinutes(activeSession.durationMinutes);
     quiz.setQuestions(activeSession.questions);
     quiz.setUserAnswers(activeSession.userAnswers || {});
     quiz.setCurrentIndex(activeSession.currentIndex || 0);
     timer.setTimeRemainingSeconds(activeSession.timeRemainingSeconds);
-    timer.setActiveExamAttemptId(activeSession.examAttemptId);
-    quiz.setStartTime(Date.now() - activeSession.totalElapsedSeconds * 1000);
-    quiz.setIsCompleted(false);
+    timer.setDenemeTotalElapsedSeconds(activeSession.totalElapsedSeconds || 0);
+    quiz.setStartTime(Date.now() - (activeSession.totalElapsedSeconds || 0) * 1000);
+    quiz.resetCompletionStatus();
+    persistence.setRecoveredSession(null);
     curriculumNav.setViewState('quiz');
   };
 
   const handleResumeRecoveredSession = () => {
-    if (!timer.recoveredSession) return;
-    timer.setActiveExamAttemptId(timer.recoveredSession.examAttemptId);
-    timer.setSelectedExamType(timer.recoveredSession.templateCode);
-    quiz.setQuestions(timer.recoveredSession.questions);
-    quiz.setCurrentIndex(timer.recoveredSession.currentIndex || 0);
-    quiz.setUserAnswers(timer.recoveredSession.userAnswers || {});
-    timer.setDenemeDurationMinutes(timer.recoveredSession.durationMinutes || 25);
-    timer.setTimeRemainingSeconds(timer.recoveredSession.timeRemainingSeconds ?? 25 * 60);
-    timer.setDenemeTotalElapsedSeconds(timer.recoveredSession.totalElapsedSeconds || 0);
-    quiz.setStartTime(new Date(timer.recoveredSession.startedAt).getTime() || Date.now());
-    timer.setIsDenemeMode(true);
-    quiz.setIsCompleted(false);
-    quiz.setStagedOption(null);
-    curriculumNav.setViewState('quiz');
-    timer.setRecoveredSession(null);
+    if (!persistence.recoveredSession) return;
+    handleResumeExamSession(persistence.recoveredSession);
   };
 
   const handlePracticeTopic = (topicTitle: string, subjectTitle?: string) => {
@@ -335,13 +344,17 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
   };
 
   const handleExitQuiz = () => {
-    if (timer.isDenemeMode) {
+    if (isDenemeMode) {
       if (
         confirm(
           'Deneme sınavından çıkmak istediğinize emin misiniz? İlerlemeniz kaydedilmeyecektir.'
         )
       ) {
-        timer.setIsDenemeMode(false);
+        setIsDenemeMode(false);
+        if (persistence.activeExamAttemptId) {
+          examSessionService.abandonActiveSession();
+          persistence.setActiveExamAttemptId(null);
+        }
         curriculumNav.setViewState('subjects');
         curriculumNav.setActiveTab('home');
       }
@@ -352,7 +365,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
 
   const handleFinishDenemeEarly = () => {
     if (confirm('Deneme sınavını şimdi sonlandırıp sonuç raporunu görmek istiyor musunuz?')) {
-      quiz.setIsCompleted(true);
+      quiz.completeQuiz();
     }
   };
 
@@ -521,10 +534,10 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
       <StudentSidebar
         activeTab={curriculumNav.activeTab}
         viewState={curriculumNav.viewState}
-        isDenemeMode={timer.isDenemeMode}
+        isDenemeMode={isDenemeMode}
         onNavigateTab={curriculumNav.setActiveTab}
         onSetViewState={curriculumNav.setViewState}
-        onOpenDenemeSetup={() => timer.setShowDenemeSetupModal(true)}
+        onOpenDenemeSetup={() => persistence.setShowDenemeSetupModal(true)}
       />
 
       {/* 2. SAĞ İÇERİK ALANI */}
@@ -597,7 +610,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
               onStartPlan={handleStartPlan}
               onStartMistakesBank={handleStartMistakesBankQuiz}
               onStartLeitnerQuiz={handleStartLeitnerQuiz}
-              onOpenDenemeSetup={() => timer.setShowDenemeSetupModal(true)}
+              onOpenDenemeSetup={() => persistence.setShowDenemeSetupModal(true)}
               onNavigateTab={(tab) => {
                 curriculumNav.setActiveTab(tab);
                 curriculumNav.setViewState('subjects');
@@ -618,7 +631,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
               generalCultureSubjects={generalCultureSubjects}
               extraSubjects={extraSubjects}
               onSubjectClick={handleSubjectClick}
-              onOpenDenemeSetup={() => timer.setShowDenemeSetupModal(true)}
+              onOpenDenemeSetup={() => persistence.setShowDenemeSetupModal(true)}
             />
           )}
 
@@ -688,12 +701,13 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
               <QuizView
                 isCompleted={quiz.isCompleted}
                 questions={quiz.questions}
+                userAnswers={quiz.userAnswers}
                 currentQ={quiz.currentQ}
                 currentAns={quiz.currentAns}
                 currentIndex={quiz.currentIndex}
                 stagedOption={quiz.stagedOption}
                 isAnswered={quiz.isAnswered}
-                isDenemeMode={timer.isDenemeMode}
+                isDenemeMode={isDenemeMode}
                 denemeDurationMinutes={timer.denemeDurationMinutes}
                 timeRemainingSeconds={timer.timeRemainingSeconds}
                 denemeTotalElapsedSeconds={timer.denemeTotalElapsedSeconds}
@@ -708,7 +722,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
                 onExitQuiz={handleExitQuiz}
                 onFinishDenemeEarly={handleFinishDenemeEarly}
                 onNavigateHome={() => {
-                  timer.setIsDenemeMode(false);
+                  setIsDenemeMode(false);
                   curriculumNav.setViewState('subjects');
                   curriculumNav.setActiveTab('home');
                 }}
@@ -844,7 +858,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
       )}
 
       {/* Sınav Oturumu Kurtarma (Exam Session Recovery) Bildirimi */}
-      {timer.recoveredSession &&
+      {persistence.recoveredSession &&
         curriculumNav.viewState !== 'quiz' &&
         curriculumNav.viewState !== 'feedback' && (
           <div
@@ -887,15 +901,15 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
                     Yarım Kalan Sınav Oturumu
                   </div>
                   <div style={{ fontSize: '12px', color: '#94A3B8' }}>
-                    {timer.recoveredSession.templateName} • Soru{' '}
-                    {timer.recoveredSession.currentIndex + 1}/
-                    {timer.recoveredSession.questions.length} • Kalan:{' '}
-                    {timer.formatTime(timer.recoveredSession.timeRemainingSeconds)}
+                    {persistence.recoveredSession.templateName} • Soru{' '}
+                    {persistence.recoveredSession.currentIndex + 1}/
+                    {persistence.recoveredSession.questions.length} • Kalan:{' '}
+                    {timer.formatTime(persistence.recoveredSession.timeRemainingSeconds)}
                   </div>
                 </div>
               </div>
               <button
-                onClick={timer.handleDiscardSession}
+                onClick={persistence.handleDiscardRecoveredSession}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -931,7 +945,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
                 <span>Kaldığım Yerden Devam Et</span>
               </button>
               <button
-                onClick={timer.handleDiscardSession}
+                onClick={persistence.handleDiscardRecoveredSession}
                 style={{
                   flex: 1,
                   padding: '10px 12px',
@@ -952,11 +966,11 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
 
       {/* DENEME MODU BAŞLATMA & SÜRE AYARI MODALI */}
       <DenemeSetupModal
-        isOpen={timer.showDenemeSetupModal}
-        onClose={() => timer.setShowDenemeSetupModal(false)}
+        isOpen={persistence.showDenemeSetupModal}
+        onClose={() => persistence.setShowDenemeSetupModal(false)}
         onStartExam={(durationMinutes, examType) => handleStartDenemeExam(durationMinutes, examType)}
-        selectedExamType={timer.selectedExamType}
-        setSelectedExamType={timer.setSelectedExamType}
+        selectedExamType={persistence.selectedExamType}
+        setSelectedExamType={persistence.setSelectedExamType}
         denemeDurationMinutes={timer.denemeDurationMinutes}
         setDenemeDurationMinutes={timer.setDenemeDurationMinutes}
       />

@@ -7,6 +7,7 @@ import { QuizResultView } from './QuizResultView';
 interface QuizViewProps {
   isCompleted: boolean;
   questions: Question[];
+  userAnswers: Record<string, UserAnswer>;
   currentQ: Question | undefined;
   currentAns: UserAnswer | undefined;
   currentIndex: number;
@@ -38,6 +39,7 @@ interface QuizViewProps {
 export const QuizView: React.FC<QuizViewProps> = ({
   isCompleted,
   questions,
+  userAnswers,
   currentQ,
   currentAns,
   currentIndex,
@@ -70,7 +72,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
       <QuizResultView
         isDenemeMode={isDenemeMode}
         questions={questions}
-        userAnswers={{}}
+        userAnswers={userAnswers}
         denemeDurationMinutes={denemeDurationMinutes}
         timeRemainingSeconds={timeRemainingSeconds}
         denemeTotalElapsedSeconds={denemeTotalElapsedSeconds}
