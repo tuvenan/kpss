@@ -2,6 +2,8 @@ import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { LogIn } from 'lucide-react';
 
+import { AuthLoadingView } from './AuthLoadingView';
+
 interface RequireAuthProps {
   children: React.ReactNode;
   onOpenAuthModal?: () => void;
@@ -14,11 +16,7 @@ export const RequireAuth: React.FC<RequireAuthProps> = ({
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-        <div style={{ fontSize: '14px', color: '#64748B' }}>Oturum doğrulanıyor...</div>
-      </div>
-    );
+    return <AuthLoadingView message="Oturum doğrulanıyor..." />;
   }
 
   if (!user) {

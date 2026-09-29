@@ -4,8 +4,7 @@ import { StudentQuiz } from './pages/StudentQuiz';
 import { AdminPanel } from './pages/AdminPanel';
 import { TeacherWorkspace } from './features/teacher/TeacherWorkspace';
 import { EditorWorkspace } from './features/editor/EditorWorkspace';
-import { RequireRole } from './components/rbac/RequireRole';
-import { UnauthorizedView } from './components/rbac/UnauthorizedView';
+import { RequireRole, RequireCapability, UnauthorizedView } from './components/rbac';
 
 type AppRoute = 'student' | 'admin' | 'teacher' | 'editor';
 

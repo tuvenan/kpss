@@ -16,6 +16,7 @@ import { adminStyles } from './AdminPanel.styles';
 import { useAdminCurriculum } from './hooks/useAdminCurriculum';
 import { useQuestionEditor } from './hooks/useQuestionEditor';
 import { useStorageManagement } from './hooks/useStorageManagement';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Components
 import { AdminLogin } from './components/AdminLogin';
@@ -41,12 +42,15 @@ import { EditUnitModal } from './modals/EditUnitModal';
 import { EditTopicModal } from './modals/EditTopicModal';
 
 export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => {
+  const { isSuperAdmin, signIn, signOut } = useAuth();
+
   // ----------------------------------------------------
   // 1. GÜVENLİK & KİMLİK DOĞRULAMA (AUTH)
   // ----------------------------------------------------
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return adminAuthService.isAuthenticated();
   });
+  const effectiveIsAuthenticated = isAuthenticated || isSuperAdmin;
   const [usernameInput, setUsernameInput] = useState('tuvenan');
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -67,7 +71,7 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   // ----------------------------------------------------
   // 3. HOOKLAR
   // ----------------------------------------------------
-  const curriculum = useAdminCurriculum(isAuthenticated, notify);
+  const curriculum = useAdminCurriculum(effectiveIsAuthenticated, notify);
   const questionEditor = useQuestionEditor(notify);
   const storage = useStorageManagement(notify);
 
@@ -94,10 +98,10 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (effectiveIsAuthenticated) {
       loadErrorStats();
     }
-  }, [isAuthenticated]);
+  }, [effectiveIsAuthenticated]);
 
   useEffect(() => {
     if (activeTab === 'system_settings') {
@@ -110,20 +114,36 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   // ----------------------------------------------------
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isValid = await adminAuthService.verifyCredentials(usernameInput, passwordInput);
-    if (isValid) {
-      adminAuthService.createSession();
-      setIsAuthenticated(true);
+    let loginOk = false;
+
+    // 1. Önce Supabase signIn dene (e-posta veya tuvenan)
+    const cleanUser = usernameInput.trim();
+    const candidateEmail = cleanUser.includes('@') ? cleanUser : `${cleanUser}@kpss.com`;
+    const res = await signIn(candidateEmail, passwordInput);
+    if (res.success) {
+      loginOk = true;
+    } else {
+      // 2. Client admin doğrulaması (yalnızca demo modunda aktif)
+      const isValid = await adminAuthService.verifyCredentials(usernameInput, passwordInput);
+      if (isValid) {
+        adminAuthService.createSession();
+        setIsAuthenticated(true);
+        loginOk = true;
+      }
+    }
+
+    if (loginOk) {
       setAuthError('');
       setPasswordInput('');
     } else {
-      setAuthError('Kullanıcı adı veya şifre hatalı! Lütfen tekrar deneyiniz.');
+      setAuthError('Giriş başarısız! Kullanıcı adı veya şifre hatalı.');
     }
   };
 
   const handleLogout = () => {
     adminAuthService.logout();
     setIsAuthenticated(false);
+    signOut();
   };
 
   const handleChangeAdminPassword = async (e: React.FormEvent) => {
@@ -261,7 +281,7 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   // ----------------------------------------------------
   // GİRİŞ EKRANI (AUTH GATE)
   // ----------------------------------------------------
-  if (!isAuthenticated) {
+  if (!effectiveIsAuthenticated) {
     return (
       <AdminLogin
         usernameInput={usernameInput}

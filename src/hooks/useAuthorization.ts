@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserRole } from '../types/auth';
+import { UserRole, AppCapability } from '../types/auth';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   member: 'Üye',
@@ -10,11 +10,33 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const useAuthorization = () => {
-  const { roles, isMember, isTeacher, isEditor, isSuperAdmin, hasRole, user, isLoading } = useAuth();
+  const {
+    roles,
+    capabilities,
+    isMember,
+    isTeacher,
+    isEditor,
+    isSuperAdmin,
+    hasRole,
+    hasAnyRole,
+    can,
+    user,
+    profile,
+    isLoading,
+    isAuthenticated,
+  } = useAuth();
 
-  const canManageContent = useMemo(() => isEditor || isSuperAdmin, [isEditor, isSuperAdmin]);
-  const canManageUsers = useMemo(() => isSuperAdmin, [isSuperAdmin]);
-  const canManageClasses = useMemo(() => isTeacher || isSuperAdmin, [isTeacher, isSuperAdmin]);
+  const canManageContent = useMemo(() => {
+    return typeof can === 'function' ? can('manage_global_content') : Boolean(isEditor || isSuperAdmin);
+  }, [can, isEditor, isSuperAdmin]);
+
+  const canManageUsers = useMemo(() => {
+    return typeof can === 'function' ? can('manage_users') : Boolean(isSuperAdmin);
+  }, [can, isSuperAdmin]);
+
+  const canManageClasses = useMemo(() => {
+    return typeof can === 'function' ? can('manage_own_classes') : Boolean(isTeacher || isSuperAdmin);
+  }, [can, isTeacher, isSuperAdmin]);
 
   const primaryRole = useMemo<UserRole>(() => {
     if (isSuperAdmin) return 'super_admin';
@@ -29,6 +51,7 @@ export const useAuthorization = () => {
 
   return {
     roles,
+    capabilities,
     primaryRole,
     primaryRoleLabel,
     isMember,
@@ -39,7 +62,11 @@ export const useAuthorization = () => {
     canManageUsers,
     canManageClasses,
     hasRole,
+    hasAnyRole,
+    can,
     user,
+    profile,
     isLoading,
+    isAuthenticated,
   };
 };

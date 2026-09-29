@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { rbacService } from '../services/rbacService';
-import { UserRole, UserProfileData, AuthContextValue } from '../types/auth';
+import {
+  UserRole,
+  AppCapability,
+  UserProfileData,
+  AuthContextValue,
+  computeCapabilities,
+} from '../types/auth';
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -11,6 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const loadUserData = useCallback(async (currentUserId?: string) => {
     if (!currentUserId) {
@@ -58,29 +65,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // 2. Canlı Auth state değişikliklerini dinle
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMounted) return;
+
+      // INITIAL_SESSION ve newSession boş ise getSession'ın sonucunu ezme
+      if (event === 'INITIAL_SESSION' && !newSession?.user) {
+        return;
+      }
+
       setSession(newSession);
       setUser(newSession?.user ?? null);
 
-      if (newSession?.user?.id) {
-        await loadUserData(newSession.user.id);
-      } else {
+      if (event === 'SIGNED_OUT' || !newSession?.user) {
         setProfile(null);
         setRoles([]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'INITIAL_SESSION'].includes(event) || newSession?.user?.id) {
+        await loadUserData(newSession.user.id);
       }
       setIsLoading(false);
     });
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, [loadUserData]);
 
   const signIn = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
     if (!isSupabaseConfigured()) {
-      return { success: false, error: 'Kimlik doğrulama servisi yapılandırılmamış.' };
+      const msg = 'Kimlik doğrulama servisi yapılandırılmamış.';
+      setAuthError(msg);
+      return { success: false, error: msg };
     }
 
     try {
@@ -90,12 +110,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        return {
-          success: false,
-          error: error.message === 'Invalid login credentials'
-            ? 'E-posta adresi veya şifre hatalı!'
-            : (error.message || 'Giriş yapılamadı.'),
-        };
+        const errorMsg = error.message === 'Invalid login credentials'
+          ? 'E-posta adresi veya şifre hatalı!'
+          : (error.message || 'Giriş yapılamadı.');
+        setAuthError(errorMsg);
+        return { success: false, error: errorMsg };
       }
 
       if (data.user) {
@@ -105,9 +124,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true };
       }
 
-      return { success: false, error: 'Oturum oluşturulamadı.' };
+      const failMsg = 'Oturum oluşturulamadı.';
+      setAuthError(failMsg);
+      return { success: false, error: failMsg };
     } catch (err: any) {
-      return { success: false, error: err?.message || 'Beklenmedik bir hata oluştu.' };
+      const exceptionMsg = err?.message || 'Beklenmedik bir hata oluştu.';
+      setAuthError(exceptionMsg);
+      return { success: false, error: exceptionMsg };
     }
   }, [loadUserData]);
 
@@ -117,8 +140,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string,
     examType = 'KPSS Lisans (GY-GK)'
   ): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
     if (!isSupabaseConfigured()) {
-      return { success: false, error: 'Kayıt servisi yapılandırılmamış.' };
+      const msg = 'Kayıt servisi yapılandırılmamış.';
+      setAuthError(msg);
+      return { success: false, error: msg };
     }
 
     try {
@@ -136,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        setAuthError(error.message);
         return { success: false, error: error.message };
       }
 
@@ -148,11 +175,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err?.message || 'Kayıt işlemi tamamlanamadı.' };
+      const exceptionMsg = err?.message || 'Kayıt işlemi tamamlanamadı.';
+      setAuthError(exceptionMsg);
+      return { success: false, error: exceptionMsg };
     }
   }, [loadUserData]);
 
   const signOut = useCallback(async (): Promise<void> => {
+    setAuthError(null);
     if (isSupabaseConfigured()) {
       try {
         await supabase.auth.signOut();
@@ -166,6 +196,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRoles([]);
   }, []);
 
+  const resetPassword = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    if (!isSupabaseConfigured()) {
+      const msg = 'Kimlik doğrulama servisi yapılandırılmamış.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/#reset-password` : undefined,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      const msg = err?.message || 'Şifre sıfırlama işlemi gerçekleştirilemedi.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async (): Promise<void> => {
+    if (user?.id) {
+      try {
+        const fetchedProfile = await rbacService.fetchUserProfile(user.id);
+        setProfile(fetchedProfile);
+      } catch (err) {
+        console.warn('refreshProfile error:', err);
+      }
+    }
+  }, [user]);
+
   const refreshAuthorization = useCallback(async (): Promise<void> => {
     if (user?.id) {
       await loadUserData(user.id);
@@ -176,22 +243,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return roles.includes(role);
   }, [roles]);
 
+  const hasAnyRole = useCallback((targetRoles: UserRole[]): boolean => {
+    return targetRoles.some((r) => roles.includes(r));
+  }, [roles]);
+
+  const capabilities = useMemo<AppCapability[]>(() => {
+    return computeCapabilities(roles);
+  }, [roles]);
+
+  const can = useCallback((capability: AppCapability): boolean => {
+    return capabilities.includes(capability) || roles.includes('super_admin');
+  }, [capabilities, roles]);
+
   const isMember = useMemo(() => roles.includes('member'), [roles]);
-  const isTeacher = useMemo(() => roles.includes('teacher') || roles.includes('super_admin'), [roles]);
-  const isEditor = useMemo(() => roles.includes('editor') || roles.includes('super_admin'), [roles]);
+  const isTeacher = useMemo(() => roles.includes('teacher'), [roles]);
+  const isEditor = useMemo(() => roles.includes('editor'), [roles]);
   const isSuperAdmin = useMemo(() => roles.includes('super_admin'), [roles]);
+  const isAuthenticated = useMemo(() => Boolean(user && session), [user, session]);
 
   const value: AuthContextValue = useMemo(() => ({
     session,
     user,
     profile,
     roles,
+    capabilities,
     isLoading,
+    isAuthenticated,
+    authError,
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    refreshProfile,
     refreshAuthorization,
     hasRole,
+    hasAnyRole,
+    can,
     isMember,
     isTeacher,
     isEditor,
@@ -201,12 +288,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     profile,
     roles,
+    capabilities,
     isLoading,
+    isAuthenticated,
+    authError,
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    refreshProfile,
     refreshAuthorization,
     hasRole,
+    hasAnyRole,
+    can,
     isMember,
     isTeacher,
     isEditor,
