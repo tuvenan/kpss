@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { rbacService } from '../services/rbacService';
 import { UserRole, UserProfileData, AuthContextValue } from '../types/auth';
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<any | null>(null);
