@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, getAdminClient, hasAdminSecretKey } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { Question, UserAnswer } from '../types';
 import { MockExamType } from './mockExamService';
 import { isUuid } from './offlineSyncService';
@@ -156,7 +156,7 @@ class ExamSessionService {
           const { data: authData } = await supabase.auth.getSession();
           const userId = authData?.session?.user?.id;
           if (userId) {
-            const client = hasAdminSecretKey() ? getAdminClient() : supabase;
+            const client = supabase;
             const validTemplateId = session.templateId && isUuid(session.templateId) ? session.templateId : null;
             await client.from('exam_attempts').upsert({
               id: session.examAttemptId,
@@ -214,7 +214,7 @@ class ExamSessionService {
         const { data: authData } = await supabase.auth.getSession();
         const userId = authData?.session?.user?.id;
         if (userId) {
-          const client = hasAdminSecretKey() ? getAdminClient() : supabase;
+          const client = supabase;
           const validTemplateId = session.templateId && isUuid(session.templateId) ? session.templateId : null;
           await client.from('exam_attempts').upsert({
             id: session.examAttemptId,
@@ -254,7 +254,7 @@ class ExamSessionService {
         const { data: authData } = await supabase.auth.getSession();
         const userId = authData?.session?.user?.id;
         if (userId) {
-          const client = hasAdminSecretKey() ? getAdminClient() : supabase;
+          const client = supabase;
           const validTemplateId = current.templateId && isUuid(current.templateId) ? current.templateId : null;
           await client.from('exam_attempts').upsert({
             id: current.examAttemptId,

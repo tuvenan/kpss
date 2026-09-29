@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, getAdminClient, hasAdminSecretKey } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { QuestionAttempt, DbSpacedRepetitionCard, OptionId } from '../types';
 import { spacedRepetitionService } from './spacedRepetitionService';
 
@@ -213,7 +213,7 @@ class OfflineSyncService {
           dbCard.user_id = activeUserId;
 
           // question_attempts tablosuna idempotent ekleme
-          const clientToUse = hasAdminSecretKey() ? getAdminClient() : supabase;
+          const clientToUse = supabase;
           const { error: attemptError } = await clientToUse
             .from('question_attempts')
             .upsert(attempt, { onConflict: 'client_event_id' });
@@ -311,7 +311,7 @@ class OfflineSyncService {
       const { data: authData } = await supabase.auth.getSession();
       const activeUserId = authData?.session?.user?.id;
 
-      if (!activeUserId && !hasAdminSecretKey()) {
+      if (!activeUserId) {
         // Kullanıcı giriş yapmadığı sürece RLS politikaları gereği kuyruk bekletilir
         this.isSyncing = false;
         return {
@@ -322,8 +322,8 @@ class OfflineSyncService {
         };
       }
 
-      const clientToUse = hasAdminSecretKey() ? getAdminClient() : supabase;
-      const targetUserId = activeUserId || '00000000-0000-0000-0000-000000000000';
+      const clientToUse = supabase;
+      const targetUserId = activeUserId;
 
       // 1. question_attempts Kuyruğunu Temizle
       const attemptsQueue = this.getAttemptsQueue();

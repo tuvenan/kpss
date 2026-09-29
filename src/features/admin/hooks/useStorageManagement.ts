@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { StorageBreakdown } from '../types';
+import { ADMIN_PASS_HASH_KEY } from '../../../services/adminAuthService';
 
-export const ADMIN_PASS_KEY = 'kpss_admin_custom_password_v1';
+export const ADMIN_PASS_KEY = ADMIN_PASS_HASH_KEY;
 
 export const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -148,8 +149,7 @@ export const useStorageManagement = (notify: (msg: string, type?: 'success' | 'e
     if (!confirm('DİKKAT: Bu işlem tarayıcıdaki tüm önbellekleri, yerel depolamayı ve geçici verileri tamamen sıfırlayacaktır.\n\n(Yönetici şifreniz ve Supabase ayarlarınız korunacaktır).\n\nDevam etmek istiyor musunuz?')) return;
     setIsClearingCache(true);
     try {
-      const savedAdminPass = localStorage.getItem(ADMIN_PASS_KEY);
-      const savedSecret = localStorage.getItem('kpss_supabase_secret_key');
+      const savedAdminPassHash = localStorage.getItem(ADMIN_PASS_HASH_KEY);
 
       if (typeof window !== 'undefined' && 'caches' in window) {
         const cacheNames = await caches.keys();
@@ -158,8 +158,7 @@ export const useStorageManagement = (notify: (msg: string, type?: 'success' | 'e
       sessionStorage.clear();
       localStorage.clear();
 
-      if (savedAdminPass) localStorage.setItem(ADMIN_PASS_KEY, savedAdminPass);
-      if (savedSecret) localStorage.setItem('kpss_supabase_secret_key', savedSecret);
+      if (savedAdminPassHash) localStorage.setItem(ADMIN_PASS_HASH_KEY, savedAdminPassHash);
       sessionStorage.setItem('kpss_admin_auth', 'true');
 
       updateStorageInfo();

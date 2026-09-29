@@ -1,12 +1,10 @@
 import React from 'react';
-import { Key, HardDrive, RefreshCw, Zap, Database, Users, Trash2, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, HardDrive, RefreshCw, Zap, Database, Users, Trash2, AlertTriangle } from 'lucide-react';
 import { StorageBreakdown } from '../types';
 import { adminStyles } from '../AdminPanel.styles';
 
 interface SystemSettingsViewProps {
   isCloud: boolean;
-  isSecretActive: boolean;
-  onOpenSecretModal: () => void;
   newAdminPassword: string;
   setNewAdminPassword: (val: string) => void;
   adminPasswordMsg: string;
@@ -22,8 +20,6 @@ interface SystemSettingsViewProps {
 
 export const SystemSettingsView: React.FC<SystemSettingsViewProps> = ({
   isCloud,
-  isSecretActive,
-  onOpenSecretModal,
   newAdminPassword,
   setNewAdminPassword,
   adminPasswordMsg,
@@ -39,29 +35,27 @@ export const SystemSettingsView: React.FC<SystemSettingsViewProps> = ({
   return (
     <div>
       <div style={adminStyles.twoColGrid}>
-        {/* Supabase Ayarları */}
+        {/* Supabase Ayarları & Güvenlik */}
         <div style={adminStyles.sectionCard}>
-          <h3 style={adminStyles.sectionTitle}>Supabase Bulut Durumu</h3>
-          <p style={adminStyles.sectionSub}>PostgreSQL veritabanı bağlantısı ve kimlik doğrulama ayarları.</p>
+          <h3 style={adminStyles.sectionTitle}>Supabase Bulut & Güvenlik Durumu</h3>
+          <p style={adminStyles.sectionSub}>PostgreSQL veritabanı bağlantısı ve güvenli Row Level Security (RLS) durumu.</p>
 
           <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={adminStyles.infoRow}>
               <span style={adminStyles.infoLabel}>Bağlantı Durumu:</span>
               <span style={{ ...adminStyles.infoValue, color: isCloud ? '#16A34A' : '#D97706', fontWeight: 600 }}>
-                {isCloud ? 'Supabase Yapılandırılmış' : 'Çevrimdışı / Yerel Mod'}
+                {isCloud ? 'Supabase Bulut Aktif' : 'Çevrimdışı / Yerel Mod'}
               </span>
             </div>
             <div style={adminStyles.infoRow}>
-              <span style={adminStyles.infoLabel}>Admin Secret Key:</span>
-              <span style={adminStyles.infoValue}>{isSecretActive ? 'Mevcut (RLS Bypass Aktif)' : 'Eksik'}</span>
+              <span style={adminStyles.infoLabel}>Güvenlik Mimarisi:</span>
+              <span style={{ ...adminStyles.infoValue, color: '#16A34A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldCheck size={14} /> Row Level Security (RLS Korumalı)
+              </span>
             </div>
-          </div>
-
-          <div style={{ marginTop: '18px' }}>
-            <button onClick={onOpenSecretModal} style={adminStyles.primaryBtn}>
-              <Key size={16} style={{ marginRight: '8px' }} />
-              Secret Key Yönetimi
-            </button>
+            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '6px', lineHeight: 1.4 }}>
+              Frontend üzerinden gizli service_role anahtarı saklanmaz. İstemci yalnızca güvenli anon anahtarı ve yetkili oturumlarla iletişim kurar.
+            </div>
           </div>
         </div>
 

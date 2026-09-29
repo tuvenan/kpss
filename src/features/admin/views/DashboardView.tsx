@@ -20,7 +20,6 @@ interface DashboardViewProps {
   currentSubject?: Subject;
   currentUnit?: Unit;
   isCloud: boolean;
-  isSecretActive: boolean;
   errorPoolStats: ErrorPoolStats | null;
   onNavigateTab: (tab: AdminTabType) => void;
   onOpenNewQuestionModal: () => void;
@@ -34,7 +33,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   currentSubject,
   currentUnit,
   isCloud,
-  isSecretActive,
   errorPoolStats,
   onNavigateTab,
   onOpenNewQuestionModal,
@@ -136,8 +134,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span style={adminStyles.infoValue}>{isCloud ? 'Supabase PostgreSQL' : 'Yerel Hafıza (LocalStorage)'}</span>
             </div>
             <div style={adminStyles.infoRow}>
-              <span style={adminStyles.infoLabel}>RLS Secret Bypass:</span>
-              <span style={adminStyles.infoValue}>{isSecretActive ? 'Etkin (Admin Yetkisi Var)' : 'Pasif'}</span>
+              <span style={adminStyles.infoLabel}>Güvenlik Durumu:</span>
+              <span style={{ ...adminStyles.infoValue, color: '#16A34A', fontWeight: 600 }}>RLS Korumalı (Standart İstemci)</span>
             </div>
             <div style={adminStyles.infoRow}>
               <span style={adminStyles.infoLabel}>Seçili Ders:</span>

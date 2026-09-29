@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, getAdminClient } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { Subject, Unit, Topic, Question, OptionId, QuestionBank } from '../types';
 import { SAMPLE_20_QUESTIONS } from '../data/samplePackage';
 import {
@@ -817,7 +817,7 @@ export const api = {
 
     if (isSupabaseConfigured()) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = {
           title: title.trim(),
           total_units: 0,
@@ -857,7 +857,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         await client.from('subjects').delete().eq('id', id);
       } catch (err: any) {
         console.warn('adminDeleteSubject cloud delete error:', err);
@@ -883,7 +883,7 @@ export const api = {
 
     if (isSupabaseConfigured()) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = {
           subject_id: subjectId,
           title: title.trim(),
@@ -924,7 +924,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         await client.from('units').delete().eq('id', id);
       } catch (err) {
         console.warn('adminDeleteUnit cloud error:', err);
@@ -951,7 +951,7 @@ export const api = {
 
     if (isSupabaseConfigured()) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = {
           unit_id: unitId,
           title: title.trim(),
@@ -990,7 +990,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         await client.from('topics').delete().eq('id', id);
       } catch (err) {
         console.warn('adminDeleteTopic cloud error:', err);
@@ -1011,7 +1011,7 @@ export const api = {
 
     if (isSupabaseConfigured()) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = {
           unit_id: question.unitId,
           topic_id: question.topicId,
@@ -1057,7 +1057,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(question.id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = {
           unit_id: question.unitId,
           topic_id: question.topicId,
@@ -1164,7 +1164,7 @@ export const api = {
       saveLocalQuestion(q);
       if (isSupabaseConfigured()) {
         try {
-          const client = getAdminClient();
+          const client = supabase;
           const payload: Record<string, any> = {
             unit_id: unitId,
             topic_id: topicId,
@@ -1208,7 +1208,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = { title: title.trim() };
         if (topicNumber !== undefined) payload.topic_number = topicNumber;
         const { error } = await client.from('topics').update(payload).eq('id', id);
@@ -1236,7 +1236,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = { title: title.trim() };
         if (unitNumber !== undefined) payload.unit_number = unitNumber;
         const { error } = await client.from('units').update(payload).eq('id', id);
@@ -1264,7 +1264,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         const payload: Record<string, any> = { title: title.trim() };
         if (iconName) payload.icon_name = iconName;
         const { error } = await client.from('subjects').update(payload).eq('id', id);
@@ -1283,7 +1283,7 @@ export const api = {
 
     if (isSupabaseConfigured() && isUuid(id)) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         await client.from('questions').delete().eq('id', id);
       } catch (err) {
         console.warn('adminDeleteQuestion cloud error:', err);
@@ -1305,7 +1305,7 @@ export const api = {
 
     if (isSupabaseConfigured()) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         if (isTopic) {
           await client.from('questions').delete().eq('topic_id', targetId);
         } else {
@@ -1401,7 +1401,7 @@ export const api = {
 
     if (isSupabaseConfigured()) {
       try {
-        const client = getAdminClient();
+        const client = supabase;
         // Supabase bulk upsert can be triggered here if configured
       } catch (err: any) {
         console.warn('adminPublishCurriculum cloud warning:', err);

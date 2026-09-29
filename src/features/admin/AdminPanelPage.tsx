@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
-import { isSupabaseConfigured, hasAdminSecretKey, setAdminSecretKey } from '../../services/supabase';
+import { isSupabaseConfigured } from '../../services/supabase';
+import { adminAuthService } from '../../services/adminAuthService';
 import { Question } from '../../types';
 import { SAMPLE_20_QUESTIONS } from '../../data/samplePackage';
 import {
@@ -13,7 +14,7 @@ import {
 import { adminStyles } from './AdminPanel.styles';
 import { useAdminCurriculum } from './hooks/useAdminCurriculum';
 import { useQuestionEditor } from './hooks/useQuestionEditor';
-import { useStorageManagement, ADMIN_PASS_KEY } from './hooks/useStorageManagement';
+import { useStorageManagement } from './hooks/useStorageManagement';
 
 // Components
 import { AdminLogin } from './components/AdminLogin';
@@ -35,15 +36,13 @@ import { QuestionModal } from './modals/QuestionModal';
 import { EditSubjectModal } from './modals/EditSubjectModal';
 import { EditUnitModal } from './modals/EditUnitModal';
 import { EditTopicModal } from './modals/EditTopicModal';
-import { SecretKeyModal } from './modals/SecretKeyModal';
 
 export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => {
   // ----------------------------------------------------
   // 1. GÜVENLİK & KİMLİK DOĞRULAMA (AUTH)
   // ----------------------------------------------------
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return sessionStorage.getItem('kpss_admin_auth') === 'true';
+    return adminAuthService.isAuthenticated();
   });
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -71,11 +70,8 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   // Hata Havuzu Verileri
   const [errorPoolStats, setErrorPoolStats] = useState<ErrorPoolStats | null>(null);
 
-  // Supabase & Secret Key Durumu
+  // Supabase Bulut Durumu
   const isCloud = isSupabaseConfigured();
-  const [showSecretModal, setShowSecretModal] = useState(false);
-  const [secretInput, setSecretInput] = useState('');
-  const [isSecretActive, setIsSecretActive] = useState(() => hasAdminSecretKey());
 
   // Şifre Değiştirme
   const [newAdminPassword, setNewAdminPassword] = useState('');
@@ -108,33 +104,32 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   // ----------------------------------------------------
   // 5. GİRİŞ & ÇIKIŞ İŞLEMLERİ
   // ----------------------------------------------------
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedPass = localStorage.getItem(ADMIN_PASS_KEY) || 'admin2026';
-    if (passwordInput === storedPass || passwordInput === 'kpss' || passwordInput === 'admin2026') {
+    const isValid = await adminAuthService.verifyPassword(passwordInput);
+    if (isValid) {
+      adminAuthService.createSession();
       setIsAuthenticated(true);
-      sessionStorage.setItem('kpss_admin_auth', 'true');
       setAuthError('');
+      setPasswordInput('');
     } else {
       setAuthError('Hatalı yetkili şifresi! Lütfen tekrar deneyiniz.');
     }
   };
 
   const handleLogout = () => {
+    adminAuthService.logout();
     setIsAuthenticated(false);
-    sessionStorage.removeItem('kpss_admin_auth');
   };
 
-  const handleChangeAdminPassword = (e: React.FormEvent) => {
+  const handleChangeAdminPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newAdminPassword.trim().length < 4) {
-      setAdminPasswordMsg('Şifre en az 4 karakter olmalıdır.');
-      return;
+    const res = await adminAuthService.updatePassword(newAdminPassword);
+    setAdminPasswordMsg(res.message);
+    if (res.success) {
+      setNewAdminPassword('');
+      setTimeout(() => setAdminPasswordMsg(''), 4000);
     }
-    localStorage.setItem(ADMIN_PASS_KEY, newAdminPassword.trim());
-    setAdminPasswordMsg('Yönetici şifresi başarıyla güncellendi!');
-    setNewAdminPassword('');
-    setTimeout(() => setAdminPasswordMsg(''), 4000);
   };
 
   // ----------------------------------------------------
@@ -192,27 +187,7 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
     notify(`${curriculum.questions.length} soru JSON dosyası olarak indirildi.`);
   };
 
-  // ----------------------------------------------------
-  // 7. SECRET KEY İŞLEMLERİ
-  // ----------------------------------------------------
-  const handleSaveSecretKey = () => {
-    if (!secretInput.trim()) {
-      notify('Lütfen secret key giriniz.', 'error');
-      return;
-    }
-    setAdminSecretKey(secretInput.trim());
-    setIsSecretActive(true);
-    setShowSecretModal(false);
-    setSecretInput('');
-    notify('Supabase Admin Secret Key kaydedildi.');
-  };
 
-  const handleClearSecretKey = () => {
-    setAdminSecretKey('');
-    setIsSecretActive(false);
-    setShowSecretModal(false);
-    notify('Secret Key kaldırıldı.');
-  };
 
   // ----------------------------------------------------
   // GİRİŞ EKRANI (AUTH GATE)
@@ -268,8 +243,6 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
         <AdminHeader
           activeTab={activeTab}
           isCloud={isCloud}
-          isSecretActive={isSecretActive}
-          onOpenSecretModal={() => setShowSecretModal(true)}
         />
 
         {/* İÇERİK GÖVDE BÖLÜMÜ */}
@@ -283,7 +256,6 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
               currentSubject={curriculum.currentSubject}
               currentUnit={curriculum.currentUnit}
               isCloud={isCloud}
-              isSecretActive={isSecretActive}
               errorPoolStats={errorPoolStats}
               onNavigateTab={setActiveTab}
               onOpenNewQuestionModal={questionEditor.openNewQuestionModal}
@@ -349,8 +321,6 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
           {activeTab === 'system_settings' && (
             <SystemSettingsView
               isCloud={isCloud}
-              isSecretActive={isSecretActive}
-              onOpenSecretModal={() => setShowSecretModal(true)}
               newAdminPassword={newAdminPassword}
               setNewAdminPassword={setNewAdminPassword}
               adminPasswordMsg={adminPasswordMsg}
@@ -405,16 +375,6 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
         onClose={() => curriculum.setEditingTopic(null)}
         onTopicChange={curriculum.setEditingTopic}
         onSave={curriculum.handleUpdateTopic}
-      />
-
-      <SecretKeyModal
-        isOpen={showSecretModal}
-        onClose={() => setShowSecretModal(false)}
-        secretInput={secretInput}
-        setSecretInput={setSecretInput}
-        isSecretActive={isSecretActive}
-        onSave={handleSaveSecretKey}
-        onClear={handleClearSecretKey}
       />
     </div>
   );

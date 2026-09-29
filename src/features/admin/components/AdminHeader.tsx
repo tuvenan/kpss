@@ -1,20 +1,15 @@
 import React from 'react';
-import { Key } from 'lucide-react';
 import { AdminTabType } from '../types';
 import { adminStyles } from '../AdminPanel.styles';
 
 interface AdminHeaderProps {
   activeTab: AdminTabType;
   isCloud: boolean;
-  isSecretActive: boolean;
-  onOpenSecretModal: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   activeTab,
   isCloud,
-  isSecretActive,
-  onOpenSecretModal,
 }) => {
   const getTabTitle = (tab: AdminTabType) => {
     switch (tab) {
@@ -66,20 +61,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           />
           <span>{isCloud ? 'Bulut Bağlı' : 'Yerel Mod'}</span>
         </div>
-
-        {/* Secret Key Butonu */}
-        <button
-          onClick={onOpenSecretModal}
-          style={{
-            ...adminStyles.headerActionBtn,
-            backgroundColor: isSecretActive ? '#EEF2FF' : '#F8FAFC',
-            borderColor: isSecretActive ? '#C7D2FE' : '#E2E8F0',
-            color: isSecretActive ? '#4338CA' : '#475569',
-          }}
-        >
-          <Key size={14} style={{ marginRight: '6px' }} />
-          {isSecretActive ? 'Secret Key Aktif' : 'Secret Key Ekle'}
-        </button>
       </div>
     </header>
   );

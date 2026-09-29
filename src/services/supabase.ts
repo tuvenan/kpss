@@ -38,37 +38,4 @@ export const isSupabaseConfigured = (): boolean => {
 
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
-/**
- * Yönetici yetkili istemcisi (Admin Client).
- * Eğer kullanıcı veya ortam değişkenleri 'service_role / secret' anahtarı sağlamışsa
- * RLS kurallarını atlayarak doğrudan tam yetkiyle çalışır; aksi halde standart istemciyi döner.
- */
-export const getAdminClient = (): SupabaseClient => {
-  const secretKey =
-    (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) ||
-    (typeof window !== 'undefined' ? localStorage.getItem('kpss_supabase_secret_key') : null);
-
-  if (secretKey && secretKey.trim()) {
-    return createClient(supabaseUrl, secretKey.trim());
-  }
-  return supabase;
-};
-
-export const hasAdminSecretKey = (): boolean => {
-  const secretKey =
-    (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) ||
-    (typeof window !== 'undefined' ? localStorage.getItem('kpss_supabase_secret_key') : null);
-  return Boolean(secretKey && secretKey.trim());
-};
-
-export const setAdminSecretKey = (key: string): void => {
-  if (typeof window !== 'undefined') {
-    if (key.trim()) {
-      localStorage.setItem('kpss_supabase_secret_key', key.trim());
-    } else {
-      localStorage.removeItem('kpss_supabase_secret_key');
-    }
-  }
-};
-
 export default supabase;
