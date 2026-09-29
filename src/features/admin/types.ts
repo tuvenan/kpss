@@ -7,6 +7,8 @@ export type AdminTabType =
   | 'bulk_packages'
   | 'error_pool'
   | 'student_data'
+  | 'users_roles'
+  | 'audit_logs'
   | 'theme_editor'
   | 'system_settings';
 

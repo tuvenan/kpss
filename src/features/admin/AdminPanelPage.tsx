@@ -29,6 +29,8 @@ import { QuestionsView } from './views/QuestionsView';
 import { BulkPackagesView } from './views/BulkPackagesView';
 import { ErrorPoolView } from './views/ErrorPoolView';
 import { StudentDataView } from './views/StudentDataView';
+import { UsersRolesView } from './views/UsersRolesView';
+import { AuditLogsView } from './views/AuditLogsView';
 import { ThemeEditorView } from './views/ThemeEditorView';
 import { SystemSettingsView } from './views/SystemSettingsView';
 
@@ -378,6 +380,14 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
 
           {activeTab === 'student_data' && (
             <StudentDataView onNotify={notify} />
+          )}
+
+          {activeTab === 'users_roles' && (
+            <UsersRolesView notify={notify} />
+          )}
+
+          {activeTab === 'audit_logs' && (
+            <AuditLogsView notify={notify} />
           )}
 
           {activeTab === 'theme_editor' && (

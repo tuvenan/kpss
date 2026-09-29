@@ -1,5 +1,7 @@
 import React from 'react';
-import { User, Sun, Moon, Crown, ChevronDown, Settings, LogOut } from 'lucide-react';
+import { User, Sun, Moon, Crown, ChevronDown, Settings, LogOut, Shield, GraduationCap, Edit3, KeyRound } from 'lucide-react';
+import { useAuthorization } from '../../../hooks/useAuthorization';
+import { rbacService } from '../../../services/rbacService';
 import { CurriculumSearch } from './CurriculumSearch';
 import { NotificationCenter } from './NotificationCenter';
 import { CurriculumSearchItem } from '../../../services/curriculumSearchService';
@@ -69,6 +71,24 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
   onNavigateTab,
   onSetViewState,
 }) => {
+  const { isTeacher, isEditor, isSuperAdmin } = useAuthorization();
+
+  const handleJoinClass = async () => {
+    setShowUserDropdown(false);
+    const code = prompt('Öğretmeninizden aldığınız 6 haneli sınıf kodunu giriniz (Örn: KPSS-123456):');
+    if (!code || !code.trim()) return;
+    if (!authUser.isLoggedIn || !authUser.id) {
+      alert('Sınıfa katılmak için lütfen önce oturum açınız.');
+      return;
+    }
+    const res = await rbacService.joinClassByInviteCode(code.trim());
+    if (res.success) {
+      alert('Sınıfa başarıyla katıldınız! Öğretmeninizin atadığı görevler profilinize eklendi.');
+    } else {
+      alert(res.error || 'Sınıfa katılınamadı. Lütfen davet kodunu kontrol ediniz.');
+    }
+  };
+
   return (
     <header className="web-header" style={styles.webHeader}>
       <CurriculumSearch
@@ -282,6 +302,113 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
                     <Settings size={15} color="#64748B" />
                     <span>Ayarlar</span>
                   </button>
+
+                  <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
+
+                  {/* Sınıfa Katıl */}
+                  <button
+                    type="button"
+                    onClick={handleJoinClass}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 16px',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '13px',
+                      color: '#0F172A',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <KeyRound size={15} color="#64748B" />
+                    <span>Sınıfa Katıl (Davet Kodu)</span>
+                  </button>
+
+                  {/* Yetki Alanları */}
+                  {isTeacher && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        window.location.hash = '#teacher';
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <GraduationCap size={15} color="#64748B" />
+                      <span>Öğretmen Paneli</span>
+                    </button>
+                  )}
+
+                  {isEditor && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        window.location.hash = '#editor';
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <Edit3 size={15} color="#64748B" />
+                      <span>Editör Paneli</span>
+                    </button>
+                  )}
+
+                  {isSuperAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        window.location.hash = '#admin';
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: 700,
+                      }}
+                    >
+                      <Shield size={15} color="#111111" />
+                      <span>Süper Admin Paneli</span>
+                    </button>
+                  )}
 
                   <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
 

@@ -11,6 +11,8 @@ import {
   ArrowLeft,
   LogOut,
   Layers,
+  Shield,
+  FileText,
 } from 'lucide-react';
 import { AdminTabType } from '../types';
 import { adminStyles } from '../AdminPanel.styles';
@@ -122,6 +124,32 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         >
           <Users size={18} color={activeTab === 'student_data' ? '#818CF8' : '#64748B'} />
           <span>Öğrenci & Veri</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users_roles')}
+          style={{
+            ...adminStyles.navItem,
+            backgroundColor: activeTab === 'users_roles' ? '#1E293B' : 'transparent',
+            color: activeTab === 'users_roles' ? '#FFFFFF' : '#94A3B8',
+            fontWeight: activeTab === 'users_roles' ? 600 : 400,
+          }}
+        >
+          <Shield size={18} color={activeTab === 'users_roles' ? '#818CF8' : '#64748B'} />
+          <span>Kullanıcılar & Roller</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('audit_logs')}
+          style={{
+            ...adminStyles.navItem,
+            backgroundColor: activeTab === 'audit_logs' ? '#1E293B' : 'transparent',
+            color: activeTab === 'audit_logs' ? '#FFFFFF' : '#94A3B8',
+            fontWeight: activeTab === 'audit_logs' ? 600 : 400,
+          }}
+        >
+          <FileText size={18} color={activeTab === 'audit_logs' ? '#818CF8' : '#64748B'} />
+          <span>Denetim Kayıtları</span>
         </button>
 
         <button

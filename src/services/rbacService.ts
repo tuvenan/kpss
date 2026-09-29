@@ -5,13 +5,26 @@ import { getRuntimeConfig } from '../config/runtimeConfig';
 export interface AuditLogItem {
   id: string;
   actor_user_id: string | null;
+  actor_id?: string | null;
+  target_user_id?: string | null;
   action: string;
   entity_type: string;
   entity_id: string;
   before_data?: any;
   after_data?: any;
+  details?: any;
   metadata?: any;
   created_at: string;
+}
+
+export type AuditLogEntry = AuditLogItem;
+
+export interface RbacActionResult {
+  success: boolean;
+  message: string;
+  error?: string;
+  className?: string;
+  classId?: string;
 }
 
 export interface UserRoleItem {
@@ -20,6 +33,13 @@ export interface UserRoleItem {
   role: UserRole;
   created_at: string;
   assigned_by?: string | null;
+}
+
+export interface UserProfileWithRoles extends UserProfileData {
+  roles: UserRole[];
+  email?: string;
+  full_name?: string;
+  is_suspended?: boolean;
 }
 
 export const rbacService = {
@@ -92,9 +112,9 @@ export const rbacService = {
   /**
    * Süper Admin: Bir kullanıcıya yeni rol atar (RPC)
    */
-  async assignRole(targetUserId: string, newRole: UserRole): Promise<{ success: boolean; message: string }> {
+  async assignRole(targetUserId: string, newRole: UserRole): Promise<RbacActionResult> {
     if (!isSupabaseConfigured()) {
-      return { success: false, message: 'Supabase yapılandırılmamış.' };
+      return { success: false, message: 'Supabase yapılandırılmamış.', error: 'Supabase yapılandırılmamış.' };
     }
 
     try {
@@ -103,19 +123,19 @@ export const rbacService = {
         new_role: newRole,
       });
 
-      if (error) return { success: false, message: error.message };
+      if (error) return { success: false, message: error.message, error: error.message };
       return { success: true, message: (data as any)?.message || 'Rol başarıyla atandı.' };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'Rol atanamadı.' };
+      return { success: false, message: err?.message || 'Rol atanamadı.', error: err?.message };
     }
   },
 
   /**
    * Süper Admin: Bir kullanıcının rolünü kaldırır (RPC - Son süper admin korumalı)
    */
-  async removeRole(targetUserId: string, targetRole: UserRole): Promise<{ success: boolean; message: string }> {
+  async removeRole(targetUserId: string, targetRole: UserRole): Promise<RbacActionResult> {
     if (!isSupabaseConfigured()) {
-      return { success: false, message: 'Supabase yapılandırılmamış.' };
+      return { success: false, message: 'Supabase yapılandırılmamış.', error: 'Supabase yapılandırılmamış.' };
     }
 
     try {
@@ -124,19 +144,19 @@ export const rbacService = {
         target_role: targetRole,
       });
 
-      if (error) return { success: false, message: error.message };
+      if (error) return { success: false, message: error.message, error: error.message };
       return { success: true, message: (data as any)?.message || 'Rol kaldırıldı.' };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'Rol kaldırılamadı.' };
+      return { success: false, message: err?.message || 'Rol kaldırılamadı.', error: err?.message };
     }
   },
 
   /**
    * Süper Admin: Kullanıcıyı askıya alır (RPC)
    */
-  async suspendUser(targetUserId: string, reason = ''): Promise<{ success: boolean; message: string }> {
+  async suspendUser(targetUserId: string, reason = ''): Promise<RbacActionResult> {
     if (!isSupabaseConfigured()) {
-      return { success: false, message: 'Supabase yapılandırılmamış.' };
+      return { success: false, message: 'Supabase yapılandırılmamış.', error: 'Supabase yapılandırılmamış.' };
     }
 
     try {
@@ -145,19 +165,19 @@ export const rbacService = {
         reason,
       });
 
-      if (error) return { success: false, message: error.message };
+      if (error) return { success: false, message: error.message, error: error.message };
       return { success: true, message: (data as any)?.message || 'Kullanıcı askıya alındı.' };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'İşlem başarısız.' };
+      return { success: false, message: err?.message || 'İşlem başarısız.', error: err?.message };
     }
   },
 
   /**
    * Süper Admin: Askıdaki kullanıcıyı yeniden etkinleştirir (RPC)
    */
-  async reactivateUser(targetUserId: string): Promise<{ success: boolean; message: string }> {
+  async reactivateUser(targetUserId: string): Promise<RbacActionResult> {
     if (!isSupabaseConfigured()) {
-      return { success: false, message: 'Supabase yapılandırılmamış.' };
+      return { success: false, message: 'Supabase yapılandırılmamış.', error: 'Supabase yapılandırılmamış.' };
     }
 
     try {
@@ -165,19 +185,19 @@ export const rbacService = {
         target_user_id: targetUserId,
       });
 
-      if (error) return { success: false, message: error.message };
+      if (error) return { success: false, message: error.message, error: error.message };
       return { success: true, message: (data as any)?.message || 'Kullanıcı etkinleştirildi.' };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'İşlem başarısız.' };
+      return { success: false, message: err?.message || 'İşlem başarısız.', error: err?.message };
     }
   },
 
   /**
    * Öğrenci: Davet koduyla sınıfa katılır (RPC)
    */
-  async joinClassByInviteCode(code: string): Promise<{ success: boolean; message: string; className?: string; classId?: string }> {
+  async joinClassByInviteCode(code: string): Promise<RbacActionResult> {
     if (!isSupabaseConfigured()) {
-      return { success: false, message: 'Supabase yapılandırılmamış.' };
+      return { success: false, message: 'Supabase yapılandırılmamış.', error: 'Supabase yapılandırılmamış.' };
     }
 
     try {
@@ -185,7 +205,7 @@ export const rbacService = {
         code: code.trim(),
       });
 
-      if (error) return { success: false, message: error.message };
+      if (error) return { success: false, message: error.message, error: error.message };
       const res = data as any;
       return {
         success: true,
@@ -194,7 +214,7 @@ export const rbacService = {
         classId: res?.class_id,
       };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'Sınıfa katılınamadı.' };
+      return { success: false, message: err?.message || 'Sınıfa katılınamadı.', error: err?.message };
     }
   },
 
@@ -222,7 +242,7 @@ export const rbacService = {
   /**
    * Süper Admin: Tüm kullanıcı profillerini ve atanmış rollerini listeler
    */
-  async getAllUsersWithRoles(): Promise<Array<UserProfileData & { roles: UserRole[] }>> {
+  async getAllUsersWithRoles(): Promise<UserProfileWithRoles[]> {
     if (!isSupabaseConfigured()) return [];
 
     try {
@@ -247,12 +267,14 @@ export const rbacService = {
       return profiles.map((p: any) => ({
         id: p.id,
         fullName: p.full_name || p.display_name || 'Kullanıcı',
+        full_name: p.full_name || p.display_name || 'Kullanıcı',
         displayName: p.display_name,
         username: p.username || '',
         avatarUrl: p.avatar_url || '',
         examType: p.exam_type || 'KPSS Lisans (GY-GK)',
         dailyGoal: p.daily_goal || 60,
         status: p.status || 'active',
+        is_suspended: p.status === 'suspended',
         createdAt: p.created_at,
         updatedAt: p.updated_at,
         roles: roleMap.get(p.id) || ['member'],

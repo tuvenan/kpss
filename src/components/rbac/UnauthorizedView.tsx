@@ -5,14 +5,21 @@ import { UserRole } from '../../types/auth';
 
 interface UnauthorizedViewProps {
   requiredRole?: UserRole;
+  title?: string;
+  message?: string;
+  onGoBack?: () => void;
   onNavigateHome?: () => void;
 }
 
 export const UnauthorizedView: React.FC<UnauthorizedViewProps> = ({
   requiredRole,
+  title,
+  message,
+  onGoBack,
   onNavigateHome,
 }) => {
   const roleName = requiredRole ? ROLE_LABELS[requiredRole] : 'Yetkili';
+  const handleBack = onGoBack || onNavigateHome;
 
   return (
     <div
@@ -60,7 +67,7 @@ export const UnauthorizedView: React.FC<UnauthorizedViewProps> = ({
             marginBottom: '10px',
           }}
         >
-          Yetkisiz Erişim
+          {title || 'Yetkisiz Erişim'}
         </h2>
 
         <p
@@ -71,13 +78,17 @@ export const UnauthorizedView: React.FC<UnauthorizedViewProps> = ({
             marginBottom: '24px',
           }}
         >
-          Bu alana erişebilmek için <strong>{roleName}</strong> rolüne sahip olmanız gerekmektedir. Hesabınızın yetkileri bu işlem için yeterli değildir.
+          {message || (
+            <>
+              Bu alana erişebilmek için <strong>{roleName}</strong> rolüne sahip olmanız gerekmektedir. Hesabınızın yetkileri bu işlem için yeterli değildir.
+            </>
+          )}
         </p>
 
-        {onNavigateHome && (
+        {handleBack && (
           <button
             type="button"
-            onClick={onNavigateHome}
+            onClick={handleBack}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
