@@ -45,8 +45,8 @@ create table if not exists public.user_roles (
   constraint uq_user_roles unique(user_id, role)
 );
 
-create index if index_user_roles_user_id not exists on public.user_roles(user_id);
-create index if index_user_roles_role not exists on public.user_roles(role);
+create index if not exists index_user_roles_user_id on public.user_roles(user_id);
+create index if not exists index_user_roles_role on public.user_roles(role);
 
 -- 3. GÜVENLİK YARDIMCI FONKSİYONLARI (SECURITY DEFINER)
 create or replace function public.has_role(_user_id uuid, _role text)
