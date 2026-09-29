@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(32);
 
 -- Stable fixture identifiers make failures easy to diagnose.
 select set_config('test.member_1', '00000000-0000-0000-0000-000000000101', true);
@@ -43,13 +43,14 @@ values
   (current_setting('test.class_1')::uuid, current_setting('test.member_1')::uuid, 'active'),
   (current_setting('test.class_2')::uuid, current_setting('test.member_2')::uuid, 'active');
 
-insert into public.assignments (id, teacher_id, class_id, title, assignment_type)
+insert into public.assignments (id, teacher_id, class_id, title, assignment_type, target_scope)
 values (
   '20000000-0000-0000-0000-000000000001'::uuid,
   current_setting('test.teacher_1')::uuid,
   current_setting('test.class_1')::uuid,
   'Assignment One',
-  'quiz'
+  'quiz',
+  'students'
 );
 
 insert into public.assignment_targets (assignment_id, student_id)
@@ -95,6 +96,12 @@ select throws_ok(
   format('insert into public.teacher_question_sets (teacher_id, title) values (%L, %L)', current_setting('test.member_1'), 'Fake teacher set'),
   '42501', null, 'member cannot create teacher-only question sets'
 );
+select is((select count(*) from public.assignments), 1::bigint, 'targeted member sees its assignment');
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', current_setting('test.member_2'), 'role', 'authenticated')::text, true);
+select is((select count(*) from public.assignments), 0::bigint, 'other class member cannot see assignment targeted elsewhere');
 
 -- TEACHER: only assigned students/classes; student performance is read-only.
 reset role;

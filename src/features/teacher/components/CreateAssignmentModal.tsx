@@ -53,6 +53,11 @@ export const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
       return;
     }
 
+    if (targetType === 'specific' && selectedStudentIds.length === 0) {
+      setError('Belirli öğrencilere atama yapmak için en az bir öğrenci seçin.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 

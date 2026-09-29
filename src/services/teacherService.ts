@@ -40,6 +40,7 @@ export interface TeacherAssignment {
   configuration: any;
   due_at: string | null;
   status: 'draft' | 'published' | 'archived';
+  target_scope: 'class' | 'students';
   completed_count?: number;
   total_assigned?: number;
   created_at: string;
@@ -362,6 +363,7 @@ export const teacherService = {
           configuration,
           due_at: dueAt,
           status,
+          target_scope: targetStudentIds.length > 0 ? 'students' : 'class',
         })
         .select()
         .single();
@@ -374,7 +376,13 @@ export const teacherService = {
           assignment_id: assignmentData.id,
           student_id: sid,
         }));
-        await supabase.from('assignment_targets').insert(targets);
+        const { error: targetsError } = await supabase.from('assignment_targets').insert(targets);
+        if (targetsError) {
+          // Do not leave a targeted assignment behind without its targets: it
+          // would otherwise be invisible or could later be misinterpreted.
+          await supabase.from('assignments').delete().eq('id', assignmentData.id);
+          return { success: false, error: targetsError.message };
+        }
       }
 
       return { success: true, data: assignmentData };

@@ -23,6 +23,7 @@ export interface StudentAssignment {
   title: string;
   description: string;
   assignment_type: 'quiz' | 'mock_exam' | 'study_plan';
+  target_scope?: 'class' | 'students';
   configuration: any;
   due_at: string | null;
   status: 'assigned' | 'started' | 'completed' | 'overdue';
@@ -135,6 +136,7 @@ export const memberService = {
           title,
           description,
           assignment_type,
+          target_scope,
           configuration,
           due_at,
           status,
@@ -186,6 +188,7 @@ export const memberService = {
           title: a.title,
           description: a.description || '',
           assignment_type: a.assignment_type,
+          target_scope: a.target_scope || 'class',
           configuration: a.configuration || {},
           due_at: a.due_at,
           status,

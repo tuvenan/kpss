@@ -220,6 +220,70 @@ describe('Member ve Teacher Rollerine Ait Gerçek Kullanıcı Akışları', () =
     expect(res.data?.status).toBe('published');
   });
 
+  it('7a. Belirli öğrencilere verilen ödevi students kapsamıyla ve hedefleriyle kaydeder', async () => {
+    const assignmentInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'asg-targeted', status: 'published', target_scope: 'students' },
+          error: null,
+        }),
+      }),
+    });
+    const targetInsert = vi.fn().mockResolvedValue({ error: null });
+
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
+      if (table === 'assignments') return { insert: assignmentInsert } as any;
+      if (table === 'assignment_targets') return { insert: targetInsert } as any;
+      return {} as any;
+    });
+
+    const res = await teacherService.createAssignment(
+      'teacher-1', 'cls-101', 'Hedefli ödev', '', 'quiz', {}, 7,
+      ['student-1', 'student-2']
+    );
+
+    expect(res.success).toBe(true);
+    expect(assignmentInsert).toHaveBeenCalledWith(expect.objectContaining({
+      target_scope: 'students',
+    }));
+    expect(targetInsert).toHaveBeenCalledWith([
+      { assignment_id: 'asg-targeted', student_id: 'student-1' },
+      { assignment_id: 'asg-targeted', student_id: 'student-2' },
+    ]);
+  });
+
+  it('7b. Hedef öğrenciler kaydedilemezse yarım kalan ödevi geri alır', async () => {
+    const assignmentInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'asg-rollback', status: 'published', target_scope: 'students' },
+          error: null,
+        }),
+      }),
+    });
+    const deleteEq = vi.fn().mockResolvedValue({ error: null });
+    const assignmentDelete = vi.fn().mockReturnValue({ eq: deleteEq });
+
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
+      if (table === 'assignments') {
+        return { insert: assignmentInsert, delete: assignmentDelete } as any;
+      }
+      if (table === 'assignment_targets') {
+        return { insert: vi.fn().mockResolvedValue({ error: { message: 'target insert failed' } }) } as any;
+      }
+      return {} as any;
+    });
+
+    const res = await teacherService.createAssignment(
+      'teacher-1', 'cls-101', 'Eksik kalmamalı', '', 'quiz', {}, 7,
+      ['student-1']
+    );
+
+    expect(res).toEqual({ success: false, error: 'target insert failed' });
+    expect(assignmentDelete).toHaveBeenCalledOnce();
+    expect(deleteEq).toHaveBeenCalledWith('id', 'asg-rollback');
+  });
+
   // 8. Member yalnızca kendisine atanmış ödevi görür
   it('8. Member yalnızca kayıtlı olduğu sınıfların yayınlanmış ödevlerini görür', async () => {
     vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
