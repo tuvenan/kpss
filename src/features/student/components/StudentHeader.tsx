@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Sun, Moon, Crown, ChevronDown, Settings, LogOut, Shield, GraduationCap, Edit3, KeyRound } from 'lucide-react';
 import { useAuthorization } from '../../../hooks/useAuthorization';
+import { useAuth } from '../../../contexts/AuthContext';
 import { rbacService } from '../../../services/rbacService';
 import { CurriculumSearch } from './CurriculumSearch';
 import { NotificationCenter } from './NotificationCenter';
@@ -72,6 +73,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
   onSetViewState,
 }) => {
   const { isTeacher, isEditor, isSuperAdmin } = useAuthorization();
+  const { signOut } = useAuth();
 
   const handleJoinClass = async () => {
     setShowUserDropdown(false);
@@ -418,6 +420,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
                     onClick={async () => {
                       setShowUserDropdown(false);
                       await authService.logout();
+                      await signOut();
                     }}
                     style={{
                       width: '100%',

@@ -42,7 +42,7 @@ import { EditUnitModal } from './modals/EditUnitModal';
 import { EditTopicModal } from './modals/EditTopicModal';
 
 export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent }) => {
-  const { isSuperAdmin, signIn, signOut } = useAuth();
+  const { isSuperAdmin, signIn, signInWithUsername, signOut } = useAuth();
 
   // ----------------------------------------------------
   // 1. GÜVENLİK & KİMLİK DOĞRULAMA (AUTH)
@@ -116,13 +116,19 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
     e.preventDefault();
     let loginOk = false;
 
-    // 1. Önce Supabase signIn dene (e-posta veya tuvenan)
+    // 1. Önce Supabase signInWithUsername veya signIn dene
     const cleanUser = usernameInput.trim();
-    const candidateEmail = cleanUser.includes('@') ? cleanUser : `${cleanUser}@kpss.com`;
-    const res = await signIn(candidateEmail, passwordInput);
-    if (res.success) {
-      loginOk = true;
-    } else {
+    if (cleanUser) {
+      if (cleanUser.includes('@')) {
+        const res = await signIn(cleanUser, passwordInput);
+        if (res.success) loginOk = true;
+      } else {
+        const res = await signInWithUsername(cleanUser, passwordInput);
+        if (res.success) loginOk = true;
+      }
+    }
+
+    if (!loginOk) {
       // 2. Client admin doğrulaması (yalnızca demo modunda aktif)
       const isValid = await adminAuthService.verifyCredentials(usernameInput, passwordInput);
       if (isValid) {
@@ -216,72 +222,92 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   const { allowClientAdminDemo } = getRuntimeConfig();
 
   // ----------------------------------------------------
-  // PRODUCTION ERİŞİM ENGELİ (GERÇEK ADMIN ALTYAPISI YOKSA)
-  // ----------------------------------------------------
-  if (!allowClientAdminDemo) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#0F172A',
-        padding: '24px',
-        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
-      }}>
-        <div style={{
-          maxWidth: '460px',
-          width: '100%',
-          backgroundColor: '#1E293B',
-          borderRadius: '16px',
-          padding: '36px 28px',
-          textAlign: 'center',
-          border: '1px solid #334155',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-        }}>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '14px',
-            backgroundColor: '#334155',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 20px',
-          }}>
-            <Lock size={26} color="#94A3B8" />
-          </div>
-          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#F8FAFC', marginBottom: '12px' }}>
-            Yönetici Erişimi Kısıtlandı
-          </h2>
-          <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, marginBottom: '24px' }}>
-            Admin altyapısı henüz production için yapılandırılmadı. Güvenlik gereği istemci tabanlı demo yetkilendirme production ortamında devre dışıdır.
-          </p>
-          <button
-            onClick={onNavigateStudent}
-            style={{
-              width: '100%',
-              padding: '12px 20px',
-              backgroundColor: '#111111',
-              color: '#FFFFFF',
-              border: '1px solid #334155',
-              borderRadius: '10px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Öğrenci Paneline Dön
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ----------------------------------------------------
-  // GİRİŞ EKRANI (AUTH GATE)
+  // GİRİŞ EKRANI / ERİŞİM KONTROLÜ (AUTH GATE)
   // ----------------------------------------------------
   if (!effectiveIsAuthenticated) {
+    if (!allowClientAdminDemo) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0F172A',
+          padding: '24px',
+          fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+        }}>
+          <div style={{
+            maxWidth: '460px',
+            width: '100%',
+            backgroundColor: '#1E293B',
+            borderRadius: '16px',
+            padding: '36px 28px',
+            textAlign: 'center',
+            border: '1px solid #334155',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              backgroundColor: '#334155',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <Lock size={26} color="#94A3B8" />
+            </div>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#F8FAFC', marginBottom: '12px' }}>
+              Yönetici Erişimi Kısıtlandı
+            </h2>
+            <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, marginBottom: '24px' }}>
+              Yönetim paneline erişebilmek için süper admin yetkisine sahip bir hesapla giriş yapmalısınız.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={onNavigateStudent}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: 'transparent',
+                  color: '#94A3B8',
+                  border: '1px solid #334155',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Öğrenci Paneli
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.history.pushState({ returnTo: '/admin' }, '', '/login');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: '#111111',
+                  color: '#FFFFFF',
+                  border: '1px solid #334155',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Giriş Yap
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <AdminLogin
         usernameInput={usernameInput}

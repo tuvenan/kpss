@@ -13,11 +13,38 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Zaten giriş yapmışsa rolüne göre yönlendir
+  // Zaten giriş yapmışsa rolüne ve hedeflenen rotaya göre yönlendir
   useEffect(() => {
     if (isAuthenticated && roles.length > 0) {
-      const route = getDefaultRouteForRole(resolveActiveRole(roles));
-      window.history.replaceState({}, '', route);
+      const activeRole = resolveActiveRole(roles);
+      const defaultRoute = getDefaultRouteForRole(activeRole);
+
+      // Hedef yol (returnTo) kontrolü (state veya query parametresi)
+      const stateReturnTo = (window.history.state as any)?.returnTo;
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryReturnTo = urlParams.get('returnTo');
+      const candidateReturn = stateReturnTo || queryReturnTo;
+
+      let targetRoute = defaultRoute;
+      if (candidateReturn && candidateReturn.startsWith('/') && candidateReturn !== '/login') {
+        if (candidateReturn.startsWith('/admin')) {
+          if (roles.includes('super_admin')) {
+            targetRoute = candidateReturn;
+          }
+        } else if (candidateReturn.startsWith('/teacher')) {
+          if (roles.includes('teacher') || roles.includes('super_admin')) {
+            targetRoute = candidateReturn;
+          }
+        } else if (candidateReturn.startsWith('/editor')) {
+          if (roles.includes('editor') || roles.includes('super_admin')) {
+            targetRoute = candidateReturn;
+          }
+        } else {
+          targetRoute = candidateReturn;
+        }
+      }
+
+      window.history.replaceState({}, '', targetRoute);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }
   }, [isAuthenticated, roles]);

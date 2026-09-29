@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { AuthProvider, useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../services/supabase';
 import { resolveActiveRole, getDefaultRouteForRole } from '../../../types/auth';
+import { LoginPage } from '../LoginPage';
+import { rbacService } from '../../../services/rbacService';
 
 // Mock supabase module
 vi.mock('../../../services/supabase', () => ({
@@ -58,6 +60,10 @@ describe('Kimlik Doğrulama Sistemi Testleri', () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
+    (supabase.auth.getSession as any).mockResolvedValue({ data: { session: null } });
+    (supabase.auth.onAuthStateChange as any).mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
   });
 
   // --------------------------------------------------------------------------
@@ -583,6 +589,99 @@ describe('Kimlik Doğrulama Sistemi Testleri', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('error').textContent).toBe('Provider not enabled');
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // 14. LoginPage: super_admin girişi sonrası /admin rotasına yönlendirir
+  // --------------------------------------------------------------------------
+  it('LoginPage: super_admin girişi sonrası doğrudan /admin rotasına yönlendirir', async () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    (supabase.rpc as any).mockResolvedValue({ data: 'tuvenan@kpss.com', error: null });
+    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+      data: {
+        user: { id: 'admin-uuid', email: 'tuvenan@kpss.com' },
+        session: { access_token: 'admin-token' },
+      },
+      error: null,
+    });
+    vi.mocked(rbacService.fetchUserRoles).mockResolvedValue(['super_admin', 'member']);
+    vi.mocked(rbacService.fetchUserProfile).mockResolvedValue({
+      id: 'admin-uuid',
+      fullName: 'Tuvenan Admin',
+      username: 'tuvenan',
+      status: 'active',
+      examType: 'KPSS Lisans (GY-GK)',
+    });
+
+    render(
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>
+    );
+
+    const usernameInput = await screen.findByPlaceholderText('kullanici_adi');
+    const passwordInput = screen.getByPlaceholderText('••••••••');
+    const submitBtn = screen.getByRole('button', { name: /giriş yap/i });
+
+    await act(async () => {
+      fireEvent.change(usernameInput, { target: { value: 'tuvenan' } });
+      fireEvent.change(passwordInput, { target: { value: 'ada18kasim' } });
+      fireEvent.click(submitBtn);
+    });
+
+    await waitFor(() => {
+      expect(replaceStateSpy).toHaveBeenCalledWith({}, '', '/admin');
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // 15. LoginPage: returnTo='/admin' durumunda super_admin'i kabul eder, member'ı / rotasına yönlendirir
+  // --------------------------------------------------------------------------
+  it('LoginPage: returnTo=/admin durumunda yetkisiz üyenin / rotasına gitmesini sağlar', async () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    // History state'inde returnTo: '/admin' simüle et
+    vi.spyOn(window.history, 'state', 'get').mockReturnValue({ returnTo: '/admin' });
+
+    (supabase.rpc as any).mockResolvedValue({ data: 'ogrenci@kpss.com', error: null });
+    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+      data: {
+        user: { id: 'member-uuid', email: 'ogrenci@kpss.com' },
+        session: { access_token: 'member-token' },
+      },
+      error: null,
+    });
+    // Yalnızca member rolü
+    vi.mocked(rbacService.fetchUserRoles).mockResolvedValue(['member']);
+    vi.mocked(rbacService.fetchUserProfile).mockResolvedValue({
+      id: 'member-uuid',
+      fullName: 'Normal Üye',
+      username: 'ogrenci',
+      status: 'active',
+      examType: 'KPSS Lisans (GY-GK)',
+    });
+
+    render(
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>
+    );
+
+    const usernameInput = await screen.findByPlaceholderText('kullanici_adi');
+    const passwordInput = screen.getByPlaceholderText('••••••••');
+    const submitBtn = screen.getByRole('button', { name: /giriş yap/i });
+
+    await act(async () => {
+      fireEvent.change(usernameInput, { target: { value: 'ogrenci' } });
+      fireEvent.change(passwordInput, { target: { value: 'parola123' } });
+      fireEvent.click(submitBtn);
+    });
+
+    await waitFor(() => {
+      // super_admin olmadığı için /admin'e değil, varsayılan route '/' rotasına gitmeli
+      expect(replaceStateSpy).toHaveBeenCalledWith({}, '', '/');
     });
   });
 });
