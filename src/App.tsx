@@ -66,7 +66,7 @@ export const AppContent: React.FC = () => {
             />
           }
         >
-          <TeacherWorkspace />
+          <TeacherWorkspace onNavigateStudent={() => navigateTo('student')} />
         </RequireRole>
       )}
 
