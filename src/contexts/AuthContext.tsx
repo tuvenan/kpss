@@ -7,6 +7,7 @@ import {
   UserProfileData,
   AuthContextValue,
   computeCapabilities,
+  resolveActiveRole,
 } from '../types/auth';
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -64,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isMounted) setIsLoading(false);
     });
 
-    // 2. Canlı Auth state değişikliklerini dinle
+    // 2. Canlı Auth state değişikliklerini dinle (tek listener)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMounted) return;
 
@@ -95,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [loadUserData]);
 
+  // E-posta ile giriş
   const signIn = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setAuthError(null);
     if (!isSupabaseConfigured()) {
@@ -110,9 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        const errorMsg = error.message === 'Invalid login credentials'
-          ? 'E-posta adresi veya şifre hatalı!'
-          : (error.message || 'Giriş yapılamadı.');
+        const errorMsg = 'Kullanıcı adı veya parola hatalı.';
         setAuthError(errorMsg);
         return { success: false, error: errorMsg };
       }
@@ -128,12 +128,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthError(failMsg);
       return { success: false, error: failMsg };
     } catch (err: any) {
-      const exceptionMsg = err?.message || 'Beklenmedik bir hata oluştu.';
+      const exceptionMsg = 'Beklenmedik bir hata oluştu. Lütfen tekrar deneyiniz.';
       setAuthError(exceptionMsg);
       return { success: false, error: exceptionMsg };
     }
   }, [loadUserData]);
 
+  // Kullanıcı adıyla giriş (RPC ile e-posta çözümlemesi)
+  const signInWithUsername = useCallback(async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    const genericError = 'Kullanıcı adı veya parola hatalı.';
+
+    if (!isSupabaseConfigured()) {
+      const msg = 'Kimlik doğrulama servisi yapılandırılmamış.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+
+    const cleanUsername = username.trim().toLowerCase();
+    if (!cleanUsername || !password) {
+      const msg = 'Kullanıcı adı ve parola boş bırakılamaz.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+
+    try {
+      // 1. Kullanıcı adından e-posta çözümle (güvenli RPC)
+      const { data: resolvedEmail, error: rpcError } = await supabase.rpc('resolve_username_to_email', {
+        input_username: cleanUsername,
+      });
+
+      if (rpcError || !resolvedEmail) {
+        // Hesap varlığı ifşa edilmez - genel hata
+        setAuthError(genericError);
+        return { success: false, error: genericError };
+      }
+
+      // 2. Çözümlenen e-posta ile standart giriş
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: resolvedEmail,
+        password,
+      });
+
+      if (error) {
+        setAuthError(genericError);
+        return { success: false, error: genericError };
+      }
+
+      if (data.user) {
+        setUser(data.user);
+        setSession(data.session);
+        await loadUserData(data.user.id);
+        return { success: true };
+      }
+
+      setAuthError(genericError);
+      return { success: false, error: genericError };
+    } catch (err: any) {
+      setAuthError(genericError);
+      return { success: false, error: genericError };
+    }
+  }, [loadUserData]);
+
+  // E-posta ile kayıt
   const signUp = useCallback(async (
     fullName: string,
     email: string,
@@ -181,6 +238,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [loadUserData]);
 
+  // Kullanıcı adıyla kayıt
+  const signUpWithUsername = useCallback(async (
+    fullName: string,
+    username: string,
+    email: string,
+    password: string,
+    examType = 'KPSS Lisans (GY-GK)'
+  ): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    if (!isSupabaseConfigured()) {
+      const msg = 'Kayıt servisi yapılandırılmamış.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Kullanıcı adı doğrulama
+    if (cleanUsername.length < 3 || cleanUsername.length > 30) {
+      const msg = 'Kullanıcı adı 3-30 karakter uzunluğunda olmalıdır.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+    if (!/^[a-zA-Z0-9._]+$/.test(cleanUsername)) {
+      const msg = 'Kullanıcı adı yalnızca harf, sayı, nokta ve alt çizgi içerebilir.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+    if (cleanUsername.startsWith('.') || cleanUsername.endsWith('.')) {
+      const msg = 'Kullanıcı adı nokta ile başlayamaz veya bitemez.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+
+    try {
+      // Kullanıcı adı benzersizliğini kontrol et
+      const { data: isAvailable, error: checkError } = await supabase.rpc('check_username_available', {
+        desired_username: cleanUsername,
+      });
+
+      if (checkError || !isAvailable) {
+        const msg = 'Bu kullanıcı adı zaten kullanılıyor.';
+        setAuthError(msg);
+        return { success: false, error: msg };
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            username: cleanUsername,
+            exam_type: examType,
+          },
+        },
+      });
+
+      if (error) {
+        let errorMsg = error.message;
+        if (error.message.includes('already registered')) {
+          errorMsg = 'Bu e-posta adresi zaten kayıtlı.';
+        }
+        setAuthError(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+
+      if (data.user) {
+        setUser(data.user);
+        setSession(data.session);
+        await loadUserData(data.user.id);
+        return { success: true };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      const exceptionMsg = err?.message || 'Kayıt işlemi tamamlanamadı.';
+      setAuthError(exceptionMsg);
+      return { success: false, error: exceptionMsg };
+    }
+  }, [loadUserData]);
+
   const signOut = useCallback(async (): Promise<void> => {
     setAuthError(null);
     if (isSupabaseConfigured()) {
@@ -207,7 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cleanEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/#reset-password` : undefined,
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined,
       });
 
       if (error) {
@@ -260,6 +400,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isEditor = useMemo(() => roles.includes('editor'), [roles]);
   const isSuperAdmin = useMemo(() => roles.includes('super_admin'), [roles]);
   const isAuthenticated = useMemo(() => Boolean(user && session), [user, session]);
+  const activeRole = useMemo(() => resolveActiveRole(roles), [roles]);
 
   const value: AuthContextValue = useMemo(() => ({
     session,
@@ -267,11 +408,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     roles,
     capabilities,
+    activeRole,
     isLoading,
     isAuthenticated,
     authError,
     signIn,
+    signInWithUsername,
     signUp,
+    signUpWithUsername,
     signOut,
     resetPassword,
     refreshProfile,
@@ -289,11 +433,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     roles,
     capabilities,
+    activeRole,
     isLoading,
     isAuthenticated,
     authError,
     signIn,
+    signInWithUsername,
     signUp,
+    signUpWithUsername,
     signOut,
     resetPassword,
     refreshProfile,

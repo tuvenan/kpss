@@ -81,11 +81,14 @@ export interface AuthContextValue {
   profile: UserProfileData | null;
   roles: UserRole[];
   capabilities: AppCapability[];
+  activeRole: UserRole;
   isLoading: boolean;
   isAuthenticated: boolean;
   authError: string | null;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithUsername: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (fullName: string, email: string, password: string, examType?: string) => Promise<{ success: boolean; error?: string }>;
+  signUpWithUsername: (fullName: string, username: string, email: string, password: string, examType?: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   refreshProfile: () => Promise<void>;
@@ -97,4 +100,22 @@ export interface AuthContextValue {
   isTeacher: boolean;
   isEditor: boolean;
   isSuperAdmin: boolean;
+}
+
+/** Birden fazla rolü olan kullanıcı için en yüksek öncelikli rolü belirler */
+export function resolveActiveRole(roles: UserRole[]): UserRole {
+  if (roles.includes('super_admin')) return 'super_admin';
+  if (roles.includes('editor')) return 'editor';
+  if (roles.includes('teacher')) return 'teacher';
+  return 'member';
+}
+
+/** Rol bazlı varsayılan başlangıç rotası */
+export function getDefaultRouteForRole(role: UserRole): string {
+  switch (role) {
+    case 'super_admin': return '/admin';
+    case 'editor': return '/editor';
+    case 'teacher': return '/teacher';
+    default: return '/';
+  }
 }
