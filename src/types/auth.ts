@@ -89,6 +89,7 @@ export interface AuthContextValue {
   signInWithUsername: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (fullName: string, email: string, password: string, examType?: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithUsername: (fullName: string, username: string, email: string, password: string, examType?: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   refreshProfile: () => Promise<void>;

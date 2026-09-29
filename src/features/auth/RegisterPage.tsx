@@ -4,7 +4,7 @@ import { getDefaultRouteForRole, resolveActiveRole } from '../../types/auth';
 import { UserPlus, User, AtSign, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
-  const { signUpWithUsername, isAuthenticated, roles, isLoading: authLoading } = useAuth();
+  const { signUpWithUsername, signInWithGoogle, isAuthenticated, roles, isLoading: authLoading } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -216,6 +216,35 @@ export const RegisterPage: React.FC = () => {
           </button>
         </form>
 
+        {/* Ayırıcı */}
+        <div style={styles.dividerRow}>
+          <div style={styles.dividerLine} />
+          <span style={styles.dividerText}>veya</span>
+          <div style={styles.dividerLine} />
+        </div>
+
+        {/* Google ile Kayıt */}
+        <button
+          type="button"
+          onClick={async () => {
+            setError('');
+            const res = await signInWithGoogle();
+            if (!res.success && res.error) {
+              setError(res.error);
+            }
+          }}
+          disabled={isSubmitting}
+          style={styles.googleBtn}
+        >
+          <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          <span>Google ile devam et</span>
+        </button>
+
         <div style={styles.footer}>
           <span style={styles.footerText}>Zaten hesabın var mı? </span>
           <button
@@ -387,5 +416,36 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     padding: 0,
     textDecoration: 'underline',
+  },
+  dividerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    margin: '20px 0',
+  },
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    backgroundColor: 'var(--kpss-border, #E2E8F0)',
+  },
+  dividerText: {
+    fontSize: '12px',
+    color: '#94A3B8',
+    fontWeight: 500,
+  },
+  googleBtn: {
+    width: '100%',
+    height: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
+    border: '1px solid var(--kpss-border, #E2E8F0)',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: 600,
+    color: 'var(--kpss-text, #0F172A)',
+    cursor: 'pointer',
   },
 };

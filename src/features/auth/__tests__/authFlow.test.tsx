@@ -18,6 +18,7 @@ vi.mock('../../../services/supabase', () => ({
       signOut: vi.fn().mockResolvedValue({}),
       resetPasswordForEmail: vi.fn(),
       updateUser: vi.fn(),
+      signInWithOAuth: vi.fn(),
     },
     rpc: vi.fn(),
     from: vi.fn(),
@@ -490,5 +491,98 @@ describe('Kimlik Doğrulama Sistemi Testleri', () => {
       (key) => key.includes('SERVICE_ROLE')
     );
     expect(hasServiceRoleEnv).toBe(false);
+  });
+
+  // --------------------------------------------------------------------------
+  // 12. Google OAuth: signInWithOAuth doğru provider ile çağrılır
+  // --------------------------------------------------------------------------
+  it('signInWithGoogle doğru provider ile signInWithOAuth çağırır', async () => {
+    (supabase.auth.signInWithOAuth as any).mockResolvedValue({ error: null });
+
+    const GoogleComponent: React.FC = () => {
+      const { signInWithGoogle } = useAuth();
+      const [result, setResult] = React.useState<string>('');
+
+      return (
+        <div>
+          <button
+            data-testid="google-btn"
+            onClick={async () => {
+              const res = await signInWithGoogle();
+              setResult(res.success ? 'success' : 'fail');
+            }}
+          >
+            Google
+          </button>
+          <span data-testid="result">{result}</span>
+        </div>
+      );
+    };
+
+    render(
+      <AuthProvider>
+        <GoogleComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => screen.getByTestId('google-btn'));
+    await act(async () => {
+      screen.getByTestId('google-btn').click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('result').textContent).toBe('success');
+    });
+
+    expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: expect.objectContaining({
+        redirectTo: expect.any(String),
+      }),
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // 13. Google OAuth hata durumu: hata mesajı döner
+  // --------------------------------------------------------------------------
+  it('Google OAuth hatası durumunda anlamlı hata mesajı döner', async () => {
+    (supabase.auth.signInWithOAuth as any).mockResolvedValue({
+      error: { message: 'Provider not enabled' },
+    });
+
+    const GoogleErrorComponent: React.FC = () => {
+      const { signInWithGoogle } = useAuth();
+      const [error, setError] = React.useState<string>('');
+
+      return (
+        <div>
+          <button
+            data-testid="google-btn"
+            onClick={async () => {
+              const res = await signInWithGoogle();
+              setError(res.error || '');
+            }}
+          >
+            Google
+          </button>
+          <span data-testid="error">{error}</span>
+        </div>
+      );
+    };
+
+    render(
+      <AuthProvider>
+        <GoogleErrorComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => screen.getByTestId('google-btn'));
+    await act(async () => {
+      screen.getByTestId('google-btn').click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error').textContent).toBe('Provider not enabled');
+    });
   });
 });

@@ -321,6 +321,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [loadUserData]);
 
+  // Google ile giriş / kayıt (OAuth)
+  const signInWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    if (!isSupabaseConfigured()) {
+      const msg = 'Kimlik doğrulama servisi yapılandırılmamış.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
+      });
+
+      if (error) {
+        const errorMsg = error.message || 'Google ile giriş yapılamadı.';
+        setAuthError(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+
+      // OAuth yönlendirme başlatıldı — kullanıcı Google'a yönlendirilecek
+      // Geri dönüşte onAuthStateChange tetiklenecek
+      return { success: true };
+    } catch (err: any) {
+      const msg = 'Google ile giriş sırasında bir hata oluştu.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+  }, []);
+
   const signOut = useCallback(async (): Promise<void> => {
     setAuthError(null);
     if (isSupabaseConfigured()) {
@@ -414,6 +447,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authError,
     signIn,
     signInWithUsername,
+    signInWithGoogle,
     signUp,
     signUpWithUsername,
     signOut,
@@ -439,6 +473,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authError,
     signIn,
     signInWithUsername,
+    signInWithGoogle,
     signUp,
     signUpWithUsername,
     signOut,
