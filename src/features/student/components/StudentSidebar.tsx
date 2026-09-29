@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Home, Timer, AlertCircle, User, Settings } from 'lucide-react';
+import { BookOpen, Home, Timer, AlertCircle, User, Settings, GraduationCap } from 'lucide-react';
 import { StudentTabType, StudentViewState } from '../types';
 import { styles } from '../../../pages/StudentQuiz.styles';
 
@@ -75,6 +75,17 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({
           >
             <AlertCircle size={18} style={{ marginRight: '12px' }} />
             <span>Hatalarım</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onNavigateTab('classes');
+              onSetViewState('subjects');
+            }}
+            style={activeTab === 'classes' && viewState === 'subjects' ? styles.sidebarNavItemActive : styles.sidebarNavItem}
+          >
+            <GraduationCap size={18} style={{ marginRight: '12px' }} />
+            <span>Sınıfım & Ödevler</span>
           </button>
 
           <button

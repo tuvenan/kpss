@@ -58,16 +58,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <User size={28} color="var(--kpss-text, #111)" />
             </div>
             <div>
-              <h2
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  margin: '0 0 4px 0',
-                  color: 'var(--kpss-text, #111)',
-                }}
-              >
-                {userProfile.name || 'Öğrenci'}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2
+                  style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    margin: '0 0 4px 0',
+                    color: 'var(--kpss-text, #111)',
+                  }}
+                >
+                  {userProfile.name || 'Öğrenci'}
+                </h2>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                    border: '1px solid var(--kpss-border, #E2E8F0)',
+                    color: '#64748B',
+                  }}
+                >
+                  Üye
+                </span>
+              </div>
               <div style={{ fontSize: '14px', color: 'var(--kpss-text-muted, #64748B)' }}>
                 {userProfile.examType} Adayı • Hedef: {userProfile.targetScore}+ Puan
                 {userProfile.branch ? ` • ${userProfile.branch}` : ''}

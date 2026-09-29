@@ -46,6 +46,7 @@ import { QuizFeedbackView } from './views/QuizFeedbackView';
 import { ErrorPoolView } from './views/ErrorPoolView';
 import { ProfileView } from './views/ProfileView';
 import { SettingsView } from './views/SettingsView';
+import { StudentClassesView } from './views/StudentClassesView';
 
 // Modals
 import { DenemeSetupModal } from '../../components/DenemeSetupModal';
@@ -644,7 +645,29 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
             />
           )}
 
-          {/* 4. PROFILE VIEW */}
+          {/* 4. CLASSES & ASSIGNMENTS VIEW */}
+          {curriculumNav.viewState === 'subjects' && curriculumNav.activeTab === 'classes' && (
+            <StudentClassesView
+              onOpenAuthModal={() => session.setShowAuthModal(true)}
+              onStartAssignmentQuiz={(questions, title, assignmentId) => {
+                if (!questions || questions.length === 0) {
+                  alert('Bu ödev için henüz soru atanmamış.');
+                  return;
+                }
+                setIsDenemeMode(false);
+                persistence.setActiveExamAttemptId(null);
+                quiz.setQuestions(questions);
+                quiz.setCurrentIndex(0);
+                quiz.setUserAnswers({});
+                quiz.resetCompletionStatus();
+                quiz.setStagedOption(null);
+                quiz.setStartTime(Date.now());
+                curriculumNav.setViewState('quiz');
+              }}
+            />
+          )}
+
+          {/* 5. PROFILE VIEW */}
           {curriculumNav.viewState === 'subjects' && curriculumNav.activeTab === 'profile' && (
             <ProfileView
               userProfile={session.userProfile}
@@ -655,7 +678,7 @@ export const StudentQuizPage: React.FC<{ onNavigateAdmin?: () => void }> = () =>
             />
           )}
 
-          {/* 5. SETTINGS VIEW */}
+          {/* 6. SETTINGS VIEW */}
           {curriculumNav.viewState === 'subjects' && curriculumNav.activeTab === 'settings' && (
             <SettingsView />
           )}

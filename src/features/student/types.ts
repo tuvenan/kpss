@@ -1,6 +1,6 @@
 import { MockExamType } from '../../services/mockExamService';
 
-export type StudentTabType = 'home' | 'subjects' | 'errors' | 'profile' | 'settings';
+export type StudentTabType = 'home' | 'subjects' | 'errors' | 'classes' | 'profile' | 'settings';
 
 export type StudentViewState = 'subjects' | 'units' | 'topics' | 'unit-detail' | 'quiz' | 'feedback';
 

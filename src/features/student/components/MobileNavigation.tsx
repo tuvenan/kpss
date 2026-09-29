@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, BookOpen, AlertTriangle, User, Settings } from 'lucide-react';
+import { Home, BookOpen, AlertTriangle, User, Settings, GraduationCap } from 'lucide-react';
 import { StudentTabType, StudentViewState } from '../types';
 import { styles } from '../../../pages/StudentQuiz.styles';
 
@@ -111,6 +111,38 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
           }}
         >
           Hatalarım
+        </span>
+      </button>
+
+      <button
+        onClick={() => {
+          onNavigateTab('classes');
+          onSetViewState('subjects');
+        }}
+        style={{
+          ...styles.mobileBottomNavItem,
+          ...(activeTab === 'classes' && viewState === 'subjects' ? styles.mobileBottomNavItemActive : {}),
+        }}
+      >
+        <GraduationCap
+          size={20}
+          color={
+            activeTab === 'classes' && viewState === 'subjects'
+              ? 'var(--kpss-primary, #4F46E5)'
+              : 'var(--kpss-text-muted, #64748B)'
+          }
+        />
+        <span
+          style={{
+            ...styles.mobileBottomNavLabel,
+            color:
+              activeTab === 'classes' && viewState === 'subjects'
+                ? 'var(--kpss-primary, #4F46E5)'
+                : 'var(--kpss-text-muted, #64748B)',
+            fontWeight: activeTab === 'classes' && viewState === 'subjects' ? 700 : 500,
+          }}
+        >
+          Sınıfım
         </span>
       </button>
 
