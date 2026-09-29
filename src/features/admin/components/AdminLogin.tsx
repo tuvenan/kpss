@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react';
 import { adminStyles } from '../AdminPanel.styles';
+import { getRuntimeConfig } from '../../../config/runtimeConfig';
 
 interface AdminLoginProps {
   passwordInput: string;
@@ -17,6 +18,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
   onLogin,
   onNavigateStudent,
 }) => {
+  const { isDemoModeEnabled } = getRuntimeConfig();
+
   return (
     <div style={adminStyles.loginBackdrop}>
       <div style={adminStyles.loginCard}>
@@ -24,6 +27,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
           <ShieldCheck size={36} color="#4F46E5" />
         </div>
         <div style={adminStyles.loginBadge}>KPSS YÖNETİCİ GİRİŞİ</div>
+        {isDemoModeEnabled && (
+          <div style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', padding: '4px 8px', borderRadius: '6px', marginBottom: '12px', display: 'inline-block' }}>
+            🛠️ Geliştirici Demo Modu (Varsayılan: admin2026)
+          </div>
+        )}
         <h2 style={adminStyles.loginTitle}>Admin Kontrol Merkezi</h2>
         <p style={adminStyles.loginSubtitle}>
           İçerik, soru bankası ve sınav müfredatını yönetmek için lütfen yetkili şifrenizi giriniz.

@@ -1,3 +1,5 @@
+import { getRuntimeConfig } from '../config/runtimeConfig';
+
 export type SubscriptionTier = 'free' | 'pro_monthly' | 'pro_annual';
 
 export interface SubscriptionState {
@@ -8,9 +10,9 @@ export interface SubscriptionState {
   autoRenew: boolean;
 }
 
-const SUB_STORAGE_KEY = 'kpss_user_subscription_v1';
+export const SUB_STORAGE_KEY = 'kpss_user_subscription_v1';
 
-const DEFAULT_SUBSCRIPTION: SubscriptionState = {
+export const DEFAULT_SUBSCRIPTION: SubscriptionState = {
   tier: 'free',
   isPro: false,
   validUntil: null,
@@ -22,6 +24,11 @@ class SubscriptionService {
   private state: SubscriptionState = this.loadState();
 
   private loadState(): SubscriptionState {
+    const { allowLocalSubscriptionDemo } = getRuntimeConfig();
+    // Production ortamında localStorage üzerinden PRO üyeliğe izin verilmez
+    if (!allowLocalSubscriptionDemo) {
+      return DEFAULT_SUBSCRIPTION;
+    }
     if (typeof window === 'undefined') return DEFAULT_SUBSCRIPTION;
     try {
       const stored = localStorage.getItem(SUB_STORAGE_KEY);
@@ -35,14 +42,29 @@ class SubscriptionService {
   }
 
   public getSubscription(): SubscriptionState {
+    const { allowLocalSubscriptionDemo } = getRuntimeConfig();
+    if (!allowLocalSubscriptionDemo) {
+      return DEFAULT_SUBSCRIPTION;
+    }
     return this.state;
   }
 
   public isPro(): boolean {
+    const { allowLocalSubscriptionDemo } = getRuntimeConfig();
+    if (!allowLocalSubscriptionDemo) {
+      // Production ortamında backend doğrulaması olmaksızın istemci PRO olamaz
+      return false;
+    }
     return this.state.isPro;
   }
 
   public upgradeToPlan(tier: SubscriptionTier): SubscriptionState {
+    const { allowLocalSubscriptionDemo } = getRuntimeConfig();
+    if (!allowLocalSubscriptionDemo) {
+      console.warn('Abonelik yükseltme işlemi production ortamında yalnızca gerçek ödeme entegrasyonu ile yapılabilir.');
+      return DEFAULT_SUBSCRIPTION;
+    }
+
     const now = new Date();
     let validUntilDate: Date;
 

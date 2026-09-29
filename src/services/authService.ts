@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { userProfileService, UserProfile } from './userProfileService';
+import { getRuntimeConfig } from '../config/runtimeConfig';
 
 export interface AuthUser {
   id: string;
@@ -87,22 +88,21 @@ class AuthService {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed: AuthUser = JSON.parse(stored);
+        const { allowLocalAuthFallback } = getRuntimeConfig();
+        // Yerel demo kullanıcı ise ve demo modu kapalıysa misafir oturumuna dön
+        if (parsed.id?.startsWith('usr_') || parsed.id?.startsWith('local_')) {
+          if (!allowLocalAuthFallback) {
+            return DEFAULT_GUEST;
+          }
+        }
+        return parsed;
       }
     } catch (e) {
       console.warn('loadInitialUser error:', e);
     }
-    // Varsayılan kayıtlı profil varsa onu alalım
-    const profile = userProfileService.getProfile();
-    return {
-      id: 'local_user_1',
-      email: profile.email || 'ali.kpss2026@gmail.com',
-      name: profile.name || 'Ali Kaya',
-      username: profile.username || 'alikaya',
-      isLoggedIn: true,
-      role: 'student',
-      createdAt: '2026-09-01',
-    };
+    // Oturum yoksa kullanıcı varsayılan olarak misafirdir (isLoggedIn: false)
+    return DEFAULT_GUEST;
   }
 
   public getCurrentUser(): AuthUser {
@@ -125,12 +125,14 @@ class AuthService {
     }
   }
 
-  /** Giriş Yap (Supabase veya Yerel Doğrulama) */
+  /** Giriş Yap (Supabase veya Yalnızca Demo Modunda Yerel Doğrulama) */
   public async login(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !password) {
       return { success: false, error: 'Lütfen e-posta ve şifrenizi giriniz.' };
     }
+
+    const { allowLocalAuthFallback } = getRuntimeConfig();
 
     if (isSupabaseConfigured()) {
       try {
@@ -139,7 +141,17 @@ class AuthService {
           password,
         });
 
-        if (!error && data.user) {
+        if (error) {
+          // Supabase yapılandırılmışsa hatalı giriş doğrudan başarısız olmalıdır.
+          return {
+            success: false,
+            error: error.message === 'Invalid login credentials'
+              ? 'E-posta veya şifre hatalı!'
+              : (error.message || 'Giriş yapılamadı.'),
+          };
+        }
+
+        if (data.user) {
           const authUser: AuthUser = {
             id: data.user.id,
             email: data.user.email || cleanEmail,
@@ -150,22 +162,62 @@ class AuthService {
             createdAt: data.user.created_at,
           };
           this.saveSession(authUser);
-          // Buluttaki profil verilerini çek ve yerel profil ile birleştir
           await userProfileService.fetchProfileFromCloud();
           return { success: true, user: authUser };
         }
       } catch (err: any) {
-        console.warn('Supabase auth login exception, falling back to local auth:', err);
+        if (!allowLocalAuthFallback) {
+          return {
+            success: false,
+            error: 'Giriş sunucusuna ulaşılamadı. Lütfen internet bağlantınızı kontrol ediniz.',
+          };
+        }
+        console.warn('Supabase auth exception, falling back to demo auth:', err);
       }
     }
 
-    // Yerel / Demo Giriş
+    // Production'da yerel giriş fallback'i kesinlikle çalışmaz
+    if (!allowLocalAuthFallback) {
+      return {
+        success: false,
+        error: isSupabaseConfigured()
+          ? 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol ediniz.'
+          : 'Giriş altyapısı henüz production için yapılandırılmadı.',
+      };
+    }
+
+    // Yalnızca demo modunda yerel giriş yapılabilir
     const profile = userProfileService.getProfile();
     const authUser: AuthUser = {
       id: `usr_${Date.now()}`,
       email: cleanEmail,
       name: profile.name || cleanEmail.split('@')[0],
       username: profile.username || cleanEmail.split('@')[0],
+      isLoggedIn: true,
+      role: 'student',
+      createdAt: new Date().toISOString(),
+    };
+    this.saveSession(authUser);
+    return { success: true, user: authUser };
+  }
+
+  /** Demo Öğrenci Girişi (Yalnızca Geliştirme ve Demo Modunda Çalışır) */
+  public async loginDemo(email = 'demo@kpss.com'): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
+    const { isDemoModeEnabled } = getRuntimeConfig();
+    if (!isDemoModeEnabled) {
+      return {
+        success: false,
+        error: 'Demo girişi production ortamında kullanılamaz.',
+      };
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const profile = userProfileService.getProfile();
+    const authUser: AuthUser = {
+      id: `usr_demo_${Date.now()}`,
+      email: cleanEmail,
+      name: profile.name || 'Demo Öğrenci',
+      username: profile.username || 'demo_ogrenci',
       isLoggedIn: true,
       role: 'student',
       createdAt: new Date().toISOString(),
@@ -186,6 +238,8 @@ class AuthService {
       return { success: false, error: 'Şifre en az 6 karakter olmalıdır.' };
     }
 
+    const { allowLocalAuthFallback } = getRuntimeConfig();
+
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase.auth.signUp({
@@ -199,7 +253,11 @@ class AuthService {
           },
         });
 
-        if (!error && data.user) {
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        if (data.user) {
           const authUser: AuthUser = {
             id: data.user.id,
             email: data.user.email || cleanEmail,
@@ -210,7 +268,6 @@ class AuthService {
             createdAt: data.user.created_at,
           };
           this.saveSession(authUser);
-          // Profil servisine de yansıt
           userProfileService.saveProfile({
             ...userProfileService.getProfile(),
             name: cleanName,
@@ -220,11 +277,24 @@ class AuthService {
           return { success: true, user: authUser };
         }
       } catch (err: any) {
+        if (!allowLocalAuthFallback) {
+          return { success: false, error: 'Kayıt servisine ulaşılamadı. Lütfen bağlantınızı kontrol ediniz.' };
+        }
         console.warn('Supabase auth register exception, local fallback:', err);
       }
     }
 
-    // Yerel kayıt
+    // Production'da yerel kayıt fallback'i çalışmaz
+    if (!allowLocalAuthFallback) {
+      return {
+        success: false,
+        error: isSupabaseConfigured()
+          ? 'Kayıt işlemi tamamlanamadı.'
+          : 'Kayıt sistemi henüz production için yapılandırılmadı.',
+      };
+    }
+
+    // Demo yerel kayıt
     const authUser: AuthUser = {
       id: `usr_${Date.now()}`,
       email: cleanEmail,

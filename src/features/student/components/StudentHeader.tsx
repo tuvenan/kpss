@@ -7,6 +7,7 @@ import { StudentNotificationItem, StudentTabType, StudentViewState } from '../ty
 import { UserProfile } from '../../../services/userProfileService';
 import { AuthUser, authService } from '../../../services/authService';
 import { SubscriptionState } from '../../../services/subscriptionService';
+import { getRuntimeConfig } from '../../../config/runtimeConfig';
 import { styles } from '../../../pages/StudentQuiz.styles';
 
 interface StudentHeaderProps {
@@ -92,6 +93,25 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
           onNotificationClick={onNotificationClick}
           onMarkAllRead={onMarkAllNotificationsRead}
         />
+
+        {/* Geliştirici Demo Modu Rozeti */}
+        {getRuntimeConfig().isDemoModeEnabled && (
+          <div
+            style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#64748B',
+              backgroundColor: '#F1F5F9',
+              border: '1px solid #E2E8F0',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              whiteSpace: 'nowrap',
+            }}
+            title="Geliştirici demo modu etkindir"
+          >
+            DEMO MODU
+          </div>
+        )}
 
         {/* Koyu / Açık Tema Hızlı Değiştirme */}
         <button

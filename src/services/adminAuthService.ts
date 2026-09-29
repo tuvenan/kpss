@@ -6,12 +6,15 @@
  * Parolalar hiçbir zaman localStorage'da düz metin (plaintext) olarak saklanmaz.
  */
 
+import { getRuntimeConfig } from '../config/runtimeConfig';
+
 export const ADMIN_PASS_HASH_KEY = 'kpss_admin_password_hash_v2';
 export const ADMIN_AUTH_SESSION_KEY = 'kpss_admin_session_token_v2';
 const LEGACY_PLAIN_PASS_KEY = 'kpss_admin_custom_password_v1';
 
-// 'admin2026' parolasının SHA-256 özeti (ilk kurulum varsayılanı)
-export const DEFAULT_ADMIN_HASH = 'f3ac0e2c88277be9ecbe4ddae29c1cfdfba1ac4c2fef2215c0e5a88c3a96e95c';
+// 'admin2026' parolasının gerçek SHA-256 özeti (ilk kurulum varsayılanı)
+export const DEFAULT_ADMIN_HASH = '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6';
+const LEGACY_DEFAULT_ADMIN_HASH = 'f3ac0e2c88277be9ecbe4ddae29c1cfdfba1ac4c2fef2215c0e5a88c3a96e95c';
 
 /**
  * Verilen metnin SHA-256 özetini (hex) hesaplar.
@@ -20,8 +23,12 @@ export async function sha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
 
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const subtleCrypto =
+    (typeof window !== 'undefined' && window.crypto?.subtle) ||
+    (typeof globalThis !== 'undefined' && globalThis.crypto?.subtle);
+
+  if (subtleCrypto) {
+    const hashBuffer = await subtleCrypto.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
@@ -74,18 +81,28 @@ class AdminAuthService {
   /**
    * Parola doğrulaması yapar.
    * Kesin eşleşme şarttır; hiçbir arka kapı veya 'kpss' bypass'ına izin verilmez.
+   * Production ortamında istemci tabanlı demo admin doğrulaması tamamen kapalıdır.
    */
   public async verifyPassword(inputPassword: string): Promise<boolean> {
+    const { allowClientAdminDemo } = getRuntimeConfig();
+    if (!allowClientAdminDemo) {
+      return false;
+    }
     if (!inputPassword || !inputPassword.trim()) return false;
     const computedHash = await sha256(inputPassword.trim());
     const storedHash = this.getStoredHash();
-    return computedHash === storedHash;
+    return (
+      computedHash === storedHash ||
+      (storedHash === LEGACY_DEFAULT_ADMIN_HASH && computedHash === DEFAULT_ADMIN_HASH)
+    );
   }
 
   /**
-   * Oturum oluşturur.
+   * Oturum oluşturur (Yalnızca demo modunda).
    */
   public createSession(): void {
+    const { allowClientAdminDemo } = getRuntimeConfig();
+    if (!allowClientAdminDemo) return;
     if (typeof window === 'undefined') return;
     const token = 'admin_session_' + Date.now() + '_' + Math.random().toString(36).substring(2);
     sessionStorage.setItem(ADMIN_AUTH_SESSION_KEY, token);
@@ -94,8 +111,19 @@ class AdminAuthService {
 
   /**
    * Oturum durumunu doğrular.
+   *
+   * GÜVENLİK NOTU (SECURITY AUDIT):
+   * İstemci tarafındaki sessionStorage değeri ('kpss_admin_session_token_v2' veya 'kpss_admin_auth')
+   * yalnızca yerel geliştirme ve demo modunda test akışını kolaylaştırmak içindir.
+   * Bu değer tek başına gerçek ve güvenli bir sunucu yetkilendirmesi DEĞİLDİR.
+   * Production ortamında istemci taraflı demo doğrulamasına güvenilmez ve panel erişimi
+   * gerçek bir backend yetkilendirmesi yapılandırılana kadar kapalı tutulur.
    */
   public isAuthenticated(): boolean {
+    const { allowClientAdminDemo } = getRuntimeConfig();
+    if (!allowClientAdminDemo) {
+      return false;
+    }
     if (typeof window === 'undefined') return false;
     const token = sessionStorage.getItem(ADMIN_AUTH_SESSION_KEY);
     const legacyAuth = sessionStorage.getItem('kpss_admin_auth');

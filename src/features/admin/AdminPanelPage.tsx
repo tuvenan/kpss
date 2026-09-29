@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { api } from '../../services/api';
 import { isSupabaseConfigured } from '../../services/supabase';
 import { adminAuthService } from '../../services/adminAuthService';
+import { getRuntimeConfig } from '../../config/runtimeConfig';
 import { Question } from '../../types';
 import { SAMPLE_20_QUESTIONS } from '../../data/samplePackage';
 import {
@@ -188,6 +189,71 @@ export const AdminPanelPage: React.FC<AdminPanelProps> = ({ onNavigateStudent })
   };
 
 
+
+  const { allowClientAdminDemo } = getRuntimeConfig();
+
+  // ----------------------------------------------------
+  // PRODUCTION ERİŞİM ENGELİ (GERÇEK ADMIN ALTYAPISI YOKSA)
+  // ----------------------------------------------------
+  if (!allowClientAdminDemo) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#0F172A',
+        padding: '24px',
+        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+      }}>
+        <div style={{
+          maxWidth: '460px',
+          width: '100%',
+          backgroundColor: '#1E293B',
+          borderRadius: '16px',
+          padding: '36px 28px',
+          textAlign: 'center',
+          border: '1px solid #334155',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+        }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '14px',
+            backgroundColor: '#334155',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+          }}>
+            <Lock size={26} color="#94A3B8" />
+          </div>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#F8FAFC', marginBottom: '12px' }}>
+            Yönetici Erişimi Kısıtlandı
+          </h2>
+          <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, marginBottom: '24px' }}>
+            Admin altyapısı henüz production için yapılandırılmadı. Güvenlik gereği istemci tabanlı demo yetkilendirme production ortamında devre dışıdır.
+          </p>
+          <button
+            onClick={onNavigateStudent}
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              backgroundColor: '#111111',
+              color: '#FFFFFF',
+              border: '1px solid #334155',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Öğrenci Paneline Dön
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ----------------------------------------------------
   // GİRİŞ EKRANI (AUTH GATE)

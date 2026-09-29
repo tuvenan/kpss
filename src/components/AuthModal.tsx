@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { authService, AuthUser } from '../services/authService';
+import { getRuntimeConfig } from '../config/runtimeConfig';
 import { X, Mail, Lock, User, CheckCircle, AlertCircle, Eye, EyeOff, LogIn, UserPlus, KeyRound, Sparkles } from 'lucide-react';
 
 interface AuthModalProps {
@@ -15,6 +16,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { isDemoModeEnabled } = getRuntimeConfig();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -100,6 +102,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {mode === 'register' && 'KPSS hedefine ulaşmak için hemen ücretsiz kaydol.'}
             {mode === 'forgot' && 'Kayıtlı e-posta adresine şifre sıfırlama talimatı göndereceğiz.'}
           </p>
+          {isDemoModeEnabled && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#F1F5F9',
+              border: '1px solid #E2E8F0',
+              padding: '3px 9px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#64748B',
+              marginTop: '6px',
+            }}>
+              <Sparkles size={12} color="#64748B" />
+              <span>Geliştirici Demo Modu Aktif</span>
+            </div>
+          )}
         </div>
 
         {/* Tab Seçimi (Giriş / Kayıt) */}
@@ -126,6 +146,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               Kayıt Ol
             </button>
           </div>
+        )}
+
+        {isDemoModeEnabled && mode === 'login' && (
+          <button
+            type="button"
+            onClick={async () => {
+              setIsLoading(true);
+              setErrorMessage('');
+              const res = await authService.loginDemo('demo@kpss.com');
+              setIsLoading(false);
+              if (res.success && res.user) {
+                onSuccess(res.user);
+                onClose();
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              marginBottom: '14px',
+              backgroundColor: '#F8FAFC',
+              border: '1px dashed #CBD5E1',
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: '#475569',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ⚡ Demo Öğrenci Olarak Hızlı Giriş Yap
+          </button>
         )}
 
         {/* Hata Bildirimi */}

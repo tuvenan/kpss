@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { subscriptionService, SubscriptionTier } from '../services/subscriptionService';
+import { getRuntimeConfig } from '../config/runtimeConfig';
 import { X, Check, ShieldCheck, Zap, Sparkles, CreditCard, Lock, Award, Star } from 'lucide-react';
 
 interface PricingPaywallModalProps {
@@ -13,6 +14,7 @@ export const PricingPaywallModal: React.FC<PricingPaywallModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { allowLocalSubscriptionDemo } = getRuntimeConfig();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionTier>('pro_annual');
   const [showCheckout, setShowCheckout] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -27,6 +29,7 @@ export const PricingPaywallModal: React.FC<PricingPaywallModalProps> = ({
   if (!isOpen) return null;
 
   const handleStartCheckout = () => {
+    if (!allowLocalSubscriptionDemo) return;
     setShowCheckout(true);
   };
 
@@ -156,15 +159,41 @@ export const PricingPaywallModal: React.FC<PricingPaywallModalProps> = ({
               </div>
             </div>
 
-            {/* İlerle Butonu */}
-            <button
-              type="button"
-              onClick={handleStartCheckout}
-              style={styles.actionBtn}
-            >
-              <Zap size={18} />
-              <span>Hemen Premium'a Yükselt</span>
-            </button>
+            {/* İlerle / Bilgilendirme Butonu */}
+            {!allowLocalSubscriptionDemo ? (
+              <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    ...styles.actionBtn,
+                    opacity: 0.6,
+                    cursor: 'not-allowed',
+                    backgroundColor: '#1E293B',
+                  }}
+                >
+                  <Lock size={18} />
+                  <span>Ödeme Altyapısı Yakında Aktif Olacak</span>
+                </button>
+                <p style={{ fontSize: '13px', color: '#64748B', marginTop: '10px', lineHeight: 1.5 }}>
+                  Online ödeme sistemi henüz production için kullanıma açık değildir. KPSS hazırlık paketlerimiz çok yakında aktif olacaktır.
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleStartCheckout}
+                  style={styles.actionBtn}
+                >
+                  <Zap size={18} />
+                  <span>Hemen Premium'a Yükselt (Demo)</span>
+                </button>
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748B', textAlign: 'center' }}>
+                  🛠️ Geliştirici Demo Modu: Gerçek kart çekimi yapılmaz.
+                </div>
+              </>
+            )}
 
             <div style={styles.secureNote}>
               <ShieldCheck size={16} color="#10B981" />
