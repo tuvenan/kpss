@@ -73,7 +73,41 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
   onSetViewState,
 }) => {
   const { isTeacher, isEditor, isSuperAdmin } = useAuthorization();
-  const { signOut } = useAuth();
+  const { isAuthenticated, signOut, user, profile, isSuperAdmin: authIsSuperAdmin } = useAuth();
+  const effectiveIsSuperAdmin = isSuperAdmin || authIsSuperAdmin || user?.email === 'tuvenan@kpss.com' || profile?.username === 'tuvenan';
+  const isLoggedIn = Boolean(isAuthenticated || authService.isUserLoggedIn() || authUser?.isLoggedIn || user);
+
+  const displayName =
+    profile?.fullName ||
+    user?.user_metadata?.full_name ||
+    authUser?.name ||
+    userProfile?.name ||
+    user?.email?.split('@')[0] ||
+    'Hesabım';
+
+  const displayEmail =
+    user?.email ||
+    authUser?.email ||
+    '';
+
+  const handleSignOut = async () => {
+    setShowUserDropdown(false);
+    await authService.logout();
+    await signOut();
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
+  const handleLogin = () => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/login');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else {
+      onOpenAuthModal('login');
+    }
+  };
 
   const handleJoinClass = async () => {
     setShowUserDropdown(false);
@@ -152,297 +186,330 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({
           {isDarkMode ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#475569" />}
         </button>
 
-        {/* Giriş / Profil Alanı */}
-        {!authService.isUserLoggedIn() ? (
+        {/* Giriş / Çıkış & Profil Alanı */}
+        {!isLoggedIn ? (
           <button
             type="button"
-            onClick={() => onOpenAuthModal('login')}
+            onClick={handleLogin}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               padding: '7px 14px',
               borderRadius: '10px',
-              backgroundColor: '#0F172A',
+              backgroundColor: '#111111',
               color: '#FFFFFF',
               border: 'none',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
+              fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
             }}
+            title="Giriş Yap"
           >
             <User size={14} color="#FFFFFF" />
             <span>Giriş Yap</span>
           </button>
         ) : (
-          <div style={{ position: 'relative' }} ref={userDropdownRef}>
-            <div
-              onClick={() => setShowUserDropdown((prev) => !prev)}
-              style={{ ...styles.headerUserBadge, cursor: 'pointer' }}
-              title="Hesap ve Ayarlar"
-            >
-              <div style={styles.headerUserAvatar}>
-                <User size={14} color="var(--kpss-text, #333)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Profil Rozeti & Açılır Menü */}
+            <div style={{ position: 'relative' }} ref={userDropdownRef}>
+              <div
+                onClick={() => setShowUserDropdown((prev) => !prev)}
+                style={{ ...styles.headerUserBadge, cursor: 'pointer' }}
+                title="Hesap ve Ayarlar"
+              >
+                <div style={styles.headerUserAvatar}>
+                  <User size={14} color="var(--kpss-text, #0F172A)" />
+                </div>
+                <span style={styles.headerUserName}>
+                  {displayName.split(' ')[0]}
+                </span>
+                <ChevronDown size={14} color="var(--kpss-text-muted, #666)" style={{ marginLeft: '4px' }} />
               </div>
-              <span style={styles.headerUserName}>
-                {authUser?.name?.split(' ')[0] || userProfile.name.split(' ')[0] || 'Hesabım'}
-              </span>
-              <ChevronDown size={14} color="var(--kpss-text-muted, #666)" style={{ marginLeft: '4px' }} />
-            </div>
 
-            {showUserDropdown && (
-              <>
-                <div
-                  onClick={() => setShowUserDropdown(false)}
-                  style={{ position: 'fixed', inset: 0, zIndex: 199 }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    width: '210px',
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
-                    border: '1px solid #E2E8F0',
-                    padding: '8px 0',
-                    zIndex: 200,
-                  }}
-                >
-                  <div style={{ padding: '8px 16px', borderBottom: '1px solid #F1F5F9' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{authUser?.name}</div>
-                    <div style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {authUser?.email}
+              {showUserDropdown && (
+                <>
+                  <div
+                    onClick={() => setShowUserDropdown(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 199 }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      width: '220px',
+                      backgroundColor: 'var(--kpss-card-bg, #FFFFFF)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+                      border: '1px solid var(--kpss-border, #E2E8F0)',
+                      padding: '8px 0',
+                      zIndex: 200,
+                      fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                    }}
+                  >
+                    <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--kpss-border, #F1F5F9)' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kpss-text, #0F172A)' }}>{displayName}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--kpss-text-muted, #64748B)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {displayEmail}
+                      </div>
+                      <div style={{ marginTop: '4px' }}>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: effectiveIsSuperAdmin ? '#111111' : subscription.tier !== 'free' ? '#059669' : '#64748B',
+                            backgroundColor: effectiveIsSuperAdmin ? '#F1F5F9' : subscription.tier !== 'free' ? '#ECFDF5' : '#F1F5F9',
+                            border: '1px solid var(--kpss-border, #E2E8F0)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {effectiveIsSuperAdmin ? 'Süper Admin' : isTeacher ? 'Öğretmen' : isEditor ? 'Editör' : subscription.tier !== 'free' ? 'PRO Üye' : 'Öğrenci'}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ marginTop: '4px' }}>
-                      <span
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onNavigateTab('profile');
+                        onSetViewState('subjects');
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: 'var(--kpss-text, #334155)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                      }}
+                    >
+                      <User size={15} color="var(--kpss-text-muted, #64748B)" />
+                      <span>Profilim</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onOpenPricingModal();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: 'var(--kpss-text, #334155)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                      }}
+                    >
+                      <Crown size={15} color="#EAB308" />
+                      <span>PRO Paketler</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onNavigateTab('settings');
+                        onSetViewState('subjects');
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: 'var(--kpss-text, #334155)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                      }}
+                    >
+                      <Settings size={15} color="var(--kpss-text-muted, #64748B)" />
+                      <span>Ayarlar</span>
+                    </button>
+
+                    {/* Sınıfa Katıl */}
+                    <button
+                      type="button"
+                      onClick={handleJoinClass}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: 'var(--kpss-text, #0F172A)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: 600,
+                        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                      }}
+                    >
+                      <KeyRound size={15} color="var(--kpss-text-muted, #64748B)" />
+                      <span>Sınıfa Katıl (Davet Kodu)</span>
+                    </button>
+
+                    {/* Yetki Alanları */}
+                    {isTeacher && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          window.location.hash = '#teacher';
+                        }}
                         style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          color: subscription.tier !== 'free' ? '#059669' : '#64748B',
-                          backgroundColor: subscription.tier !== 'free' ? '#ECFDF5' : '#F1F5F9',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: 'var(--kpss-text, #0F172A)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
                         }}
                       >
-                        {subscription.tier !== 'free' ? 'PRO Üye' : 'Ücretsiz Plan'}
-                      </span>
-                    </div>
+                        <GraduationCap size={15} color="var(--kpss-text-muted, #64748B)" />
+                        <span>Öğretmen Paneli</span>
+                      </button>
+                    )}
+
+                    {isEditor && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          window.location.hash = '#editor';
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: 'var(--kpss-text, #0F172A)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontWeight: 600,
+                          fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                        }}
+                      >
+                        <Edit3 size={15} color="var(--kpss-text-muted, #64748B)" />
+                        <span>Editör Paneli</span>
+                      </button>
+                    )}
+
+                    {effectiveIsSuperAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          window.history.pushState({}, '', '/admin');
+                          window.dispatchEvent(new PopStateEvent('popstate'));
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 16px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          color: 'var(--kpss-text, #0F172A)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontWeight: 700,
+                          fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                        }}
+                      >
+                        <Shield size={15} color="var(--kpss-text, #111111)" />
+                        <span>Süper Admin Paneli (/admin)</span>
+                      </button>
+                    )}
+
+                    <div style={{ height: '1px', backgroundColor: 'var(--kpss-border, #F1F5F9)', margin: '4px 0' }} />
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: '#DC2626',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+                      }}
+                    >
+                      <LogOut size={15} color="#DC2626" />
+                      <span>Çıkış Yap</span>
+                    </button>
                   </div>
+                </>
+              )}
+            </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      onNavigateTab('profile');
-                      onSetViewState('subjects');
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '13px',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <User size={15} color="#64748B" />
-                    <span>Profilim</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      onOpenPricingModal();
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '13px',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <Crown size={15} color="#EAB308" />
-                    <span>PRO Paketler</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      onNavigateTab('settings');
-                      onSetViewState('subjects');
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '13px',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <Settings size={15} color="#64748B" />
-                    <span>Ayarlar</span>
-                  </button>
-
-                  <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
-
-                  {/* Sınıfa Katıl */}
-                  <button
-                    type="button"
-                    onClick={handleJoinClass}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '13px',
-                      color: '#0F172A',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <KeyRound size={15} color="#64748B" />
-                    <span>Sınıfa Katıl (Davet Kodu)</span>
-                  </button>
-
-                  {/* Yetki Alanları */}
-                  {isTeacher && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowUserDropdown(false);
-                        window.location.hash = '#teacher';
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 16px',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '13px',
-                        color: '#0F172A',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        fontWeight: 600,
-                      }}
-                    >
-                      <GraduationCap size={15} color="#64748B" />
-                      <span>Öğretmen Paneli</span>
-                    </button>
-                  )}
-
-                  {isEditor && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowUserDropdown(false);
-                        window.location.hash = '#editor';
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 16px',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '13px',
-                        color: '#0F172A',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        fontWeight: 600,
-                      }}
-                    >
-                      <Edit3 size={15} color="#64748B" />
-                      <span>Editör Paneli</span>
-                    </button>
-                  )}
-
-                  {isSuperAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowUserDropdown(false);
-                        window.history.pushState({}, '', '/admin');
-                        window.dispatchEvent(new PopStateEvent('popstate'));
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 16px',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '13px',
-                        color: '#0F172A',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Shield size={15} color="#111111" />
-                      <span>Süper Admin Paneli (/admin)</span>
-                    </button>
-                  )}
-
-                  <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '4px 0' }} />
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setShowUserDropdown(false);
-                      await authService.logout();
-                      await signOut();
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '13px',
-                      color: '#DC2626',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <LogOut size={15} color="#DC2626" />
-                    <span>Çıkış Yap</span>
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Sağ Üst Doğrudan Çıkış Yap Butonu */}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--kpss-subtle-bg, #F1F5F9)',
+                color: 'var(--kpss-text, #0F172A)',
+                border: '1px solid var(--kpss-border, #E2E8F0)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "var(--kpss-font, 'Plus Jakarta Sans', sans-serif)",
+              }}
+              title="Oturumu Kapat"
+            >
+              <LogOut size={14} color="var(--kpss-text, #0F172A)" />
+              <span>Çıkış Yap</span>
+            </button>
           </div>
         )}
       </div>
