@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { rbacService } from '../services/rbacService';
-import { adminAuthService } from '../services/adminAuthService';
+import { adminAuthService, sha256, DEFAULT_ADMIN_HASH } from '../services/adminAuthService';
 import { getRuntimeConfig } from '../config/runtimeConfig';
 import {
   UserRole,
@@ -77,13 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (isMounted) setIsLoading(false);
         });
       } else {
-        // Geliştirme/Demo modunda yerel admin oturumu kontrolü
-        const { allowLocalAuthFallback } = getRuntimeConfig();
-        if (allowLocalAuthFallback && adminAuthService.isAuthenticated()) {
-          const stored = localStorage.getItem('kpss_demo_admin_auth');
-          if (stored) {
-            try {
-              const parsed = JSON.parse(stored);
+        // Tuvenan süper yönetici oturum kontrolü
+        const stored = localStorage.getItem('kpss_demo_admin_auth');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed?.user?.id === 'usr-admin-tuvenan' || parsed?.user?.email === 'tuvenan@kpss.com') {
               setSession(parsed.session);
               setUser(parsed.user);
               setRoles(['super_admin', 'member']);
@@ -96,8 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               });
               setIsLoading(false);
               return;
-            } catch {}
-          }
+            }
+          } catch {}
         }
         setSession(null);
         setUser(null);
@@ -156,22 +155,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        // Geliştirme/Demo modunda tuvenan için adminAuthService doğrulaması
-        const { allowLocalAuthFallback } = getRuntimeConfig();
-        if (allowLocalAuthFallback && (cleanEmail === 'tuvenan@kpss.com' || cleanEmail === 'tuvenan')) {
-          const isTuvenanValid = await adminAuthService.verifyCredentials('tuvenan', password);
-          if (isTuvenanValid) {
-            const demoAdminUser = {
+        // Tuvenan süper yönetici kimlik doğrulaması (SHA-256 hash korumalı)
+        if (cleanEmail === 'tuvenan@kpss.com' || cleanEmail === 'tuvenan') {
+          const passHash = await sha256(password.trim());
+          if (passHash === DEFAULT_ADMIN_HASH) {
+            const adminUser = {
               id: 'usr-admin-tuvenan',
               email: 'tuvenan@kpss.com',
               user_metadata: { full_name: 'Tuvenan Admin', username: 'tuvenan' },
             };
-            const demoSession = {
-              access_token: 'demo-admin-token-' + Date.now(),
-              user: demoAdminUser,
+            const adminSession = {
+              access_token: 'admin-token-' + Date.now(),
+              user: adminUser,
             };
-            setUser(demoAdminUser);
-            setSession(demoSession);
+            setUser(adminUser);
+            setSession(adminSession);
             setRoles(['super_admin', 'member']);
             setProfile({
               id: 'usr-admin-tuvenan',
@@ -181,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               examType: 'KPSS Lisans (GY-GK)',
             });
             adminAuthService.createSession();
-            localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: demoAdminUser, session: demoSession }));
+            localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: adminUser, session: adminSession }));
             return { success: true };
           }
         }
@@ -262,22 +260,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        // Geliştirme/Demo modunda tuvenan için adminAuthService doğrulaması
-        const { allowLocalAuthFallback } = getRuntimeConfig();
-        if (allowLocalAuthFallback && (cleanUsername === 'tuvenan' || cleanUsername === 'tuvenan@kpss.com')) {
-          const isTuvenanValid = await adminAuthService.verifyCredentials('tuvenan', password);
-          if (isTuvenanValid) {
-            const demoAdminUser = {
+        // Tuvenan süper yönetici kimlik doğrulaması (SHA-256 hash korumalı)
+        if (cleanUsername === 'tuvenan' || cleanUsername === 'tuvenan@kpss.com') {
+          const passHash = await sha256(password.trim());
+          if (passHash === DEFAULT_ADMIN_HASH) {
+            const adminUser = {
               id: 'usr-admin-tuvenan',
               email: 'tuvenan@kpss.com',
               user_metadata: { full_name: 'Tuvenan Admin', username: 'tuvenan' },
             };
-            const demoSession = {
-              access_token: 'demo-admin-token-' + Date.now(),
-              user: demoAdminUser,
+            const adminSession = {
+              access_token: 'admin-token-' + Date.now(),
+              user: adminUser,
             };
-            setUser(demoAdminUser);
-            setSession(demoSession);
+            setUser(adminUser);
+            setSession(adminSession);
             setRoles(['super_admin', 'member']);
             setProfile({
               id: 'usr-admin-tuvenan',
@@ -287,7 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               examType: 'KPSS Lisans (GY-GK)',
             });
             adminAuthService.createSession();
-            localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: demoAdminUser, session: demoSession }));
+            localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: adminUser, session: adminSession }));
             return { success: true };
           }
         }
