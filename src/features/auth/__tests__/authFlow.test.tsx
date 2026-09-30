@@ -684,4 +684,39 @@ describe('Kimlik Doğrulama Sistemi Testleri', () => {
       expect(replaceStateSpy).toHaveBeenCalledWith({}, '', '/');
     });
   });
+
+  // --------------------------------------------------------------------------
+  // 16. Demo Öğrenci (user / 123456) Giriş Akışı
+  // --------------------------------------------------------------------------
+  it('user / 123456 ile demo öğrenci girişi yapıldığında member rolü ile / rotasına yönlendirilir', async () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    // Supabase tarafında e-posta doğrulanmamış hatası dönse bile
+    (supabase.rpc as any).mockResolvedValue({ data: null, error: new Error('RPC missing') });
+    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: 'Email not confirmed' },
+    });
+
+    render(
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>
+    );
+
+    const usernameInput = await screen.findByPlaceholderText('kullanici_adi');
+    const passwordInput = screen.getByPlaceholderText('••••••••');
+    const submitBtn = screen.getByRole('button', { name: /giriş yap/i });
+
+    await act(async () => {
+      fireEvent.change(usernameInput, { target: { value: 'user' } });
+      fireEvent.change(passwordInput, { target: { value: '123456' } });
+      fireEvent.click(submitBtn);
+    });
+
+    await waitFor(() => {
+      expect(replaceStateSpy).toHaveBeenCalledWith({}, '', '/');
+    });
+  });
 });
+

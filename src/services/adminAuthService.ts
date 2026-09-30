@@ -25,6 +25,11 @@ export const DEFAULT_ADMIN_HASH = 'baf54b061972e88c1b43ee2fe273a50c31414f5ddb38d
 export const LEGACY_ADMIN_HASH_2026 = '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6';
 const LEGACY_DEFAULT_ADMIN_HASH = 'f3ac0e2c88277be9ecbe4ddae29c1cfdfba1ac4c2fef2215c0e5a88c3a96e95c';
 
+// Demo Öğrenci (user / 123456)
+export const DEFAULT_STUDENT_USERNAME = 'user';
+export const DEFAULT_STUDENT_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // '123456'
+
+
 /**
  * Verilen metnin SHA-256 özetini (hex) hesaplar.
  */

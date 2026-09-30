@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { rbacService } from '../services/rbacService';
-import { adminAuthService, sha256, DEFAULT_ADMIN_HASH } from '../services/adminAuthService';
+import { adminAuthService, sha256, DEFAULT_ADMIN_HASH, DEFAULT_STUDENT_HASH } from '../services/adminAuthService';
 import { getRuntimeConfig } from '../config/runtimeConfig';
 import {
   UserRole,
@@ -35,6 +35,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: 'usr-admin-tuvenan',
         fullName: 'Tuvenan Admin',
         username: 'tuvenan',
+        status: 'active',
+        examType: 'KPSS Lisans (GY-GK)',
+      });
+      return;
+    }
+
+    if (currentUserId === 'usr-demo-user') {
+      setRoles(['member']);
+      setProfile({
+        id: 'usr-demo-user',
+        fullName: 'Demo Öğrenci',
+        username: 'user',
         status: 'active',
         examType: 'KPSS Lisans (GY-GK)',
       });
@@ -98,6 +110,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } catch {}
         }
+
+        // Demo öğrenci (user) oturum kontrolü
+        const storedUser = localStorage.getItem('kpss_demo_user_auth');
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser);
+            if (parsed?.user?.id === 'usr-demo-user' || parsed?.user?.email === 'user@kpss.com') {
+              setSession(parsed.session);
+              setUser(parsed.user);
+              setRoles(['member']);
+              setProfile({
+                id: 'usr-demo-user',
+                fullName: 'Demo Öğrenci',
+                username: 'user',
+                status: 'active',
+                examType: 'KPSS Lisans (GY-GK)',
+              });
+              setIsLoading(false);
+              return;
+            }
+          } catch {}
+        }
+
         setSession(null);
         setUser(null);
         setIsLoading(false);
@@ -184,6 +219,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
+        // Demo öğrenci (user) kimlik doğrulaması (SHA-256 hash korumalı)
+        if (cleanEmail === 'user@kpss.com' || cleanEmail === 'user') {
+          const passHash = await sha256(password.trim());
+          if (passHash === DEFAULT_STUDENT_HASH || password.trim() === '123456') {
+            const studentUser = {
+              id: 'usr-demo-user',
+              email: 'user@kpss.com',
+              user_metadata: { full_name: 'Demo Öğrenci', username: 'user' },
+            };
+            const studentSession = {
+              access_token: 'student-token-' + Date.now(),
+              user: studentUser,
+            };
+            setUser(studentUser);
+            setSession(studentSession);
+            setRoles(['member']);
+            setProfile({
+              id: 'usr-demo-user',
+              fullName: 'Demo Öğrenci',
+              username: 'user',
+              status: 'active',
+              examType: 'KPSS Lisans (GY-GK)',
+            });
+            localStorage.setItem('kpss_demo_user_auth', JSON.stringify({ user: studentUser, session: studentSession }));
+
+            // authService senkronizasyonu
+            const authStudentUser = {
+              id: 'usr-demo-user',
+              email: 'user@kpss.com',
+              name: 'Demo Öğrenci',
+              username: 'user',
+              isLoggedIn: true,
+              role: 'student' as const,
+              createdAt: new Date().toISOString(),
+            };
+            localStorage.setItem('kpss_auth_session_v1', JSON.stringify(authStudentUser));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('kpss_auth_changed', { detail: authStudentUser }));
+            }
+
+            return { success: true };
+          }
+        }
+
         if (error.message?.toLowerCase().includes('email not confirmed')) {
           const unconfirmedMsg = 'E-posta adresi henüz doğrulanmamış. Supabase panelinden "Confirm email" ayarını kapatın veya e-postanızı onaylayın.';
           setAuthError(unconfirmedMsg);
@@ -244,6 +323,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           resolvedEmail = data;
         } else if (cleanUsername === 'tuvenan') {
           resolvedEmail = 'tuvenan@kpss.com';
+        } else if (cleanUsername === 'user') {
+          resolvedEmail = 'user@kpss.com';
         }
       }
 
@@ -285,6 +366,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             adminAuthService.createSession();
             localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: adminUser, session: adminSession }));
+            return { success: true };
+          }
+        }
+
+        // Demo öğrenci (user) kimlik doğrulaması (SHA-256 hash korumalı)
+        if (cleanUsername === 'user' || cleanUsername === 'user@kpss.com') {
+          const passHash = await sha256(password.trim());
+          if (passHash === DEFAULT_STUDENT_HASH || password.trim() === '123456') {
+            const studentUser = {
+              id: 'usr-demo-user',
+              email: 'user@kpss.com',
+              user_metadata: { full_name: 'Demo Öğrenci', username: 'user' },
+            };
+            const studentSession = {
+              access_token: 'student-token-' + Date.now(),
+              user: studentUser,
+            };
+            setUser(studentUser);
+            setSession(studentSession);
+            setRoles(['member']);
+            setProfile({
+              id: 'usr-demo-user',
+              fullName: 'Demo Öğrenci',
+              username: 'user',
+              status: 'active',
+              examType: 'KPSS Lisans (GY-GK)',
+            });
+            localStorage.setItem('kpss_demo_user_auth', JSON.stringify({ user: studentUser, session: studentSession }));
+
+            // authService senkronizasyonu
+            const authStudentUser = {
+              id: 'usr-demo-user',
+              email: 'user@kpss.com',
+              name: 'Demo Öğrenci',
+              username: 'user',
+              isLoggedIn: true,
+              role: 'student' as const,
+              createdAt: new Date().toISOString(),
+            };
+            localStorage.setItem('kpss_auth_session_v1', JSON.stringify(authStudentUser));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('kpss_auth_changed', { detail: authStudentUser }));
+            }
+
             return { success: true };
           }
         }
@@ -482,6 +607,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     try {
       localStorage.removeItem('kpss_demo_admin_auth');
+      localStorage.removeItem('kpss_demo_user_auth');
+      localStorage.removeItem('kpss_auth_session_v1');
       adminAuthService.logout();
       if (isSupabaseConfigured()) {
         await supabase.auth.signOut();
