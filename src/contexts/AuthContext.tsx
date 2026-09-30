@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { rbacService } from '../services/rbacService';
+import { adminAuthService } from '../services/adminAuthService';
+import { getRuntimeConfig } from '../config/runtimeConfig';
 import {
   UserRole,
   AppCapability,
@@ -20,10 +22,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const loadUserData = useCallback(async (currentUserId?: string) => {
+  const loadUserData = useCallback(async (currentUserId?: string, userEmail?: string) => {
     if (!currentUserId) {
       setProfile(null);
       setRoles([]);
+      return;
+    }
+
+    if (currentUserId === 'usr-admin-tuvenan') {
+      setRoles(['super_admin', 'member']);
+      setProfile({
+        id: 'usr-admin-tuvenan',
+        fullName: 'Tuvenan Admin',
+        username: 'tuvenan',
+        status: 'active',
+        examType: 'KPSS Lisans (GY-GK)',
+      });
       return;
     }
 
@@ -32,7 +46,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         rbacService.fetchUserRoles(currentUserId),
         rbacService.fetchUserProfile(currentUserId),
       ]);
-      setRoles(fetchedRoles);
+      const isTuvenan = userEmail?.toLowerCase() === 'tuvenan@kpss.com';
+      if (isTuvenan && !fetchedRoles.includes('super_admin')) {
+        setRoles(['super_admin', ...fetchedRoles]);
+      } else {
+        setRoles(fetchedRoles);
+      }
       setProfile(fetchedProfile);
     } catch (err) {
       console.warn('loadUserData error:', err);
@@ -51,13 +70,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 1. İlk oturumu yükle
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (!isMounted) return;
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      if (initialSession?.user?.id) {
-        loadUserData(initialSession.user.id).finally(() => {
+      if (initialSession?.user) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+        loadUserData(initialSession.user.id, initialSession.user.email).finally(() => {
           if (isMounted) setIsLoading(false);
         });
       } else {
+        // Geliştirme/Demo modunda yerel admin oturumu kontrolü
+        const { allowLocalAuthFallback } = getRuntimeConfig();
+        if (allowLocalAuthFallback && adminAuthService.isAuthenticated()) {
+          const stored = localStorage.getItem('kpss_demo_admin_auth');
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              setSession(parsed.session);
+              setUser(parsed.user);
+              setRoles(['super_admin', 'member']);
+              setProfile({
+                id: 'usr-admin-tuvenan',
+                fullName: 'Tuvenan Admin',
+                username: 'tuvenan',
+                status: 'active',
+                examType: 'KPSS Lisans (GY-GK)',
+              });
+              setIsLoading(false);
+              return;
+            } catch {}
+          }
+        }
+        setSession(null);
+        setUser(null);
         setIsLoading(false);
       }
     }).catch((err) => {
@@ -85,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'INITIAL_SESSION'].includes(event) || newSession?.user?.id) {
-        await loadUserData(newSession.user.id);
+        await loadUserData(newSession.user.id, newSession.user.email);
       }
       setIsLoading(false);
     });
@@ -105,13 +148,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: msg };
     }
 
+    const cleanEmail = email.trim().toLowerCase();
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
       });
 
       if (error) {
+        // Geliştirme/Demo modunda tuvenan için adminAuthService doğrulaması
+        const { allowLocalAuthFallback } = getRuntimeConfig();
+        if (allowLocalAuthFallback && (cleanEmail === 'tuvenan@kpss.com' || cleanEmail === 'tuvenan')) {
+          const isTuvenanValid = await adminAuthService.verifyCredentials('tuvenan', password);
+          if (isTuvenanValid) {
+            const demoAdminUser = {
+              id: 'usr-admin-tuvenan',
+              email: 'tuvenan@kpss.com',
+              user_metadata: { full_name: 'Tuvenan Admin', username: 'tuvenan' },
+            };
+            const demoSession = {
+              access_token: 'demo-admin-token-' + Date.now(),
+              user: demoAdminUser,
+            };
+            setUser(demoAdminUser);
+            setSession(demoSession);
+            setRoles(['super_admin', 'member']);
+            setProfile({
+              id: 'usr-admin-tuvenan',
+              fullName: 'Tuvenan Admin',
+              username: 'tuvenan',
+              status: 'active',
+              examType: 'KPSS Lisans (GY-GK)',
+            });
+            adminAuthService.createSession();
+            localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: demoAdminUser, session: demoSession }));
+            return { success: true };
+          }
+        }
+
+        if (error.message?.toLowerCase().includes('email not confirmed')) {
+          const unconfirmedMsg = 'E-posta adresi henüz doğrulanmamış. Supabase panelinden "Confirm email" ayarını kapatın veya e-postanızı onaylayın.';
+          setAuthError(unconfirmedMsg);
+          return { success: false, error: unconfirmedMsg };
+        }
+
         const errorMsg = 'Kullanıcı adı veya parola hatalı.';
         setAuthError(errorMsg);
         return { success: false, error: errorMsg };
@@ -120,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         setUser(data.user);
         setSession(data.session);
-        await loadUserData(data.user.id);
+        await loadUserData(data.user.id, data.user.email);
         return { success: true };
       }
 
@@ -182,6 +262,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        // Geliştirme/Demo modunda tuvenan için adminAuthService doğrulaması
+        const { allowLocalAuthFallback } = getRuntimeConfig();
+        if (allowLocalAuthFallback && (cleanUsername === 'tuvenan' || cleanUsername === 'tuvenan@kpss.com')) {
+          const isTuvenanValid = await adminAuthService.verifyCredentials('tuvenan', password);
+          if (isTuvenanValid) {
+            const demoAdminUser = {
+              id: 'usr-admin-tuvenan',
+              email: 'tuvenan@kpss.com',
+              user_metadata: { full_name: 'Tuvenan Admin', username: 'tuvenan' },
+            };
+            const demoSession = {
+              access_token: 'demo-admin-token-' + Date.now(),
+              user: demoAdminUser,
+            };
+            setUser(demoAdminUser);
+            setSession(demoSession);
+            setRoles(['super_admin', 'member']);
+            setProfile({
+              id: 'usr-admin-tuvenan',
+              fullName: 'Tuvenan Admin',
+              username: 'tuvenan',
+              status: 'active',
+              examType: 'KPSS Lisans (GY-GK)',
+            });
+            adminAuthService.createSession();
+            localStorage.setItem('kpss_demo_admin_auth', JSON.stringify({ user: demoAdminUser, session: demoSession }));
+            return { success: true };
+          }
+        }
+
+        if (error.message?.toLowerCase().includes('email not confirmed')) {
+          const unconfirmedMsg = 'E-posta adresi henüz doğrulanmamış. Supabase panelinden "Confirm email" ayarını kapatın veya e-postanızı onaylayın.';
+          setAuthError(unconfirmedMsg);
+          return { success: false, error: unconfirmedMsg };
+        }
+
         setAuthError(genericError);
         return { success: false, error: genericError };
       }
@@ -189,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         setUser(data.user);
         setSession(data.session);
-        await loadUserData(data.user.id);
+        await loadUserData(data.user.id, data.user.email);
         return { success: true };
       }
 
@@ -367,12 +483,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = useCallback(async (): Promise<void> => {
     setAuthError(null);
-    if (isSupabaseConfigured()) {
-      try {
+    try {
+      localStorage.removeItem('kpss_demo_admin_auth');
+      adminAuthService.logout();
+      if (isSupabaseConfigured()) {
         await supabase.auth.signOut();
-      } catch (err) {
-        console.warn('signOut error:', err);
       }
+    } catch (err) {
+      console.warn('signOut error:', err);
     }
     setSession(null);
     setUser(null);
@@ -419,7 +537,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshAuthorization = useCallback(async (): Promise<void> => {
     if (user?.id) {
-      await loadUserData(user.id);
+      await loadUserData(user.id, user.email);
     }
   }, [user, loadUserData]);
 
